@@ -14,6 +14,8 @@ import PropertyReviews from "@/components/property/PropertyReviews";
 import PropertyReservation from "@/components/property/PropertyReservation";
 import PropertyMap from "@/components/property/PropertyMap";
 
+const siteUrl = "https://alugacasabuzios.com.br";
+
 interface PropertyPageProps {
   params: Promise<{
     id: string;
@@ -31,18 +33,87 @@ export async function generateMetadata({
 }: PropertyPageProps): Promise<Metadata> {
   const { id } = await params;
 
-  const property = properties.find((item) => item.id === id);
+  const property = properties.find(
+    (item) => item.id === id
+  );
 
   if (!property) {
     return {
       title: "Imóvel não encontrado",
+      description:
+        "O imóvel solicitado não foi encontrado.",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
+  const propertyUrl =
+    `${siteUrl}/imoveis/${property.id}`;
+
+  const propertyImage =
+    property.gallery.find(
+      (image) =>
+        typeof image === "string" &&
+        image.trim() !== ""
+    ) || property.image;
+
+  const title =
+    `${property.title} — Casa de temporada em Búzios`;
+
+  const description =
+    property.description ||
+    `${property.title}, casa de temporada em ${property.neighborhood}, Armação dos Búzios.`;
+
   return {
-    title: property.title,
-    description: property.description,
+    title,
+
+    description,
+
     keywords: property.keywords,
+
+    alternates: {
+      canonical: propertyUrl,
+    },
+
+    openGraph: {
+      type: "website",
+      locale: "pt_BR",
+      url: propertyUrl,
+      siteName: "Aluga Casa Búzios",
+      title,
+      description,
+
+      images: [
+        {
+          url: propertyImage,
+          alt: `${property.title} em Armação dos Búzios`,
+        },
+      ],
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+
+      images: [
+        propertyImage,
+      ],
+    },
+
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
   };
 }
 
@@ -51,17 +122,57 @@ export default async function PropertyPage({
 }: PropertyPageProps) {
   const { id } = await params;
 
-  const property = properties.find((item) => item.id === id);
+  const property = properties.find(
+    (item) => item.id === id
+  );
 
   if (!property) {
     notFound();
   }
+
+  const propertyUrl =
+    `${siteUrl}/imoveis/${property.id}`;
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Início",
+        item: siteUrl,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Casas",
+        item: `${siteUrl}/casas`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: property.title,
+        item: propertyUrl,
+      },
+    ],
+  };
 
   return (
     <>
       <Header />
 
       <main className="min-h-screen bg-zinc-50">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              breadcrumbJsonLd
+            ).replace(/</g, "\\u003c"),
+          }}
+        />
+
         {/* Navegação */}
         <section className="border-b border-zinc-200 bg-white">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-6 py-5 text-sm">
@@ -72,7 +183,9 @@ export default async function PropertyPage({
               Início
             </Link>
 
-            <span className="text-zinc-300">/</span>
+            <span className="text-zinc-300">
+              /
+            </span>
 
             <Link
               href="/casas"
@@ -81,7 +194,9 @@ export default async function PropertyPage({
               Casas
             </Link>
 
-            <span className="text-zinc-300">/</span>
+            <span className="text-zinc-300">
+              /
+            </span>
 
             <span className="font-semibold text-blue-950">
               {property.title}
@@ -90,14 +205,18 @@ export default async function PropertyPage({
         </section>
 
         {/* Galeria */}
-        <PropertyGallery property={property} />
+        <PropertyGallery
+          property={property}
+        />
 
         {/* Resumo */}
         <section className="mx-auto mt-8 max-w-7xl px-6">
-          <PropertySummary property={property} />
+          <PropertySummary
+            property={property}
+          />
         </section>
 
-        {/* Informações do imóvel */}
+        {/* Informações */}
         <section className="mx-auto max-w-7xl px-6 py-12">
           <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,2fr)_420px]">
             {/* Coluna principal */}
@@ -107,9 +226,9 @@ export default async function PropertyPage({
                   Conheça o imóvel
                 </p>
 
-                <h2 className="mt-3 text-3xl font-bold text-blue-950">
-                  Sobre este imóvel
-                </h2>
+                <h1 className="mt-3 text-3xl font-bold text-blue-950 sm:text-4xl">
+                  {property.title}
+                </h1>
 
                 <p className="mt-5 text-lg leading-8 text-zinc-700">
                   {property.description}
@@ -129,7 +248,9 @@ export default async function PropertyPage({
                 />
               </div>
 
-              <PropertyMap property={property} />
+              <PropertyMap
+                property={property}
+              />
 
               {/* Regras */}
               <section className="mt-16">
@@ -142,16 +263,18 @@ export default async function PropertyPage({
                 </h2>
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  {property.rules.map((rule) => (
-                    <div
-                      key={rule}
-                      className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
-                    >
-                      <p className="font-medium text-zinc-700">
-                        ✓ {rule}
-                      </p>
-                    </div>
-                  ))}
+                  {property.rules.map(
+                    (rule) => (
+                      <div
+                        key={rule}
+                        className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+                      >
+                        <p className="font-medium text-zinc-700">
+                          ✓ {rule}
+                        </p>
+                      </div>
+                    )
+                  )}
                 </div>
 
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -161,7 +284,8 @@ export default async function PropertyPage({
                     </p>
 
                     <p className="mt-2 text-xl font-bold text-blue-950">
-                      A partir das {property.checkin}
+                      A partir das{" "}
+                      {property.checkin}
                     </p>
                   </div>
 
@@ -171,13 +295,14 @@ export default async function PropertyPage({
                     </p>
 
                     <p className="mt-2 text-xl font-bold text-blue-950">
-                      Até as {property.checkout}
+                      Até as{" "}
+                      {property.checkout}
                     </p>
                   </div>
                 </div>
               </section>
 
-              {/* Voltar para as casas */}
+              {/* Voltar */}
               <div className="mt-14 border-t border-zinc-200 pt-10">
                 <Link
                   href="/casas"
@@ -188,9 +313,11 @@ export default async function PropertyPage({
               </div>
             </div>
 
-            {/* Painel de reserva */}
+            {/* Reserva */}
             <aside className="lg:sticky lg:top-32">
-              <PropertyReservation property={property} />
+              <PropertyReservation
+                property={property}
+              />
             </aside>
           </div>
         </section>

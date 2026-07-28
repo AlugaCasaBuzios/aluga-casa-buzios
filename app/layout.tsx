@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { GoogleAnalytics } from "@next/third-parties/google";
 
 import "./globals.css";
 
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
-import AnalyticsEvents from "@/components/analytics/AnalyticsEvents";
+import PrivacyConsent from "@/components/privacy/PrivacyConsent";
 
 const siteUrl = "https://alugacasabuzios.com.br";
 
@@ -15,7 +14,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
   title: {
-    default: "Aluga Casa Búzios | Casas de Temporada",
+    default:
+      "Aluga Casa Búzios | Casas de Temporada",
     template: "%s | Aluga Casa Búzios",
   },
 
@@ -52,14 +52,16 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: siteUrl,
     siteName: "Aluga Casa Búzios",
-    title: "Aluga Casa Búzios | Casas de Temporada",
+    title:
+      "Aluga Casa Búzios | Casas de Temporada",
     description:
       "Encontre casas de temporada em Búzios com conforto, segurança e atendimento direto.",
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "Aluga Casa Búzios | Casas de Temporada",
+    title:
+      "Aluga Casa Búzios | Casas de Temporada",
     description:
       "Encontre casas de temporada em Búzios com conforto, segurança e atendimento direto.",
   },
@@ -88,7 +90,8 @@ const organizationJsonLd = {
 
   name: "Aluga Casa Búzios",
 
-  alternateName: "Aluga Casa Búzios — Casas de Temporada",
+  alternateName:
+    "Aluga Casa Búzios — Casas de Temporada",
 
   url: siteUrl,
 
@@ -142,10 +145,9 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationJsonLd).replace(
-              /</g,
-              "\\u003c"
-            ),
+            __html: JSON.stringify(
+              organizationJsonLd
+            ).replace(/</g, "\\u003c"),
           }}
         />
 
@@ -153,12 +155,10 @@ export default function RootLayout({
 
         <WhatsAppButton />
 
-        <AnalyticsEvents />
+        <PrivacyConsent
+          gaId={googleAnalyticsId}
+        />
       </body>
-
-      {googleAnalyticsId && (
-        <GoogleAnalytics gaId={googleAnalyticsId} />
-      )}
     </html>
   );
 }

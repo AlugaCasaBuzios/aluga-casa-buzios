@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import "./globals.css";
 
@@ -14,8 +15,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
   title: {
-    default:
-      "Aluga Casa Búzios | Casas de Temporada",
+    default: "Aluga Casa Búzios | Casas de Temporada",
     template: "%s | Aluga Casa Búzios",
   },
 
@@ -52,16 +52,14 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: siteUrl,
     siteName: "Aluga Casa Búzios",
-    title:
-      "Aluga Casa Búzios | Casas de Temporada",
+    title: "Aluga Casa Búzios | Casas de Temporada",
     description:
       "Encontre casas de temporada em Búzios com conforto, segurança e atendimento direto.",
   },
 
   twitter: {
     card: "summary_large_image",
-    title:
-      "Aluga Casa Búzios | Casas de Temporada",
+    title: "Aluga Casa Búzios | Casas de Temporada",
     description:
       "Encontre casas de temporada em Búzios com conforto, segurança e atendimento direto.",
   },
@@ -158,6 +156,8 @@ export default function RootLayout({
         <PrivacyConsent
           gaId={googleAnalyticsId}
         />
+
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -30,14 +30,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    {
+      url: `${baseUrl}/privacidade`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
 
-  const propertyPages: MetadataRoute.Sitemap = properties.map((property) => ({
-    url: `${baseUrl}/imoveis/${property.id}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.8,
-  }));
+  const propertyPages: MetadataRoute.Sitemap = properties.map(
+    (property) => ({
+      url: `${baseUrl}/imoveis/${property.id}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    })
+  );
 
   return [...staticPages, ...propertyPages];
 }

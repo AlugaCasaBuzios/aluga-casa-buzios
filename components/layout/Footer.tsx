@@ -9,7 +9,7 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-16">
         <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* Marca */}
-          <div className="lg:col-span-1">
+          <div>
             <Link
               href="/"
               className="inline-flex items-center gap-4"
@@ -104,6 +104,13 @@ export default function Footer() {
               >
                 Contato
               </Link>
+
+              <Link
+                href="/privacidade"
+                className="transition hover:translate-x-1 hover:text-white"
+              >
+                Política de Privacidade
+              </Link>
             </nav>
           </div>
 
@@ -186,17 +193,26 @@ export default function Footer() {
         </div>
 
         {/* Parte inferior */}
-        <div className="mt-14 flex flex-col gap-4 border-t border-white/10 pt-8 text-sm text-white/50 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-14 flex flex-col gap-5 border-t border-white/10 pt-8 text-sm text-white/50 lg:flex-row lg:items-center lg:justify-between">
           <p>
             © {currentYear} Aluga Casa Búzios. Todos os direitos reservados.
           </p>
 
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <span>Armação dos Búzios — RJ</span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <span>
+              Armação dos Búzios — RJ
+            </span>
 
             <span>
               alugacasabuzios.com.br
             </span>
+
+            <Link
+              href="/privacidade"
+              className="font-semibold text-white/70 transition hover:text-white"
+            >
+              Privacidade
+            </Link>
           </div>
         </div>
       </div>

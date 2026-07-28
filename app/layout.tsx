@@ -4,6 +4,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
+import AnalyticsEvents from "@/components/analytics/AnalyticsEvents";
 
 const siteUrl = "https://alugacasabuzios.com.br";
 
@@ -105,6 +106,7 @@ const organizationJsonLd = {
   areaServed: {
     "@type": "City",
     name: "Armação dos Búzios",
+
     containedInPlace: {
       "@type": "State",
       name: "Rio de Janeiro",
@@ -115,6 +117,7 @@ const organizationJsonLd = {
     "@type": "ContactPoint",
     telephone: "+55 24 99828-8846",
     contactType: "customer service",
+
     availableLanguage: [
       "Portuguese",
       "Spanish",
@@ -149,6 +152,8 @@ export default function RootLayout({
         {children}
 
         <WhatsAppButton />
+
+        <AnalyticsEvents />
       </body>
 
       {googleAnalyticsId && (

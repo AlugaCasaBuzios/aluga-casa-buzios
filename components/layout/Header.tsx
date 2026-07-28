@@ -1,28 +1,64 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-export default function Header() {
-  const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
+const navigation = [
+  {
+    label: "Início",
+    href: "/",
+  },
+  {
+    label: "Casas",
+    href: "/casas",
+  },
+  {
+    label: "Sobre",
+    href: "/sobre",
+  },
+  {
+    label: "Contato",
+    href: "/contato",
+  },
+];
 
-  function navigateTo(path: string) {
-    setMenuOpen(false);
-    router.push(path);
+export default function Header() {
+  const pathname = usePathname();
+
+  const [mobileMenuOpen, setMobileMenuOpen] =
+    useState(false);
+
+  function closeMobileMenu() {
+    setMobileMenuOpen(false);
+  }
+
+  function isActive(href: string) {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    if (
+      href === "/casas" &&
+      pathname.startsWith("/imoveis/")
+    ) {
+      return true;
+    }
+
+    return pathname.startsWith(href);
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex h-24 items-center justify-between gap-4">
-          {/* Logo */}
-          <button
-            type="button"
-            onClick={() => navigateTo("/")}
-            className="flex min-w-0 items-center gap-3 text-left"
-            aria-label="Voltar para a página inicial"
+        <div className="flex h-20 items-center justify-between gap-3 sm:h-24">
+          {/* Marca */}
+          <Link
+            href="/"
+            onClick={closeMobileMenu}
+            className="flex min-w-0 items-center gap-3 sm:gap-4"
+            aria-label="Página inicial da Aluga Casa Búzios"
           >
             <Image
               src="/images/logo/logo1.jpg"
@@ -30,7 +66,7 @@ export default function Header() {
               width={88}
               height={88}
               priority
-              className="h-16 w-16 flex-none rounded-full object-cover shadow-md sm:h-20 sm:w-20"
+              className="h-14 w-14 flex-none rounded-full object-cover shadow-md sm:h-20 sm:w-20"
             />
 
             <div className="hidden min-w-0 sm:block">
@@ -38,54 +74,44 @@ export default function Header() {
                 Aluga Casa Búzios
               </p>
 
-              <p className="truncate text-sm text-gray-500">
+              <p className="truncate text-sm text-zinc-500">
                 Casas de Temporada em Búzios
               </p>
             </div>
-          </button>
+          </Link>
 
-          {/* Menu para computador */}
-          <nav className="hidden items-center gap-8 font-semibold text-gray-900 lg:flex">
-            <button
-              type="button"
-              onClick={() => navigateTo("/")}
-              className="transition hover:text-sky-700"
-            >
-              Início
-            </button>
+          {/* Navegação no computador */}
+          <nav
+            className="hidden items-center gap-2 lg:flex"
+            aria-label="Navegação principal"
+          >
+            {navigation.map((item) => {
+              const active = isActive(item.href);
 
-            <button
-              type="button"
-              onClick={() => navigateTo("/casas")}
-              className="transition hover:text-sky-700"
-            >
-              Casas
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigateTo("/sobre")}
-              className="transition hover:text-sky-700"
-            >
-              Sobre
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigateTo("/contato")}
-              className="transition hover:text-sky-700"
-            >
-              Contato
-            </button>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-full px-4 py-3 font-semibold transition ${
+                    active
+                      ? "bg-sky-50 text-sky-700"
+                      : "text-zinc-800 hover:bg-zinc-100 hover:text-sky-700"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Ações */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <a
               href="https://instagram.com/aluga.casa.buzios"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden text-sm font-medium text-gray-700 transition hover:text-pink-600 xl:block"
+              aria-label="Abrir Instagram da Aluga Casa Búzios"
+              className="hidden text-sm font-medium text-zinc-600 transition hover:text-pink-600 xl:block"
             >
               📸 @aluga.casa.buzios
             </a>
@@ -94,85 +120,101 @@ export default function Header() {
               href="https://wa.me/5524998288846?text=Olá! Gostaria de conhecer as casas disponíveis em Búzios."
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden rounded-full bg-green-600 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-green-700 sm:inline-flex"
+              className="inline-flex items-center justify-center rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-green-700 sm:px-5"
             >
-              Reservar pelo WhatsApp
+              <span className="sm:hidden">
+                WhatsApp
+              </span>
+
+              <span className="hidden sm:inline">
+                Reservar pelo WhatsApp
+              </span>
             </a>
 
             {/* Botão do menu no celular */}
             <button
               type="button"
-              onClick={() => setMenuOpen((current) => !current)}
-              aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-              aria-expanded={menuOpen}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-gray-200 bg-white text-blue-950 shadow-sm transition hover:bg-gray-50 lg:hidden"
+              onClick={() =>
+                setMobileMenuOpen((current) => !current)
+              }
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+              aria-label={
+                mobileMenuOpen
+                  ? "Fechar menu"
+                  : "Abrir menu"
+              }
+              className="flex h-12 w-12 flex-none items-center justify-center rounded-full border border-zinc-200 bg-white text-blue-950 shadow-sm transition hover:bg-zinc-100 lg:hidden"
             >
-              {menuOpen ? (
-                <span className="text-2xl leading-none">✕</span>
+              {mobileMenuOpen ? (
+                <span
+                  aria-hidden="true"
+                  className="text-2xl"
+                >
+                  ✕
+                </span>
               ) : (
-                <span className="text-2xl leading-none">☰</span>
+                <span
+                  aria-hidden="true"
+                  className="flex flex-col gap-1.5"
+                >
+                  <span className="block h-0.5 w-6 rounded bg-current" />
+                  <span className="block h-0.5 w-6 rounded bg-current" />
+                  <span className="block h-0.5 w-6 rounded bg-current" />
+                </span>
               )}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Menu aberto no celular */}
-        {menuOpen && (
-          <div className="border-t border-gray-200 pb-5 pt-4 lg:hidden">
-            <nav className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => navigateTo("/")}
-                className="rounded-xl px-4 py-3 text-left font-semibold text-gray-900 transition hover:bg-sky-50 hover:text-sky-700"
-              >
-                Início
-              </button>
+      {/* Menu no celular */}
+      {mobileMenuOpen && (
+        <div
+          id="mobile-navigation"
+          className="border-t border-zinc-200 bg-white px-4 py-5 shadow-xl lg:hidden"
+        >
+          <nav
+            className="mx-auto flex max-w-7xl flex-col gap-2"
+            aria-label="Navegação no celular"
+          >
+            {navigation.map((item) => {
+              const active = isActive(item.href);
 
-              <button
-                type="button"
-                onClick={() => navigateTo("/casas")}
-                className="rounded-xl px-4 py-3 text-left font-semibold text-gray-900 transition hover:bg-sky-50 hover:text-sky-700"
-              >
-                Casas
-              </button>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMobileMenu}
+                  className={`flex items-center justify-between rounded-2xl px-5 py-4 text-lg font-bold transition ${
+                    active
+                      ? "bg-sky-50 text-sky-700"
+                      : "text-blue-950 hover:bg-zinc-100"
+                  }`}
+                >
+                  <span>{item.label}</span>
 
-              <button
-                type="button"
-                onClick={() => navigateTo("/sobre")}
-                className="rounded-xl px-4 py-3 text-left font-semibold text-gray-900 transition hover:bg-sky-50 hover:text-sky-700"
-              >
-                Sobre
-              </button>
+                  <span aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              );
+            })}
 
-              <button
-                type="button"
-                onClick={() => navigateTo("/contato")}
-                className="rounded-xl px-4 py-3 text-left font-semibold text-gray-900 transition hover:bg-sky-50 hover:text-sky-700"
-              >
-                Contato
-              </button>
-
-              <a
-                href="https://wa.me/5524998288846?text=Olá! Gostaria de conhecer as casas disponíveis em Búzios."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 rounded-xl bg-green-600 px-4 py-3 text-center font-bold text-white shadow-md transition hover:bg-green-700 sm:hidden"
-              >
-                Reservar pelo WhatsApp
-              </a>
-
+            <div className="mt-3 border-t border-zinc-200 pt-5">
               <a
                 href="https://instagram.com/aluga.casa.buzios"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl px-4 py-3 text-center font-semibold text-pink-600 transition hover:bg-pink-50"
+                onClick={closeMobileMenu}
+                className="flex items-center justify-center rounded-2xl border border-zinc-200 px-5 py-4 font-bold text-zinc-700 transition hover:bg-zinc-100 hover:text-pink-600"
               >
-                📸 Instagram
+                📸 Acompanhar no Instagram
               </a>
-            </nav>
-          </div>
-        )}
-      </div>
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

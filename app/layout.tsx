@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 import "./globals.css";
 
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 
 const siteUrl = "https://alugacasabuzios.com.br";
+
+const googleAnalyticsId =
+  process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -146,6 +150,10 @@ export default function RootLayout({
 
         <WhatsAppButton />
       </body>
+
+      {googleAnalyticsId && (
+        <GoogleAnalytics gaId={googleAnalyticsId} />
+      )}
     </html>
   );
 }

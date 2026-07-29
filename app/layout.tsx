@@ -43,9 +43,7 @@ export const metadata: Metadata = {
 
   publisher: "Aluga Casa Búzios",
 
-  alternates: {
-    canonical: "/",
-  },
+
 
   openGraph: {
     type: "website",

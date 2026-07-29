@@ -287,9 +287,9 @@ export const properties: Property[] = [
 
   checkout: "10:00",
 
-  price: 0,
+  price: 500,
 
-  cleaningFee: 0,
+  cleaningFee: 250,
 
   image:
     "/images/properties/casa-doce-mar/1.jpg",

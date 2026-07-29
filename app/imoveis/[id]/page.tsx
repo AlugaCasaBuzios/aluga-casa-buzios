@@ -59,6 +59,11 @@ export async function generateMetadata({
         image.trim() !== ""
     ) || property.image;
 
+  const absolutePropertyImage =
+    propertyImage.startsWith("http")
+      ? propertyImage
+      : `${siteUrl}${propertyImage}`;
+
   const title =
     `${property.title} — Casa de temporada em Búzios`;
 
@@ -68,9 +73,7 @@ export async function generateMetadata({
 
   return {
     title,
-
     description,
-
     keywords: property.keywords,
 
     alternates: {
@@ -87,7 +90,7 @@ export async function generateMetadata({
 
       images: [
         {
-          url: propertyImage,
+          url: absolutePropertyImage,
           alt: `${property.title} em Armação dos Búzios`,
         },
       ],
@@ -97,15 +100,15 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
-
       images: [
-        propertyImage,
+        absolutePropertyImage,
       ],
     },
 
     robots: {
       index: true,
       follow: true,
+
       googleBot: {
         index: true,
         follow: true,
@@ -133,6 +136,22 @@ export default async function PropertyPage({
   const propertyUrl =
     `${siteUrl}/imoveis/${property.id}`;
 
+  const propertyImages = Array.from(
+    new Set(
+      [property.image, ...property.gallery]
+        .filter(
+          (image): image is string =>
+            typeof image === "string" &&
+            image.trim() !== ""
+        )
+        .map((image) =>
+          image.startsWith("http")
+            ? image
+            : `${siteUrl}${image}`
+        )
+    )
+  );
+
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -159,6 +178,142 @@ export default async function PropertyPage({
     ],
   };
 
+  const amenityFeature = [
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Wi-Fi",
+      value: property.wifi,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Piscina",
+      value: property.pool,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Ar-condicionado",
+      value: property.airConditioning,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Cozinha",
+      value: property.kitchen,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Churrasqueira",
+      value: property.barbecue,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Máquina de lavar",
+      value: property.washingMachine,
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      name: "Aceita animais",
+      value: property.petFriendly,
+    },
+  ];
+
+  const propertyJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LodgingBusiness",
+
+    "@id": `${propertyUrl}#property`,
+
+    name: property.title,
+
+    url: propertyUrl,
+
+    description: property.description,
+
+    image: propertyImages,
+
+    telephone: "+55 24 99828-8846",
+
+    address: {
+      "@type": "PostalAddress",
+
+      ...(property.address
+        ? {
+            streetAddress: property.address,
+          }
+        : {}),
+
+      addressLocality: "Armação dos Búzios",
+      addressRegion: "RJ",
+      addressCountry: "BR",
+    },
+
+    ...(property.latitude !== undefined &&
+    property.longitude !== undefined
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: property.latitude,
+            longitude: property.longitude,
+          },
+        }
+      : {}),
+
+    amenityFeature,
+
+    numberOfRooms: property.bedrooms,
+
+    petsAllowed: property.petFriendly,
+
+    checkinTime: property.checkin,
+
+    checkoutTime: property.checkout,
+
+    aggregateRating:
+      property.rating > 0 &&
+      property.reviews > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: property.rating,
+            ratingCount: property.reviews,
+            reviewCount: property.reviews,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
+
+    ...(property.price > 0
+      ? {
+          makesOffer: {
+            "@type": "Offer",
+            url: propertyUrl,
+            priceCurrency: "BRL",
+            price: property.price,
+            availability:
+              "https://schema.org/InStock",
+            description:
+              "Valor inicial da diária. Consulte disponibilidade e valor final para as datas desejadas.",
+          },
+        }
+      : {}),
+
+    containedInPlace: {
+      "@type": "City",
+      name: "Armação dos Búzios",
+
+      address: {
+        "@type": "PostalAddress",
+        addressRegion: "RJ",
+        addressCountry: "BR",
+      },
+    },
+
+    sameAs: [
+      property.airbnb,
+      ...(property.booking
+        ? [property.booking]
+        : []),
+    ],
+  };
+
   return (
     <>
       <Header />
@@ -169,6 +324,15 @@ export default async function PropertyPage({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
               breadcrumbJsonLd
+            ).replace(/</g, "\\u003c"),
+          }}
+        />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              propertyJsonLd
             ).replace(/</g, "\\u003c"),
           }}
         />

@@ -2,358 +2,614 @@ import type { Property } from "@/types/Property";
 
 export const properties: Property[] = [
   {
-    id: "arete-top",
-    title: "Aretê Top",
-    neighborhood: "EDITAR BAIRRO",
-    address: "Armação dos Búzios - RJ",
+  id: "arete-top",
 
-    guests: 0,
-    bedrooms: 0,
-    bathrooms: 0,
-    beds: 0,
-    suites: 0,
-    area: 0,
-    garage: 0,
+  title: "Aretê Top – Casa Premium com Piscina",
 
-    petFriendly: false,
-    pool: false,
-    barbecue: false,
-    wifi: true,
-    airConditioning: true,
-    kitchen: true,
-    washingMachine: true,
+  neighborhood: "Condomínio Aretê",
 
-    beachDistance: "EDITAR DISTÂNCIA DA PRAIA",
-    checkin: "15:00",
-    checkout: "11:00",
+  address:
+    "Condomínio Aretê, Armação dos Búzios - RJ",
 
-    price: 0,
-    cleaningFee: 0,
+  guests: 8,
 
-    image: "/images/properties/arete-top/1.jpg",
+  bedrooms: 4,
 
-    gallery: [
-      "/images/properties/arete-top/1.jpg",
-    ],
+  bathrooms: 3.5,
 
-    description:
-      "EDITAR: escreva aqui uma descrição completa da propriedade Aretê Top.",
+  beds: 4,
 
-    amenities: [
-      "Wi-Fi",
-      "Ar-condicionado",
-      "Cozinha completa",
-      "Máquina de lavar",
-      "Smart TV",
-      "Garagem",
-    ],
+  suites: 4,
 
-    rules: [
-      "Check-in após 15h",
-      "Check-out até 11h",
-      "Não é permitido festas",
-      "Proibido fumar dentro da casa",
-      "Animais mediante consulta",
-    ],
+  // Atualize quando souber a metragem correta.
+  area: 0,
 
-    airbnb: "",
-    booking: "",
-    whatsapp: "5524998288846",
+  // Atualize quando confirmar a quantidade de vagas.
+  garage: 4,
 
-    rating: 0,
-    reviews: 0,
+  // Altere para true caso aceite animais.
+  petFriendly: false,
 
-    keywords: [
-      "Aretê Top",
-      "Casa em Búzios",
-      "Temporada em Búzios",
-      "Hospedagem em Búzios",
-    ],
-  },
+  pool: true,
 
-  {
-    id: "casa-da-margarida",
-    title: "Casa da Margarida",
-    neighborhood: "EDITAR BAIRRO",
-    address: "Armação dos Búzios - RJ",
+  // Altere para true caso confirme a churrasqueira.
+  barbecue: true,
 
-    guests: 0,
-    bedrooms: 0,
-    bathrooms: 0,
-    beds: 0,
-    suites: 0,
-    area: 0,
-    garage: 0,
+  wifi: true,
 
-    petFriendly: false,
-    pool: false,
-    barbecue: false,
-    wifi: true,
-    airConditioning: true,
-    kitchen: true,
-    washingMachine: true,
+  airConditioning: true,
 
-    beachDistance: "EDITAR DISTÂNCIA DA PRAIA",
-    checkin: "15:00",
-    checkout: "11:00",
+  kitchen: true,
 
-    price: 0,
-    cleaningFee: 0,
+  // Altere para true caso confirme a máquina de lavar.
+  washingMachine: true,
 
-    image:
-      "/images/properties/casa-da-margarida/1.jpg",
+  beachDistance:
+    "Localizada no Condomínio Aretê",
 
-    gallery: [
-      "/images/properties/casa-da-margarida/1.jpg",
-    ],
+  checkin: "15:00",
 
-    description:
-      "EDITAR: escreva aqui uma descrição completa da Casa da Margarida.",
+  checkout: "11:00",
 
-    amenities: [
-      "Wi-Fi",
-      "Ar-condicionado",
-      "Cozinha completa",
-      "Máquina de lavar",
-      "Smart TV",
-      "Garagem",
-    ],
+  // Atualize com o valor real da diária.
+  price: 1500,
 
-    rules: [
-      "Check-in após 15h",
-      "Check-out até 11h",
-      "Não é permitido festas",
-      "Proibido fumar dentro da casa",
-      "Animais mediante consulta",
-    ],
+  // Atualize com o valor real da taxa de limpeza.
+  cleaningFee: 300,
 
-    airbnb: "",
-    booking: "",
-    whatsapp: "5524998288846",
+  image:
+    "/images/properties/arete-top/airbnb-1.jpg",
 
-    rating: 0,
-    reviews: 0,
+  gallery: [
+    "/images/properties/arete-top/airbnb-1.jpg",
+    "/images/properties/arete-top/airbnb-2.jpg",
+    "/images/properties/arete-top/airbnb-3.jpg",
+    "/images/properties/arete-top/airbnb-4.jpg",
+    "/images/properties/arete-top/airbnb-5.jpg",
+  ],
 
-    keywords: [
-      "Casa da Margarida",
-      "Casa em Búzios",
-      "Temporada em Búzios",
-      "Hospedagem em Búzios",
-    ],
-  },
+  description:
+    "Viva uma experiência de conforto e exclusividade no Aretê Top, uma casa premium localizada no Condomínio Aretê, em Armação dos Búzios. O imóvel acomoda até 6 hóspedes e possui 3 suítes climatizadas, 4 camas, ambientes elegantes, cozinha equipada, Wi-Fi e piscina privativa. Uma excelente opção para famílias e pequenos grupos que procuram tranquilidade, segurança e uma hospedagem de alto padrão em Búzios.",
+
+  amenities: [
+    "Piscina privativa",
+    "3 suítes climatizadas",
+    "3,5 banheiros",
+    "4 camas",
+    "Ar-condicionado nos quartos",
+    "Wi-Fi",
+    "Cozinha equipada",
+    "Sala de estar",
+    "Ambientes planejados",
+    "Móveis e utensílios novos",
+    "Roupa de cama e banho",
+    "Condomínio fechado",
+    "Portaria 24 horas",
+    "Estrutura de lazer do condomínio",
+    "Uso exclusivo dos hóspedes",
+  ],
+
+  rules: [
+    "A casa acomoda no máximo 6 hóspedes",
+    "Check-in entre 15h e 21h",
+    "Check-out até as 11h",
+    "Informar corretamente adultos, crianças e bebês na reserva",
+    "Não ultrapassar o número de hóspedes informado na reserva",
+    "Visitantes devem ser informados previamente ao anfitrião",
+    "Não é permitido realizar festas ou eventos sem autorização",
+    "Respeitar o horário de silêncio do condomínio",
+    "Crianças devem permanecer supervisionadas na piscina",
+    "Proibido fumar dentro da casa",
+    "Enviar os dados dos hóspedes para liberação na portaria",
+    "Enviar as placas dos veículos quando solicitado",
+    "Deixar a louça lavada antes do check-out",
+    "Retirar os lixos antes da saída",
+  ],
+
+  airbnb:
+    "https://www.airbnb.com.br/h/arete-top",
+
+  booking: "",
+
+  whatsapp: "5524998288846",
+
+  // Atualize após confirmar a avaliação atual.
+  rating: 0,
+
+  reviews: 0,
+
+  keywords: [
+    "Aretê Top Búzios",
+    "Casa premium no Condomínio Aretê",
+    "Casa com piscina em Búzios",
+    "Casa com 3 suítes em Búzios",
+    "Casa para 6 hóspedes em Búzios",
+    "Casa de temporada no Aretê",
+    "Casa em condomínio fechado em Búzios",
+    "Aluguel de temporada em Búzios",
+  ],
+},
 
   {
-    id: "casa-doce-mar",
-    title: "Casa Doce Mar",
-    neighborhood: "EDITAR BAIRRO",
-    address: "Armação dos Búzios - RJ",
+  id: "casa-da-margarida",
 
-    guests: 0,
-    bedrooms: 0,
-    bathrooms: 0,
-    beds: 0,
-    suites: 0,
-    area: 0,
-    garage: 0,
+  title: "Casa da Margarida com Piscina Privativa",
 
-    petFriendly: false,
-    pool: false,
-    barbecue: false,
-    wifi: true,
-    airConditioning: true,
-    kitchen: true,
-    washingMachine: true,
+  neighborhood: "Armação dos Búzios",
 
-    beachDistance: "EDITAR DISTÂNCIA DA PRAIA",
-    checkin: "15:00",
-    checkout: "11:00",
+  address:
+    "Armação dos Búzios - RJ",
 
-    price: 0,
-    cleaningFee: 0,
+  guests: 6,
 
-    image:
-      "/images/properties/casa-doce-mar/1.jpg",
+  bedrooms: 2,
 
-    gallery: [
-      "/images/properties/casa-doce-mar/1.jpg",
-    ],
+  bathrooms: 2,
 
-    description:
-      "EDITAR: escreva aqui uma descrição completa da Casa Doce Mar.",
+  beds: 6,
 
-    amenities: [
-      "Wi-Fi",
-      "Ar-condicionado",
-      "Cozinha completa",
-      "Máquina de lavar",
-      "Smart TV",
-      "Garagem",
-    ],
+  suites: 0,
 
-    rules: [
-      "Check-in após 15h",
-      "Check-out até 11h",
-      "Não é permitido festas",
-      "Proibido fumar dentro da casa",
-      "Animais mediante consulta",
-    ],
+  area: 0,
 
-    airbnb: "",
-    booking: "",
-    whatsapp: "5524998288846",
+  garage: 0,
 
-    rating: 0,
-    reviews: 0,
+  petFriendly: false,
 
-    keywords: [
-      "Casa Doce Mar",
-      "Casa em Búzios",
-      "Temporada em Búzios",
-      "Hospedagem em Búzios",
-    ],
-  },
+  pool: true,
+
+  barbecue: true,
+
+  wifi: true,
+
+  airConditioning: true,
+
+  kitchen: true,
+
+  washingMachine: true,
+
+  beachDistance:
+    "Consulte a distância das praias",
+
+  checkin: "12:00",
+
+  checkout: "12:00",
+
+  price: 0,
+
+  cleaningFee: 0,
+
+  image:
+    "/images/properties/casa-da-margarida/1.jpg",
+
+  gallery: [
+    "/images/properties/casa-da-margarida/1.jpg",
+    "/images/properties/casa-da-margarida/2.jpg",
+    "/images/properties/casa-da-margarida/3.jpg",
+    "/images/properties/casa-da-margarida/4.jpg",
+    "/images/properties/casa-da-margarida/5.jpg",
+  ],
+
+  description:
+    "A Casa da Margarida é uma acomodação confortável e privativa em Armação dos Búzios, ideal para famílias e pequenos grupos. O imóvel acomoda até 6 hóspedes e possui 2 quartos, 2 banheiros, piscina privativa, churrasqueira, cozinha equipada, Wi-Fi, ar-condicionado e ambientes preparados para momentos de descanso e lazer.",
+
+  amenities: [
+    "Piscina privativa",
+    "Churrasqueira",
+    "2 quartos",
+    "2 banheiros",
+    "Wi-Fi",
+    "Ar-condicionado",
+    "Cozinha equipada",
+    "Máquina de lavar",
+    "Smart TV",
+    "Sala de estar",
+    "Área externa",
+    "Uso exclusivo dos hóspedes",
+  ],
+
+  rules: [
+    "A casa acomoda no máximo 6 hóspedes",
+    "Check-in entre 12h e 14h",
+    "Check-out até as 12h",
+    "Não ultrapassar o número de hóspedes informado na reserva",
+    "Visitantes devem ser informados previamente ao anfitrião",
+    "Não é permitido realizar festas ou eventos sem autorização",
+    "Respeitar o horário de silêncio",
+    "Crianças devem permanecer supervisionadas na piscina",
+    "Proibido fumar dentro da casa",
+    "Deixar a louça lavada antes do check-out",
+    "Retirar os lixos antes da saída",
+  ],
+
+  airbnb:
+    "https://www.airbnb.com.br/h/casa-da-margarida",
+
+  booking: "",
+
+  whatsapp: "5524998288846",
+
+  rating: 0,
+
+  reviews: 0,
+
+  keywords: [
+    "Casa da Margarida Búzios",
+    "Casa com piscina privativa em Búzios",
+    "Casa com churrasqueira em Búzios",
+    "Casa para 6 hóspedes em Búzios",
+    "Casa de temporada em Búzios",
+    "Aluguel de casa em Búzios",
+    "Hospedagem familiar em Búzios",
+  ],
+},
 
   {
-    id: "casa-em-buzios",
-    title: "Casa em Búzios",
-    neighborhood: "EDITAR BAIRRO",
-    address: "Armação dos Búzios - RJ",
+  id: "casa-doce-mar",
 
-    guests: 0,
-    bedrooms: 0,
-    bathrooms: 0,
-    beds: 0,
-    suites: 0,
-    area: 0,
-    garage: 0,
+  title: "Casa Doce Mar com Piscina e Área Gourmet",
 
-    petFriendly: false,
-    pool: false,
-    barbecue: false,
-    wifi: true,
-    airConditioning: true,
-    kitchen: true,
-    washingMachine: true,
+  neighborhood: "Tucuns",
 
-    beachDistance: "EDITAR DISTÂNCIA DA PRAIA",
-    checkin: "15:00",
-    checkout: "11:00",
+  address: "Tucuns, Armação dos Búzios - RJ",
 
-    price: 0,
-    cleaningFee: 0,
+  guests: 10,
 
-    image:
-      "/images/properties/casa-em-buzios/1.jpg",
+  bedrooms: 3,
 
-    gallery: [
-      "/images/properties/casa-em-buzios/1.jpg",
-    ],
+  bathrooms: 4,
 
-    description:
-      "EDITAR: escreva aqui uma descrição completa desta casa em Búzios.",
+  beds: 6,
 
-    amenities: [
-      "Wi-Fi",
-      "Ar-condicionado",
-      "Cozinha completa",
-      "Máquina de lavar",
-      "Smart TV",
-      "Garagem",
-    ],
+  suites: 2,
 
-    rules: [
-      "Check-in após 15h",
-      "Check-out até 11h",
-      "Não é permitido festas",
-      "Proibido fumar dentro da casa",
-      "Animais mediante consulta",
-    ],
+  area: 0,
 
-    airbnb: "",
-    booking: "",
-    whatsapp: "5524998288846",
+  garage: 3,
 
-    rating: 0,
-    reviews: 0,
+  petFriendly: true,
 
-    keywords: [
-      "Casa em Búzios",
-      "Aluguel de temporada",
-      "Temporada em Búzios",
-      "Hospedagem em Búzios",
-    ],
-  },
+  pool: true,
+
+  barbecue: true,
+
+  wifi: true,
+
+  airConditioning: true,
+
+  kitchen: true,
+
+  washingMachine: true,
+
+  beachDistance: "Consulte a distância das praias",
+
+  checkin: "14:00",
+
+  checkout: "10:00",
+
+  price: 0,
+
+  cleaningFee: 0,
+
+  image:
+    "/images/properties/casa-doce-mar/1.jpg",
+
+  gallery: [
+    "/images/properties/casa-doce-mar/1.jpg",
+    "/images/properties/casa-doce-mar/2.jpg",
+    "/images/properties/casa-doce-mar/3.jpg",
+    "/images/properties/casa-doce-mar/4.jpg",
+    "/images/properties/casa-doce-mar/5.jpg",
+  ],
+
+  description:
+    "A Casa Doce Mar é uma casa espaçosa e completa em Tucuns, Armação dos Búzios, preparada para acomodar até 10 hóspedes. O imóvel possui 3 quartos, sendo 2 suítes, 4 banheiros, ambientes climatizados, cozinha equipada, Wi-Fi, piscina privativa e uma agradável área gourmet com churrasqueira. É uma excelente opção para famílias e grupos que procuram conforto, privacidade e momentos de lazer durante a estadia em Búzios.",
+
+  amenities: [
+    "Piscina privativa",
+    "Área gourmet",
+    "Churrasqueira",
+    "3 quartos",
+    "2 suítes",
+    "4 banheiros",
+    "6 camas",
+    "Ar-condicionado",
+    "Wi-Fi",
+    "Cozinha equipada",
+    "Máquina de lavar",
+    "Smart TV",
+    "Sala de estar",
+    "Área externa",
+    "Garagem para 3 carros",
+    "Permitido animais mediante consulta",
+    "Uso exclusivo dos hóspedes",
+  ],
+
+  rules: [
+    "A casa acomoda no máximo 10 hóspedes",
+    "Check-in a partir das 14h",
+    "Check-out até as 10h",
+    "Informar corretamente adultos, crianças e bebês na reserva",
+    "Não ultrapassar o número de hóspedes informado na reserva",
+    "Visitantes devem ser informados previamente ao anfitrião",
+    "Não é permitido realizar festas ou eventos sem autorização",
+    "Respeitar o horário de silêncio",
+    "Crianças devem permanecer supervisionadas na piscina",
+    "Animais são permitidos mediante consulta prévia",
+    "Proibido fumar dentro da casa",
+    "Deixar a louça lavada antes do check-out",
+    "Retirar os lixos antes da saída",
+  ],
+
+  airbnb:
+    "https://www.airbnb.com.br/h/acomodacaodocemar",
+
+  booking: "",
+
+  whatsapp: "5524998288846",
+
+  rating: 0,
+
+  reviews: 0,
+
+  keywords: [
+    "Casa Doce Mar Búzios",
+    "Casa em Tucuns",
+    "Casa com piscina em Búzios",
+    "Casa com área gourmet em Búzios",
+    "Casa com churrasqueira em Búzios",
+    "Casa para 10 hóspedes em Búzios",
+    "Casa com 3 quartos em Búzios",
+    "Casa de temporada em Búzios",
+    "Aluguel de casa em Búzios",
+  ],
+},
+
+  {
+  id: "casa-em-buzios",
+
+  title: "Casa em Búzios Próxima a Geribá",
+
+  neighborhood: "São José",
+
+  address: "Armação dos Búzios - RJ",
+
+  guests: 10,
+
+  bedrooms: 3,
+
+  bathrooms: 3,
+
+  beds: 5,
+
+  // Atualize quando confirmar quantos quartos são suítes.
+  suites: 1,
+
+  // Atualize quando souber a metragem correta.
+  area: 0,
+
+  garage: 4,
+
+  // Altere para true caso a casa aceite animais.
+  petFriendly: true,
+
+  pool: true,
+
+  barbecue: true,
+
+  wifi: true,
+
+  airConditioning: true,
+
+  kitchen: true,
+
+  washingMachine: true,
+
+  beachDistance: "Próxima à Praia de Geribá",
+
+  checkin: "16:00",
+
+  checkout: "11:00",
+
+  // Atualize com o valor real da diária.
+  price: 500,
+
+  // Atualize com o valor real da taxa de limpeza.
+  cleaningFee: 250,
+
+  image:
+  "/images/properties/casa-em-buzios/1.jpg",
+
+gallery: [
+  "/images/properties/casa-em-buzios/1.jpg",
+  "/images/properties/casa-em-buzios/2.jpg",
+  "/images/properties/casa-em-buzios/3.jpg",
+  "/images/properties/casa-em-buzios/4.jpg",
+  "/images/properties/casa-em-buzios/5.jpg",
+],
+
+  description:
+    "Casa espaçosa em Armação dos Búzios, próxima à Praia de Geribá, preparada para acomodar até 10 hóspedes. O imóvel possui 3 quartos, 3 banheiros, ambientes climatizados, cozinha equipada, Wi-Fi, piscina, churrasqueira e garagem para até 4 carros. É uma ótima opção para famílias e grupos que procuram conforto, privacidade e fácil acesso às praias e aos principais atrativos de Búzios.",
+
+  amenities: [
+    "Piscina",
+    "Churrasqueira",
+    "3 quartos",
+    "3 banheiros",
+    "5 camas",
+    "Ar-condicionado",
+    "Wi-Fi",
+    "Cozinha equipada",
+    "Máquina de lavar",
+    "Smart TV",
+    "Sala de estar",
+    "Área externa",
+    "Garagem para 4 carros",
+    "Próxima à Praia de Geribá",
+    "Uso exclusivo dos hóspedes",
+  ],
+
+  rules: [
+    "A casa acomoda no máximo 10 hóspedes",
+    "Check-in a partir das 16h",
+    "Check-out até as 11h",
+    "Informar corretamente adultos, crianças e bebês na reserva",
+    "Não ultrapassar o número de hóspedes informado na reserva",
+    "Visitantes devem ser informados previamente ao anfitrião",
+    "Não é permitido realizar festas ou eventos sem autorização",
+    "Respeitar o horário de silêncio",
+    "Crianças devem permanecer supervisionadas na piscina",
+    "Proibido fumar dentro da casa",
+    "Deixar a louça lavada antes do check-out",
+    "Retirar os lixos antes da saída",
+    "Enviar os dados dos hóspedes quando solicitado",
+    "Enviar as placas dos veículos para liberação, quando necessário",
+  ],
+
+  airbnb:
+    "https://www.airbnb.com.br/h/buzios-temporada",
+
+  booking: "",
+
+  whatsapp: "5524998288846",
+
+  // Atualize quando confirmar os números atuais.
+  rating: 4.95,
+
+  reviews: 63,
+
+  keywords: [
+    "Casa em Búzios próxima a Geribá",
+    "Casa com piscina em Búzios",
+    "Casa com churrasqueira em Búzios",
+    "Casa para 10 hóspedes em Búzios",
+    "Casa com 3 quartos em Búzios",
+    "Casa de temporada próxima a Geribá",
+    "Aluguel de casa em Búzios",
+    "Hospedagem em Búzios",
+  ],
+},
 
   {
     id: "casa-toriba",
-    title: "Casa Toriba",
-    neighborhood: "EDITAR BAIRRO",
-    address: "Armação dos Búzios - RJ",
+    title: "Casa Toriba no Condomínio Aretê",
 
-    guests: 0,
-    bedrooms: 0,
-    bathrooms: 0,
-    beds: 0,
-    suites: 0,
-    area: 0,
-    garage: 0,
+  neighborhood: "Condomínio Aretê",
 
-    petFriendly: false,
-    pool: false,
-    barbecue: false,
-    wifi: true,
-    airConditioning: true,
-    kitchen: true,
-    washingMachine: true,
+  address:
+    "Condomínio Aretê, Armação dos Búzios - RJ",
 
-    beachDistance: "EDITAR DISTÂNCIA DA PRAIA",
-    checkin: "15:00",
-    checkout: "11:00",
+  guests: 8,
 
-    price: 0,
-    cleaningFee: 0,
+  bedrooms: 4,
 
-    image:
-      "/images/properties/casa-toriba/1.jpg",
+  bathrooms: 4.5,
 
-    gallery: [
-      "/images/properties/casa-toriba/1.jpg",
-    ],
+  beds: 4,
 
-    description:
-      "EDITAR: escreva aqui uma descrição completa da Casa Toriba.",
+  suites: 4,
 
-    amenities: [
-      "Wi-Fi",
-      "Ar-condicionado",
-      "Cozinha completa",
-      "Máquina de lavar",
-      "Smart TV",
-      "Garagem",
-    ],
+  // Preencha quando souber a metragem correta.
+  area: 0,
 
-    rules: [
-      "Check-in após 15h",
-      "Check-out até 11h",
-      "Não é permitido festas",
-      "Proibido fumar dentro da casa",
-      "Animais mediante consulta",
-    ],
+  // Preencha quando confirmar o número de vagas.
+  garage: 4,
 
-    airbnb: "",
-    booking: "",
-    whatsapp: "5524998288846",
+  petFriendly: true,
 
-    rating: 0,
-    reviews: 0,
+  pool: true,
 
-    keywords: [
-      "Casa Toriba",
-      "Casa em Búzios",
-      "Temporada em Búzios",
-      "Hospedagem em Búzios",
-    ],
-  },
+  // Altere para true quando confirmar que existe churrasqueira.
+  barbecue: true,
+
+  wifi: true,
+
+  airConditioning: true,
+
+  kitchen: true,
+
+  washingMachine: true,
+
+  beachDistance:
+    "Localizada no Condomínio Aretê",
+
+  checkin: "16:00",
+
+  checkout: "11:00",
+
+  // Atualize com o valor da diária.
+  price: 1200,
+
+  // Atualize com o valor da limpeza.
+  cleaningFee: 300,
+
+  image: "/images/properties/casa-toriba/1.jpg",
+
+gallery: [
+  "/images/properties/casa-toriba/1.jpg",
+  "/images/properties/casa-toriba/2.jpg",
+  "/images/properties/casa-toriba/3.jpg",
+  "/images/properties/casa-toriba/4.jpg",
+  "/images/properties/casa-toriba/5.jpg",
+  "/images/properties/casa-toriba/6.jpg",
+],
+
+  description:
+    "Casa de alto padrão localizada no Condomínio Aretê, em Armação dos Búzios. O imóvel acomoda até 8 hóspedes e conta com 4 suítes, ambientes climatizados, cozinha equipada, piscina privativa e estrutura adequada para famílias e grupos que desejam conforto, segurança e tranquilidade durante a estadia. A localização no condomínio náutico oferece uma experiência especial para quem deseja aproveitar os atrativos e as áreas de lazer do Aretê.",
+
+  amenities: [
+    "Piscina privativa",
+    "4 suítes",
+    "Ar-condicionado",
+    "Wi-Fi",
+    "Cozinha equipada",
+    "Máquina de lavar",
+    "Smart TV",
+    "Ambientes amplos",
+    "Condomínio fechado",
+    "Segurança",
+    "Área náutica",
+    "Permitido animais mediante consulta",
+  ],
+
+  rules: [
+    "A casa acomoda no máximo 8 hóspedes",
+    "Check-in a partir das 16h",
+    "Check-out até as 11h",
+    "Não ultrapassar o número de hóspedes informado na reserva",
+    "Visitantes devem ser informados previamente ao anfitrião",
+    "Respeitar o horário de silêncio do condomínio",
+    "Crianças devem permanecer supervisionadas na piscina",
+    "Não é permitido realizar festas ou eventos sem autorização",
+    "Proibido fumar dentro da casa",
+    "Animais são permitidos mediante consulta prévia",
+    "Enviar os dados dos hóspedes para liberação na portaria",
+    "Enviar as placas dos veículos para liberação no condomínio",
+  ],
+
+  airbnb:
+    "https://www.airbnb.com.br/h/casa-toriba",
+
+  booking: "",
+
+  whatsapp: "5524998288846",
+
+  // Atualize quando confirmar as avaliações.
+  rating: 0,
+
+  reviews: 0,
+
+  keywords: [
+    "Casa Toriba Búzios",
+    "Casa no Condomínio Aretê",
+    "Casa com piscina em Búzios",
+    "Casa com 4 suítes em Búzios",
+    "Casa para 8 hóspedes em Búzios",
+    "Casa de temporada no Aretê",
+    "Casa em condomínio fechado em Búzios",
+    "Aluguel de temporada em Búzios",
+  ],
+},
 
   {
     id: "centro-top",
@@ -566,77 +822,122 @@ export const properties: Property[] = [
   },
 
   {
-    id: "flat-tartaruga",
-    title: "Flat Tartaruga",
-    neighborhood: "Tartaruga",
+  id: "flat-tartaruga",
 
-    address:
-      "Tartaruga - Armação dos Búzios",
+  title: "Flat próximo à Praia da Tartaruga",
 
-    guests: 0,
-    bedrooms: 0,
-    bathrooms: 0,
-    beds: 0,
-    suites: 0,
-    area: 0,
-    garage: 0,
+  neighborhood: "Tartaruga",
 
-    petFriendly: false,
-    pool: false,
-    barbecue: false,
-    wifi: true,
-    airConditioning: true,
-    kitchen: true,
-    washingMachine: true,
+  address:
+    "Praia da Tartaruga, Armação dos Búzios - RJ",
 
-    beachDistance:
-      "EDITAR DISTÂNCIA DA PRAIA",
+  guests: 6,
 
-    checkin: "15:00",
-    checkout: "11:00",
+  bedrooms: 1,
 
-    price: 0,
-    cleaningFee: 0,
+  bathrooms: 1,
 
-    image:
-      "/images/properties/flat-tartaruga/1.jpg",
+  beds: 4,
 
-    gallery: [
-      "/images/properties/flat-tartaruga/1.jpg",
-    ],
+  suites: 0,
 
-    description:
-      "EDITAR: escreva aqui uma descrição completa do Flat Tartaruga.",
+  // Preencha quando souber a metragem correta.
+  area: 0,
 
-    amenities: [
-      "Wi-Fi",
-      "Ar-condicionado",
-      "Cozinha completa",
-      "Máquina de lavar",
-      "Smart TV",
-      "Garagem",
-    ],
+  garage: 1,
 
-    rules: [
-      "Check-in após 15h",
-      "Check-out até 11h",
-      "Não é permitido festas",
-      "Proibido fumar dentro do imóvel",
-      "Animais mediante consulta",
-    ],
+  petFriendly: true,
 
-    airbnb: "",
-    booking: "",
-    whatsapp: "5524998288846",
+  pool: false,
 
-    rating: 0,
-    reviews: 0,
+  barbecue: true,
 
-    keywords: [
-      "Flat Tartaruga",
-      "Praia da Tartaruga",
-      "Casa em Búzios",
-      "Temporada em Búzios",
-    ],
-  },
+  wifi: true,
+
+  airConditioning: true,
+
+  kitchen: true,
+
+  // Altere para true somente quando confirmar.
+  washingMachine: false,
+
+  beachDistance:
+    "Aproximadamente 350 m da Praia da Tartaruga",
+
+  checkin: "15:00",
+
+  checkout: "11:00",
+
+  // Preencha com o valor atual da diária.
+  price: 450,
+
+  // Preencha com a taxa de limpeza atual.
+  cleaningFee: 250,
+
+  image:
+    "/images/properties/flat-tartaruga/1.jpg",
+
+  gallery: [
+    "/images/properties/flat-tartaruga/1.jpg",
+    "/images/properties/flat-tartaruga/2.jpg",
+    "/images/properties/flat-tartaruga/3.jpg",
+    "/images/properties/flat-tartaruga/4.jpg",
+    "/images/properties/flat-tartaruga/5.jpg",
+  ],
+
+  description:
+    "Flat confortável localizado próximo à Praia da Tartaruga, em Armação dos Búzios. A acomodação recebe até 6 hóspedes e possui 1 quarto, 4 camas, banheiro, ar-condicionado, Wi-Fi, TV, cozinha equipada e estacionamento. É uma opção prática para famílias e pequenos grupos que desejam tranquilidade e fácil acesso a uma das praias mais conhecidas de Búzios. O imóvel também aceita animais mediante consulta prévia.",
+
+  amenities: [
+    "Aproximadamente 350 m da Praia da Tartaruga",
+    "1 quarto",
+    "4 camas",
+    "1 banheiro",
+    "Ar-condicionado",
+    "Wi-Fi",
+    "TV",
+    "Cozinha equipada",
+    "Estacionamento",
+    "Self check-in",
+    "Permitido animais mediante consulta",
+    "Uso exclusivo dos hóspedes",
+  ],
+
+  rules: [
+    "O imóvel acomoda no máximo 6 hóspedes",
+    "Check-in a partir das 15h",
+    "Check-out até as 11h",
+    "Informar corretamente adultos, crianças e bebês na reserva",
+    "Não ultrapassar o número de hóspedes informado na reserva",
+    "Visitantes devem ser informados previamente ao anfitrião",
+    "Não é permitido realizar festas ou eventos",
+    "Respeitar o horário de silêncio",
+    "Animais são permitidos mediante consulta prévia",
+    "Proibido fumar dentro do imóvel",
+    "Deixar a louça lavada antes do check-out",
+    "Retirar os lixos antes da saída",
+  ],
+
+  airbnb:
+    "https://www.airbnb.com.br/h/flatnatartaruga",
+
+  booking: "",
+
+  whatsapp: "5524998288846",
+
+  rating: 0,
+
+  reviews: 0,
+
+  keywords: [
+    "Flat Praia da Tartaruga",
+    "Flat em Búzios",
+    "Hospedagem próxima à Praia da Tartaruga",
+    "Flat para 6 hóspedes em Búzios",
+    "Hospedagem que aceita animais em Búzios",
+    "Aluguel de temporada em Búzios",
+    "Casa de temporada na Tartaruga",
+    "Hospedagem familiar em Búzios",
+  ],
+},
 ];

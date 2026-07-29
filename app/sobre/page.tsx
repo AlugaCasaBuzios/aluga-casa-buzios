@@ -1,14 +1,7 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-
-export const metadata: Metadata = {
-  title: "Sobre nós",
-  description:
-    "Conheça a Aluga Casa Búzios e nosso trabalho com casas de temporada em Armação dos Búzios.",
-};
+import Header from "@/components/layout/Header";
 
 const benefits = [
   {
@@ -56,6 +49,24 @@ const numbers = [
   },
 ];
 
+const commitments = [
+  {
+    title: "Informações transparentes",
+    description:
+      "Características, comodidades, localização e regras apresentadas com clareza.",
+  },
+  {
+    title: "Atendimento personalizado",
+    description:
+      "Orientação para encontrar a propriedade adequada às suas datas e necessidades.",
+  },
+  {
+    title: "Suporte durante a hospedagem",
+    description:
+      "Comunicação direta para auxiliar antes e durante a estadia.",
+  },
+];
+
 export default function SobrePage() {
   return (
     <>
@@ -84,7 +95,8 @@ export default function SobrePage() {
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/casas"
-                  className="inline-flex items-center justify-center rounded-full bg-sky-600 px-8 py-4 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-sky-500"
+                  style={{ color: "#ffffff" }}
+                  className="inline-flex items-center justify-center rounded-full bg-sky-600 px-8 py-4 font-bold !text-white shadow-lg transition hover:-translate-y-1 hover:bg-sky-500"
                 >
                   Conhecer as casas
                 </Link>
@@ -93,7 +105,8 @@ export default function SobrePage() {
                   href="https://wa.me/5524998288846?text=Olá! Gostaria de conhecer melhor o trabalho da Aluga Casa Búzios."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-8 py-4 font-bold text-white transition hover:bg-white/20"
+                  style={{ color: "#ffffff" }}
+                  className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-8 py-4 font-bold !text-white transition hover:bg-white/20"
                 >
                   Falar pelo WhatsApp
                 </a>
@@ -117,8 +130,8 @@ export default function SobrePage() {
               <div className="mt-6 space-y-5 text-lg leading-8 text-zinc-600">
                 <p>
                   A Aluga Casa Búzios nasceu com o objetivo de facilitar o
-                  encontro entre viajantes e boas casas de temporada em
-                  Armação dos Búzios.
+                  encontro entre viajantes e boas casas de temporada em Armação
+                  dos Búzios.
                 </p>
 
                 <p>
@@ -145,56 +158,21 @@ export default function SobrePage() {
               </h3>
 
               <div className="mt-8 space-y-5">
-                <div className="flex gap-4">
-                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-sky-100 text-xl">
-                    ✓
-                  </span>
+                {commitments.map((item) => (
+                  <div key={item.title} className="flex gap-4">
+                    <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-sky-100 text-xl text-blue-950">
+                      ✓
+                    </span>
 
-                  <div>
-                    <p className="font-bold text-blue-950">
-                      Informações transparentes
-                    </p>
+                    <div>
+                      <p className="font-bold text-blue-950">{item.title}</p>
 
-                    <p className="mt-1 leading-7 text-zinc-600">
-                      Características, comodidades, localização e regras
-                      apresentadas com clareza.
-                    </p>
+                      <p className="mt-1 leading-7 text-zinc-600">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-sky-100 text-xl">
-                    ✓
-                  </span>
-
-                  <div>
-                    <p className="font-bold text-blue-950">
-                      Atendimento personalizado
-                    </p>
-
-                    <p className="mt-1 leading-7 text-zinc-600">
-                      Orientação para encontrar a propriedade adequada às suas
-                      datas e necessidades.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-sky-100 text-xl">
-                    ✓
-                  </span>
-
-                  <div>
-                    <p className="font-bold text-blue-950">
-                      Suporte durante a hospedagem
-                    </p>
-
-                    <p className="mt-1 leading-7 text-zinc-600">
-                      Comunicação direta para auxiliar antes e durante a
-                      estadia.
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -280,7 +258,8 @@ export default function SobrePage() {
             <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
               <Link
                 href="/casas"
-                className="inline-flex items-center justify-center rounded-full bg-blue-950 px-8 py-4 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-blue-900"
+                style={{ color: "#ffffff" }}
+                className="inline-flex items-center justify-center rounded-full bg-blue-950 px-8 py-4 font-bold !text-white shadow-lg transition hover:-translate-y-1 hover:bg-blue-900"
               >
                 Ver todas as casas
               </Link>
@@ -289,7 +268,8 @@ export default function SobrePage() {
                 href="https://wa.me/5524998288846?text=Olá! Gostaria de receber sugestões de casas para minha viagem a Búzios."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-full bg-green-600 px-8 py-4 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-700"
+                style={{ color: "#ffffff" }}
+                className="inline-flex items-center justify-center rounded-full bg-green-600 px-8 py-4 font-bold !text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-700"
               >
                 Solicitar atendimento
               </a>

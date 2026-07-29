@@ -13,7 +13,7 @@ export default function Hero({
   return (
     <section className="relative min-h-[720px] overflow-hidden">
       <Image
-  src="/images/hero/hero.jpg"
+  src="/images/Hero-otimizada.jpg"
   alt="Vista aérea de Armação dos Búzios"
   fill
   sizes="100vw"

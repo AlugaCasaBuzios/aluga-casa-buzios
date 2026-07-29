@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -26,9 +26,8 @@ export default function PrivacidadePage() {
             </h1>
 
             <p className="mt-6 text-lg leading-8 text-white/80">
-              Saiba como a Aluga Casa Búzios utiliza,
-              protege e trata informações relacionadas
-              aos visitantes do site.
+              Saiba como a Aluga Casa Búzios utiliza, protege e trata
+              informações relacionadas aos visitantes do site.
             </p>
 
             <p className="mt-5 text-sm text-white/60">
@@ -46,10 +45,9 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  A Aluga Casa Búzios atua na divulgação
-                  e no atendimento relacionado a casas
-                  de temporada em Armação dos Búzios,
-                  Rio de Janeiro.
+                  A Aluga Casa Búzios atua na divulgação e no atendimento
+                  relacionado a casas de temporada em Armação dos Búzios, Rio
+                  de Janeiro.
                 </p>
 
                 <div className="mt-5 rounded-2xl bg-sky-50 p-6">
@@ -62,8 +60,7 @@ export default function PrivacidadePage() {
                   </p>
 
                   <p className="mt-1 text-zinc-600">
-                    E-mail:
-                    contato@alugacasabuzios.com.br
+                    E-mail: contato@alugacasabuzios.com.br
                   </p>
 
                   <p className="mt-1 text-zinc-600">
@@ -78,26 +75,21 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  O site pode tratar informações
-                  fornecidas voluntariamente pelo
-                  visitante, como nome, datas da viagem,
-                  quantidade de hóspedes e mensagem de
-                  atendimento.
+                  O site pode tratar informações fornecidas voluntariamente
+                  pelo visitante, como nome, datas da viagem, quantidade de
+                  hóspedes e mensagem de atendimento.
                 </p>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  Quando autorizado, também podemos
-                  utilizar dados analíticos de navegação,
-                  como páginas visitadas, dispositivo,
-                  origem do acesso, interações e cliques
-                  nos botões do WhatsApp.
+                  Quando autorizado, também podemos utilizar dados analíticos
+                  de navegação, como páginas visitadas, dispositivo, origem do
+                  acesso, interações e cliques nos botões do WhatsApp.
                 </p>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  Informações técnicas necessárias ao
-                  funcionamento, segurança e prevenção
-                  de fraudes também podem ser processadas
-                  pelos provedores de infraestrutura.
+                  Informações técnicas necessárias ao funcionamento, segurança
+                  e prevenção de fraudes também podem ser processadas pelos
+                  provedores de infraestrutura.
                 </p>
               </section>
 
@@ -108,28 +100,20 @@ export default function PrivacidadePage() {
 
                 <ul className="mt-5 space-y-3 leading-7 text-zinc-600">
                   <li>
-                    • Responder solicitações de
-                    atendimento e disponibilidade.
+                    • Responder solicitações de atendimento e disponibilidade.
                   </li>
 
                   <li>
-                    • Apresentar propriedades adequadas
-                    às necessidades da viagem.
+                    • Apresentar propriedades adequadas às necessidades da
+                    viagem.
                   </li>
 
-                  <li>
-                    • Melhorar o conteúdo e a navegação
-                    do site.
-                  </li>
+                  <li>• Melhorar o conteúdo e a navegação do site.</li>
+
+                  <li>• Medir cliques nos canais de atendimento.</li>
 
                   <li>
-                    • Medir cliques nos canais de
-                    atendimento.
-                  </li>
-
-                  <li>
-                    • Manter a segurança e o funcionamento
-                    da plataforma.
+                    • Manter a segurança e o funcionamento da plataforma.
                   </li>
                 </ul>
               </section>
@@ -140,19 +124,16 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  O Google Analytics é utilizado para
-                  gerar estatísticas de utilização do
-                  site. Essa ferramenta somente será
-                  carregada após o visitante aceitar os
-                  cookies analíticos no banner exibido
-                  pelo site.
+                  O Google Analytics é utilizado para gerar estatísticas de
+                  utilização do site. Essa ferramenta somente será carregada
+                  após o visitante aceitar os cookies analíticos no banner
+                  exibido pelo site.
                 </p>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  O visitante pode recusar esses cookies
-                  e continuar navegando normalmente.
-                  Também pode modificar sua escolha por
-                  meio do botão “Preferências de cookies”.
+                  O visitante pode recusar esses cookies e continuar navegando
+                  normalmente. Também pode modificar sua escolha por meio do
+                  botão “Preferências de cookies”.
                 </p>
               </section>
 
@@ -162,16 +143,14 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  O site utiliza serviços de terceiros
-                  para hospedagem, análise de acesso e
-                  atendimento, incluindo Vercel, Google
-                  Analytics, Supabase e WhatsApp.
+                  O site utiliza serviços de terceiros para hospedagem, análise
+                  de acesso e atendimento, incluindo Vercel, Google Analytics,
+                  Supabase e WhatsApp.
                 </p>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  Ao abrir um link externo, o visitante
-                  também estará sujeito às políticas de
-                  privacidade da plataforma acessada.
+                  Ao abrir um link externo, o visitante também estará sujeito às
+                  políticas de privacidade da plataforma acessada.
                 </p>
               </section>
 
@@ -181,11 +160,9 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  Não comercializamos dados pessoais.
-                  Informações poderão ser compartilhadas
-                  com fornecedores necessários ao
-                  funcionamento do site e do atendimento,
-                  observadas as finalidades descritas
+                  Não comercializamos dados pessoais. Informações poderão ser
+                  compartilhadas com fornecedores necessários ao funcionamento
+                  do site e do atendimento, observadas as finalidades descritas
                   nesta política.
                 </p>
               </section>
@@ -196,11 +173,9 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  O titular pode solicitar informações
-                  sobre o tratamento de seus dados,
-                  correção, atualização, exclusão,
-                  revogação do consentimento e outras
-                  providências previstas na legislação
+                  O titular pode solicitar informações sobre o tratamento de
+                  seus dados, correção, atualização, exclusão, revogação do
+                  consentimento e outras providências previstas na legislação
                   aplicável.
                 </p>
 
@@ -216,10 +191,9 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  Adotamos medidas razoáveis para
-                  proteger as informações contra acesso
-                  não autorizado, perda, alteração ou
-                  divulgação indevida.
+                  Adotamos medidas razoáveis para proteger as informações contra
+                  acesso não autorizado, perda, alteração ou divulgação
+                  indevida.
                 </p>
               </section>
 
@@ -229,30 +203,32 @@ export default function PrivacidadePage() {
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
-                  Esta política poderá ser atualizada
-                  para refletir mudanças no site, nos
-                  serviços utilizados ou nas práticas de
-                  tratamento de dados.
+                  Esta política poderá ser atualizada para refletir mudanças no
+                  site, nos serviços utilizados ou nas práticas de tratamento
+                  de dados.
                 </p>
               </section>
 
               <section className="rounded-3xl bg-blue-950 p-7 text-white sm:p-9">
-                <h2 className="text-2xl font-bold">
+                <h2 className="text-2xl font-bold text-white">
                   Fale conosco
                 </h2>
 
                 <p className="mt-4 leading-7 text-white/75">
-                  Para dúvidas relacionadas à
-                  privacidade ou à utilização de dados,
-                  entre em contato com nossa equipe.
+                  Para dúvidas relacionadas à privacidade ou à utilização de
+                  dados, entre em contato com nossa equipe.
                 </p>
 
                 <a
-                  href="mailto:contato@alugacasabuzios.com.br"
-                  className="mt-6 inline-flex rounded-full bg-white px-6 py-3 font-bold text-blue-950 transition hover:bg-sky-100"
-                >
-                  Enviar e-mail
-                </a>
+  href="mailto:contato@alugacasabuzios.com.br"
+  style={{
+    backgroundColor: "#16a34a",
+    color: "#ffffff",
+  }}
+  className="mt-6 inline-flex items-center justify-center rounded-full px-7 py-3 font-bold shadow-md transition hover:opacity-90"
+>
+  Enviar e-mail
+</a>
               </section>
             </div>
           </article>

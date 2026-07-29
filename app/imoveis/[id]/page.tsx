@@ -231,7 +231,10 @@ export default async function PropertyPage({
     image: propertyImages,
 
     telephone: "+55 24 99828-8846",
-
+priceRange:
+  property.price > 0
+    ? `A partir de R$ ${property.price} por diária`
+    : "Valores sob consulta",
     address: {
       "@type": "PostalAddress",
 

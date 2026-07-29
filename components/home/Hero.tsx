@@ -13,13 +13,15 @@ export default function Hero({
   return (
     <section className="relative min-h-[720px] overflow-hidden">
       <Image
-        src="/images/hero/hero.jpg"
-        alt="Vista aérea de Armação dos Búzios"
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover"
-      />
+  src="/images/hero/hero.jpg"
+  alt="Vista aérea de Armação dos Búzios"
+  fill
+  sizes="100vw"
+  fetchPriority="high"
+  loading="eager"
+  quality={65}
+  className="object-cover"
+/>
 
       <div className="absolute inset-0 bg-black/55" />
 

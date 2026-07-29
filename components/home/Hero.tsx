@@ -1,4 +1,5 @@
 import Image from "next/image";
+
 import SearchBar from "@/components/home/SearchBar";
 
 interface HeroProps {
@@ -13,13 +14,13 @@ export default function Hero({
   return (
     <section className="relative min-h-[720px] overflow-hidden">
       <Image
-  src="/images/Hero-otimizada.jpg"
-  alt="Vista aérea de Armação dos Búzios"
-  fill
-  sizes="100vw"
-  preload
-  className="object-cover"
-/>
+        src="/images/hero/Hero-otimizada.jpg"
+        alt="Vista aérea de Armação dos Búzios"
+        fill
+        sizes="100vw"
+        preload
+        className="object-cover"
+      />
 
       <div className="absolute inset-0 bg-black/55" />
 

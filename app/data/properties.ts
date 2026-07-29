@@ -69,7 +69,7 @@ export const properties: Property[] = [
   ],
 
   description:
-    "Viva uma experiência de conforto e exclusividade no Aretê Top, uma casa premium localizada no Condomínio Aretê, em Armação dos Búzios. O imóvel acomoda até 6 hóspedes e possui 4 suítes climatizadas, 4 camas, ambientes elegantes, cozinha equipada, Wi-Fi e piscina privativa. Uma excelente opção para famílias e pequenos grupos que procuram tranquilidade, segurança e uma hospedagem de alto padrão em Búzios.",
+    "Viva uma experiência de conforto e exclusividade no Aretê Top, uma casa premium localizada no Condomínio Aretê, em Armação dos Búzios. O imóvel acomoda até 8 hóspedes e possui 4 suítes climatizadas, 4 camas, ambientes elegantes, cozinha equipada, Wi-Fi, piscina privativa e churrasqueira. Uma excelente opção para famílias e grupos que procuram tranquilidade, segurança e uma hospedagem de alto padrão em Búzios.",
 
   amenities: [
     "Piscina privativa",

@@ -15,7 +15,7 @@ export const properties: Property[] = [
 
   bedrooms: 4,
 
-  bathrooms: 3.5,
+  bathrooms: 4.5,
 
   beds: 4,
 
@@ -69,12 +69,12 @@ export const properties: Property[] = [
   ],
 
   description:
-    "Viva uma experiência de conforto e exclusividade no Aretê Top, uma casa premium localizada no Condomínio Aretê, em Armação dos Búzios. O imóvel acomoda até 6 hóspedes e possui 3 suítes climatizadas, 4 camas, ambientes elegantes, cozinha equipada, Wi-Fi e piscina privativa. Uma excelente opção para famílias e pequenos grupos que procuram tranquilidade, segurança e uma hospedagem de alto padrão em Búzios.",
+    "Viva uma experiência de conforto e exclusividade no Aretê Top, uma casa premium localizada no Condomínio Aretê, em Armação dos Búzios. O imóvel acomoda até 6 hóspedes e possui 4 suítes climatizadas, 4 camas, ambientes elegantes, cozinha equipada, Wi-Fi e piscina privativa. Uma excelente opção para famílias e pequenos grupos que procuram tranquilidade, segurança e uma hospedagem de alto padrão em Búzios.",
 
   amenities: [
     "Piscina privativa",
-    "3 suítes climatizadas",
-    "3,5 banheiros",
+    "4 suítes climatizadas",
+    "4,5 banheiros",
     "4 camas",
     "Ar-condicionado nos quartos",
     "Wi-Fi",
@@ -90,7 +90,7 @@ export const properties: Property[] = [
   ],
 
   rules: [
-    "A casa acomoda no máximo 6 hóspedes",
+    "A casa acomoda no máximo 8 hóspedes",
     "Check-in entre 15h e 21h",
     "Check-out até as 11h",
     "Informar corretamente adultos, crianças e bebês na reserva",
@@ -122,8 +122,8 @@ export const properties: Property[] = [
     "Aretê Top Búzios",
     "Casa premium no Condomínio Aretê",
     "Casa com piscina em Búzios",
-    "Casa com 3 suítes em Búzios",
-    "Casa para 6 hóspedes em Búzios",
+    "Casa com 4 suítes em Búzios",
+    "Casa para 8 hóspedes em Búzios",
     "Casa de temporada no Aretê",
     "Casa em condomínio fechado em Búzios",
     "Aluguel de temporada em Búzios",

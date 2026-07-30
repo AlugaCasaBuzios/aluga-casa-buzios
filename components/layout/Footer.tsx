@@ -176,7 +176,7 @@ export default function Footer() {
               href="https://wa.me/5524998288846?text=Olá! Gostaria de consultar casas disponíveis para minha viagem a Búzios."
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-green-600 px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-700"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-green-800 px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-900"
             >
               Consultar disponibilidade
             </a>

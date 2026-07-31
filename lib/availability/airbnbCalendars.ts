@@ -22,6 +22,9 @@ const calendarEnvironmentVariables: Record<
 
   "casa-doce-mar":
     process.env.AIRBNB_ICAL_CASA_DOCE_MAR,
+
+  "casa-toriba":
+    process.env.AIRBNB_ICAL_CASA_TORIBA,
 };
 
 /**

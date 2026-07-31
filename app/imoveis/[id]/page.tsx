@@ -474,13 +474,15 @@ export default async function PropertyPage({
               </div>
             </div>
 
-            {/* Calendário com disponibilidade e valores */}
-            <aside className="lg:sticky lg:top-32">
-              <BookingQuote
-                propertyId={property.id}
-                propertyTitle={property.title}
-                whatsapp={property.whatsapp}
-              />
+            {/* Calendário fixo */}
+            <aside className="lg:sticky lg:top-28 lg:self-start">
+              <div className="lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2">
+                <BookingQuote
+                  propertyId={property.id}
+                  propertyTitle={property.title}
+                  whatsapp={property.whatsapp}
+                />
+              </div>
             </aside>
           </div>
         </section>

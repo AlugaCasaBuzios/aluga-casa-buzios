@@ -25,14 +25,14 @@ const calendarEnvironmentVariables: Record<
 
   "casa-toriba":
     process.env.AIRBNB_ICAL_CASA_TORIBA,
+
+  "centro-top":
+    process.env.AIRBNB_ICAL_CENTRO_TOP,
 };
 
 /**
  * Retorna o endereço iCal configurado
  * para determinado imóvel.
- *
- * Quando não existe calendário configurado,
- * retorna null.
  */
 export function getAirbnbCalendarUrl(
   propertyId: string
@@ -45,9 +45,7 @@ export function getAirbnbCalendarUrl(
   }
 
   try {
-    const parsedUrl = new URL(
-      calendarUrl.trim()
-    );
+    const parsedUrl = new URL(calendarUrl.trim());
 
     if (
       parsedUrl.protocol !== "https:" &&
@@ -77,8 +75,5 @@ export function getAirbnbCalendarUrl(
 export function hasAirbnbCalendar(
   propertyId: string
 ): boolean {
-  return (
-    getAirbnbCalendarUrl(propertyId) !==
-    null
-  );
+  return getAirbnbCalendarUrl(propertyId) !== null;
 }

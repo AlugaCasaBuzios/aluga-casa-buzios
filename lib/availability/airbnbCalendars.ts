@@ -1,11 +1,11 @@
 import "server-only";
 
 /**
- * Relaciona cada imóvel ao nome da variável
- * de ambiente que contém seu calendário iCal.
+ * Relaciona cada imóvel à variável segura
+ * que contém o calendário iCal do Airbnb.
  *
- * Os links privados nunca ficam no código
- * enviado ao navegador.
+ * Os links privados permanecem somente no
+ * arquivo .env.local e nas variáveis da Vercel.
  */
 const calendarEnvironmentVariables: Record<
   string,
@@ -13,13 +13,17 @@ const calendarEnvironmentVariables: Record<
 > = {
   "arete-top":
     process.env.AIRBNB_ICAL_ARETE_TOP,
+
+  "casa-em-buzios":
+    process.env.AIRBNB_ICAL_BUZIOS_TEMPORADA,
 };
 
 /**
- * Retorna o endereço iCal do imóvel.
+ * Retorna o endereço iCal configurado
+ * para determinado imóvel.
  *
- * Quando o imóvel ainda não possui calendário
- * configurado, retorna null.
+ * Quando não existe calendário configurado,
+ * retorna null.
  */
 export function getAirbnbCalendarUrl(
   propertyId: string
@@ -32,7 +36,9 @@ export function getAirbnbCalendarUrl(
   }
 
   try {
-    const parsedUrl = new URL(calendarUrl);
+    const parsedUrl = new URL(
+      calendarUrl.trim()
+    );
 
     if (
       parsedUrl.protocol !== "https:" &&
@@ -56,11 +62,14 @@ export function getAirbnbCalendarUrl(
 }
 
 /**
- * Informa se o imóvel possui um calendário
- * Airbnb configurado.
+ * Informa se o imóvel possui
+ * calendário Airbnb configurado.
  */
 export function hasAirbnbCalendar(
   propertyId: string
 ): boolean {
-  return getAirbnbCalendarUrl(propertyId) !== null;
+  return (
+    getAirbnbCalendarUrl(propertyId) !==
+    null
+  );
 }

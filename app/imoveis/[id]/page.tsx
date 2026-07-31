@@ -4,15 +4,16 @@ import { notFound } from "next/navigation";
 
 import { properties } from "@/app/data/properties";
 
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
 
-import PropertyGallery from "@/components/property/PropertyGallery";
-import PropertySummary from "@/components/property/PropertySummary";
+import BookingQuote from "@/components/property/BookingQuote";
 import PropertyAmenities from "@/components/property/PropertyAmenities";
-import PropertyReviews from "@/components/property/PropertyReviews";
-import PropertyReservation from "@/components/property/PropertyReservation";
+import PropertyGallery from "@/components/property/PropertyGallery";
 import PropertyMap from "@/components/property/PropertyMap";
+import PropertyReservation from "@/components/property/PropertyReservation";
+import PropertyReviews from "@/components/property/PropertyReviews";
+import PropertySummary from "@/components/property/PropertySummary";
 
 const siteUrl = "https://alugacasabuzios.com.br";
 
@@ -100,9 +101,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: [
-        absolutePropertyImage,
-      ],
+      images: [absolutePropertyImage],
     },
 
     robots: {
@@ -231,10 +230,12 @@ export default async function PropertyPage({
     image: propertyImages,
 
     telephone: "+55 24 99828-8846",
-priceRange:
-  property.price > 0
-    ? `A partir de R$ ${property.price} por diária`
-    : "Valores sob consulta",
+
+    priceRange:
+      property.price > 0
+        ? `A partir de R$ ${property.price} por diária`
+        : "Valores sob consulta",
+
     address: {
       "@type": "PostalAddress",
 
@@ -480,8 +481,14 @@ priceRange:
               </div>
             </div>
 
-            {/* Reserva */}
-            <aside className="lg:sticky lg:top-32">
+            {/* Orçamento e reserva */}
+            <aside className="space-y-6 lg:sticky lg:top-32">
+              <BookingQuote
+                propertyId={property.id}
+                propertyTitle={property.title}
+                whatsapp={property.whatsapp}
+              />
+
               <PropertyReservation
                 property={property}
               />

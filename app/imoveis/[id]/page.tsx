@@ -11,7 +11,6 @@ import BookingQuote from "@/components/property/BookingQuote";
 import PropertyAmenities from "@/components/property/PropertyAmenities";
 import PropertyGallery from "@/components/property/PropertyGallery";
 import PropertyMap from "@/components/property/PropertyMap";
-import PropertyReservation from "@/components/property/PropertyReservation";
 import PropertyReviews from "@/components/property/PropertyReviews";
 import PropertySummary from "@/components/property/PropertySummary";
 
@@ -222,11 +221,8 @@ export default async function PropertyPage({
     "@id": `${propertyUrl}#property`,
 
     name: property.title,
-
     url: propertyUrl,
-
     description: property.description,
-
     image: propertyImages,
 
     telephone: "+55 24 99828-8846",
@@ -264,11 +260,8 @@ export default async function PropertyPage({
     amenityFeature,
 
     numberOfRooms: property.bedrooms,
-
     petsAllowed: property.petFriendly,
-
     checkinTime: property.checkin,
-
     checkoutTime: property.checkout,
 
     aggregateRating:
@@ -481,16 +474,12 @@ export default async function PropertyPage({
               </div>
             </div>
 
-            {/* Orçamento e reserva */}
-            <aside className="space-y-6 lg:sticky lg:top-32">
+            {/* Calendário com disponibilidade e valores */}
+            <aside className="lg:sticky lg:top-32">
               <BookingQuote
                 propertyId={property.id}
                 propertyTitle={property.title}
                 whatsapp={property.whatsapp}
-              />
-
-              <PropertyReservation
-                property={property}
               />
             </aside>
           </div>

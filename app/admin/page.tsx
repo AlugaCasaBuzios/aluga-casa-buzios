@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { logout } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -88,17 +89,30 @@ export default async function AdminPage({
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 rounded-3xl bg-blue-950 p-8 text-white shadow-lg">
-          <p className="text-sm font-semibold uppercase tracking-widest text-blue-200">
-            Aluga Casa Búzios
-          </p>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-blue-200">
+                Aluga Casa Búzios
+              </p>
 
-          <h1 className="mt-2 text-3xl font-bold">
-            Painel administrativo
-          </h1>
+              <h1 className="mt-2 text-3xl font-bold">
+                Painel administrativo
+              </h1>
 
-          <p className="mt-2 text-blue-100">
-            Gerenciamento de preços e regras dos imóveis
-          </p>
+              <p className="mt-2 text-blue-100">
+                Gerenciamento de preços e regras dos imóveis
+              </p>
+            </div>
+
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded-xl border border-white/30 bg-white/10 px-5 py-3 font-bold text-white transition hover:bg-white hover:text-blue-950"
+              >
+                Sair do painel
+              </button>
+            </form>
+          </div>
         </header>
 
         {salvo === "1" && (
@@ -122,37 +136,20 @@ export default async function AdminPage({
             <table className="w-full min-w-[1100px] text-left">
               <thead className="bg-slate-50 text-sm text-slate-700">
                 <tr>
-                  <th className="px-5 py-4">
-                    Imóvel
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Preço-base
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Limpeza
-                  </th>
-
+                  <th className="px-5 py-4">Imóvel</th>
+                  <th className="px-5 py-4">Preço-base</th>
+                  <th className="px-5 py-4">Limpeza</th>
                   <th className="px-5 py-4">
                     Mínimo de noites
                   </th>
-
                   <th className="px-5 py-4">
                     Preço mínimo
                   </th>
-
                   <th className="px-5 py-4">
                     Preço máximo
                   </th>
-
-                  <th className="px-5 py-4">
-                    Status
-                  </th>
-
-                  <th className="px-5 py-4">
-                    Ações
-                  </th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Ações</th>
                 </tr>
               </thead>
 

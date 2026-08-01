@@ -1,8 +1,20 @@
 import { properties } from "@/app/data/properties";
 
-import { getAirbnbBlockedPeriods } from "@/lib/availability/getAirbnbAvailability";
-import { calculatePropertyStayPrice } from "@/lib/pricing/calculatePropertyStayPrice";
-import { getPropertyPricingConfig } from "@/lib/pricing/getPropertyPricingConfig";
+import {
+  getAirbnbBlockedPeriods,
+} from "@/lib/availability/getAirbnbAvailability";
+
+import {
+  calculatePropertyStayPrice,
+} from "@/lib/pricing/calculatePropertyStayPrice";
+
+import {
+  getPropertyPricingConfig,
+} from "@/lib/pricing/getPropertyPricingConfig";
+
+import {
+  getSpecialPricingRules,
+} from "@/lib/pricing/getSpecialPricingRules";
 
 interface QuoteRequestBody {
   propertyId?: unknown;
@@ -153,6 +165,16 @@ export async function POST(
       );
 
     /*
+     * Busca os períodos especiais ativos
+     * cadastrados no Supabase.
+     *
+     * Caso a consulta falhe, utiliza
+     * automaticamente specialPricing.ts.
+     */
+    const specialPricingConfig =
+      await getSpecialPricingRules();
+
+    /*
      * Consulta o calendário iCal do Airbnb.
      */
     const blockedPeriods =
@@ -197,8 +219,10 @@ export async function POST(
     }
 
     /*
-     * Calcula o orçamento usando os valores
-     * vindos do Supabase.
+     * Calcula o orçamento usando:
+     * - valores do Supabase;
+     * - períodos especiais do Supabase;
+     * - disponibilidade do Airbnb.
      */
     const quote =
       calculatePropertyStayPrice({
@@ -222,6 +246,9 @@ export async function POST(
 
         maximumPrice:
           pricingConfig.maximumPrice,
+
+        specialPricingRules:
+          specialPricingConfig.rules,
       });
 
     return Response.json({
@@ -255,6 +282,9 @@ export async function POST(
 
       pricingSource:
         pricingConfig.source,
+
+      specialPricingSource:
+        specialPricingConfig.source,
 
       availabilityConfirmed: true,
 

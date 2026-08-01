@@ -3,6 +3,10 @@ import {
   type DynamicPriceResult,
 } from "@/lib/pricing/calculateDynamicPrice";
 
+import type {
+  SpecialPricingRule,
+} from "@/app/data/specialPricing";
+
 export interface StayPriceInput {
   /**
    * Datas no formato YYYY-MM-DD.
@@ -28,6 +32,15 @@ export interface StayPriceInput {
    */
   minimumPrice?: number;
   maximumPrice?: number;
+
+  /**
+   * Regras de períodos especiais carregadas
+   * do Supabase.
+   *
+   * Quando não informadas, o cálculo utiliza
+   * as regras locais de segurança.
+   */
+  specialPricingRules?: SpecialPricingRule[];
 
   /**
    * Data usada para calcular antecedência.
@@ -198,6 +211,7 @@ export function calculateStayPrice({
   defaultMinimumNights,
   minimumPrice,
   maximumPrice,
+  specialPricingRules,
   referenceDate,
   monthlyOccupancy = {},
   orphanGapDates = [],
@@ -283,6 +297,7 @@ export function calculateStayPrice({
         defaultMinimumNights,
         minimumPrice,
         maximumPrice,
+        specialPricingRules,
       });
 
     nightlyPrices.push({

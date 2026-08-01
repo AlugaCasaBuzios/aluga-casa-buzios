@@ -3,7 +3,7 @@ import {
 } from "@/app/data/dynamicPricing";
 
 import {
-  specialPricingRules,
+  specialPricingRules as localSpecialPricingRules,
   type SpecialPricingRule,
 } from "@/app/data/specialPricing";
 
@@ -80,6 +80,12 @@ export interface DynamicPriceInput {
    * Limite máximo absoluto definido no painel.
    */
   maximumPrice?: number;
+
+  /**
+   * Regras especiais carregadas do Supabase.
+   * Quando não informadas, utiliza as regras locais.
+   */
+  specialPricingRules?: SpecialPricingRule[];
 }
 
 export interface DynamicPriceResult {
@@ -209,20 +215,20 @@ function applyMultiplier(
 }
 
 function findSpecialRule(
-  date: string
+  date: string,
+  rules: SpecialPricingRule[]
 ): SpecialPricingRule | null {
-  const matchingRules =
-    specialPricingRules
-      .filter(
-        (rule) =>
-          date >= rule.startDate &&
-          date <= rule.endDate
-      )
-      .sort(
-        (firstRule, secondRule) =>
-          secondRule.priority -
-          firstRule.priority
-      );
+  const matchingRules = rules
+    .filter(
+      (rule) =>
+        date >= rule.startDate &&
+        date <= rule.endDate
+    )
+    .sort(
+      (firstRule, secondRule) =>
+        secondRule.priority -
+        firstRule.priority
+    );
 
   return matchingRules[0] ?? null;
 }
@@ -254,6 +260,8 @@ export function calculateDynamicPrice({
   defaultMinimumNights,
   minimumPrice,
   maximumPrice,
+  specialPricingRules =
+    localSpecialPricingRules,
 }: DynamicPriceInput): DynamicPriceResult {
   if (
     !Number.isFinite(basePrice) ||
@@ -282,7 +290,10 @@ export function calculateDynamicPrice({
   );
 
   const specialRule =
-    findSpecialRule(date);
+    findSpecialRule(
+      date,
+      specialPricingRules
+    );
 
   const adjustments: PriceAdjustment[] =
     [];

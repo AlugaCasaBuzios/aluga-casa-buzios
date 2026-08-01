@@ -17,6 +17,19 @@ export interface StayPriceInput {
   cleaningFee?: number;
 
   /**
+   * Mínimo padrão de noites definido
+   * no painel administrativo.
+   */
+  defaultMinimumNights?: number;
+
+  /**
+   * Limites absolutos definidos
+   * no painel administrativo.
+   */
+  minimumPrice?: number;
+  maximumPrice?: number;
+
+  /**
    * Data usada para calcular antecedência.
    * Quando não informada, será usada a data atual.
    */
@@ -31,7 +44,10 @@ export interface StayPriceInput {
    *   "2027-01": 0.65
    * }
    */
-  monthlyOccupancy?: Record<string, number>;
+  monthlyOccupancy?: Record<
+    string,
+    number
+  >;
 
   /**
    * Datas que representam pequenos intervalos
@@ -47,7 +63,10 @@ export interface StayPriceInput {
    *   "2026-12-31": 2500
    * }
    */
-  manualPrices?: Record<string, number>;
+  manualPrices?: Record<
+    string,
+    number
+  >;
 
   /**
    * Mínimo de noites manual por data.
@@ -80,8 +99,11 @@ export interface StayPriceResult {
   total: number;
 }
 
-function parseDateOnly(date: string): Date {
-  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+function parseDateOnly(
+  date: string
+): Date {
+  const datePattern =
+    /^\d{4}-\d{2}-\d{2}$/;
 
   if (!datePattern.test(date)) {
     throw new Error(
@@ -94,12 +116,18 @@ function parseDateOnly(date: string): Date {
     .map(Number);
 
   const parsedDate = new Date(
-    Date.UTC(year, month - 1, day)
+    Date.UTC(
+      year,
+      month - 1,
+      day
+    )
   );
 
   if (
-    parsedDate.getUTCFullYear() !== year ||
-    parsedDate.getUTCMonth() !== month - 1 ||
+    parsedDate.getUTCFullYear() !==
+      year ||
+    parsedDate.getUTCMonth() !==
+      month - 1 ||
     parsedDate.getUTCDate() !== day
   ) {
     throw new Error(
@@ -110,8 +138,11 @@ function parseDateOnly(date: string): Date {
   return parsedDate;
 }
 
-function formatDateOnly(date: Date): string {
-  const year = date.getUTCFullYear();
+function formatDateOnly(
+  date: Date
+): string {
+  const year =
+    date.getUTCFullYear();
 
   const month = String(
     date.getUTCMonth() + 1
@@ -131,7 +162,8 @@ function addDays(
   const nextDate = new Date(date);
 
   nextDate.setUTCDate(
-    nextDate.getUTCDate() + numberOfDays
+    nextDate.getUTCDate() +
+      numberOfDays
   );
 
   return nextDate;
@@ -145,13 +177,16 @@ function differenceInDays(
     24 * 60 * 60 * 1000;
 
   return Math.round(
-    (laterDate.getTime() -
-      earlierDate.getTime()) /
-      millisecondsPerDay
+    (
+      laterDate.getTime() -
+      earlierDate.getTime()
+    ) / millisecondsPerDay
   );
 }
 
-function getMonthKey(date: string): string {
+function getMonthKey(
+  date: string
+): string {
   return date.slice(0, 7);
 }
 
@@ -160,20 +195,26 @@ export function calculateStayPrice({
   checkOut,
   basePrice,
   cleaningFee = 0,
+  defaultMinimumNights,
+  minimumPrice,
+  maximumPrice,
   referenceDate,
   monthlyOccupancy = {},
   orphanGapDates = [],
   manualPrices = {},
   manualMinimumNights = {},
 }: StayPriceInput): StayPriceResult {
-  const checkInDate = parseDateOnly(checkIn);
+  const checkInDate =
+    parseDateOnly(checkIn);
+
   const checkOutDate =
     parseDateOnly(checkOut);
 
-  const nights = differenceInDays(
-    checkOutDate,
-    checkInDate
-  );
+  const nights =
+    differenceInDays(
+      checkOutDate,
+      checkInDate
+    );
 
   if (nights <= 0) {
     throw new Error(
@@ -190,21 +231,24 @@ export function calculateStayPrice({
     );
   }
 
-  const orphanGapDateSet = new Set(
-    orphanGapDates
-  );
+  const orphanGapDateSet =
+    new Set(orphanGapDates);
 
-  const nightlyPrices: StayNightPrice[] =
-    [];
+  const nightlyPrices:
+    StayNightPrice[] = [];
 
   for (
     let nightIndex = 0;
     nightIndex < nights;
     nightIndex += 1
   ) {
-    const currentDate = formatDateOnly(
-      addDays(checkInDate, nightIndex)
-    );
+    const currentDate =
+      formatDateOnly(
+        addDays(
+          checkInDate,
+          nightIndex
+        )
+      );
 
     const monthKey =
       getMonthKey(currentDate);
@@ -213,20 +257,38 @@ export function calculateStayPrice({
       calculateDynamicPrice({
         date: currentDate,
         basePrice,
+
         monthlyOccupancy:
-          monthlyOccupancy[monthKey] ?? 0,
+          monthlyOccupancy[
+            monthKey
+          ] ?? 0,
+
         isOrphanGap:
-          orphanGapDateSet.has(currentDate),
+          orphanGapDateSet.has(
+            currentDate
+          ),
+
         referenceDate,
+
         manualPrice:
-          manualPrices[currentDate],
+          manualPrices[
+            currentDate
+          ],
+
         manualMinimumNights:
-          manualMinimumNights[currentDate],
+          manualMinimumNights[
+            currentDate
+          ],
+
+        defaultMinimumNights,
+        minimumPrice,
+        maximumPrice,
       });
 
     nightlyPrices.push({
       date: currentDate,
-      price: calculation.finalPrice,
+      price:
+        calculation.finalPrice,
       minimumNights:
         calculation.minimumNights,
       calculation,
@@ -240,12 +302,14 @@ export function calculateStayPrice({
       0
     );
 
-  const requiredMinimumNights = Math.max(
-    1,
-    ...nightlyPrices.map(
-      (night) => night.minimumNights
-    )
-  );
+  const requiredMinimumNights =
+    Math.max(
+      1,
+      ...nightlyPrices.map(
+        (night) =>
+          night.minimumNights
+      )
+    );
 
   const normalizedCleaningFee =
     Math.round(cleaningFee);
@@ -255,12 +319,17 @@ export function calculateStayPrice({
     checkOut,
     nights,
     requiredMinimumNights,
+
     minimumNightsMet:
-      nights >= requiredMinimumNights,
+      nights >=
+      requiredMinimumNights,
+
     nightlyPrices,
     accommodationSubtotal,
+
     cleaningFee:
       normalizedCleaningFee,
+
     total:
       accommodationSubtotal +
       normalizedCleaningFee,

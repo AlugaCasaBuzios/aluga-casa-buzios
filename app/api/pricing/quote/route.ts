@@ -2,6 +2,7 @@ import { properties } from "@/app/data/properties";
 
 import { getAirbnbBlockedPeriods } from "@/lib/availability/getAirbnbAvailability";
 import { calculatePropertyStayPrice } from "@/lib/pricing/calculatePropertyStayPrice";
+import { getPropertyPricingConfig } from "@/lib/pricing/getPropertyPricingConfig";
 
 interface QuoteRequestBody {
   propertyId?: unknown;
@@ -108,12 +109,9 @@ export async function POST(
       );
     }
 
-    /*
-     * Guardamos os valores já validados em
-     * constantes. Assim o TypeScript reconhece
-     * que checkIn e checkOut são strings.
-     */
-    const propertyId = body.propertyId;
+    const propertyId =
+      body.propertyId.trim();
+
     const checkIn = body.checkIn;
     const checkOut = body.checkOut;
 
@@ -139,9 +137,23 @@ export async function POST(
     }
 
     /*
+     * Busca no Supabase:
+     * - preço-base;
+     * - taxa de limpeza;
+     * - mínimo de noites;
+     * - preço mínimo;
+     * - preço máximo.
+     *
+     * Caso o Supabase esteja indisponível,
+     * utiliza automaticamente properties.ts.
+     */
+    const pricingConfig =
+      await getPropertyPricingConfig(
+        property
+      );
+
+    /*
      * Consulta o calendário iCal do Airbnb.
-     * Quando o imóvel não possui calendário,
-     * a função retorna uma lista vazia.
      */
     const blockedPeriods =
       await getAirbnbBlockedPeriods(
@@ -149,8 +161,8 @@ export async function POST(
       );
 
     /*
-     * Verifica se alguma diária selecionada
-     * atravessa um período bloqueado.
+     * Verifica se as datas selecionadas
+     * atravessam algum período bloqueado.
      */
     const conflictingPeriod =
       blockedPeriods.find((period) =>
@@ -166,12 +178,14 @@ export async function POST(
       return Response.json(
         {
           success: false,
+
           error:
             "O imóvel não está disponível durante todo o período selecionado. Escolha outras datas.",
 
           unavailablePeriod: {
             startDate:
               conflictingPeriod.startDate,
+
             endDateExclusive:
               conflictingPeriod.endDateExclusive,
           },
@@ -183,15 +197,31 @@ export async function POST(
     }
 
     /*
-     * Calcula o preço somente depois de confirmar
-     * que não existe conflito com o Airbnb.
+     * Calcula o orçamento usando os valores
+     * vindos do Supabase.
      */
     const quote =
       calculatePropertyStayPrice({
-        property,
+        property: {
+          price:
+            pricingConfig.basePrice,
+
+          cleaningFee:
+            pricingConfig.cleaningFee,
+        },
+
         checkIn,
         checkOut,
         referenceDate,
+
+        defaultMinimumNights:
+          pricingConfig.minimumNights,
+
+        minimumPrice:
+          pricingConfig.minimumPrice,
+
+        maximumPrice:
+          pricingConfig.maximumPrice,
       });
 
     return Response.json({
@@ -200,12 +230,31 @@ export async function POST(
       property: {
         id: property.id,
         title: property.title,
+
         neighborhood:
           property.neighborhood,
-        basePrice: property.price,
+
+        basePrice:
+          pricingConfig.basePrice,
+
         cleaningFee:
-          property.cleaningFee,
+          pricingConfig.cleaningFee,
+
+        minimumNights:
+          pricingConfig.minimumNights ??
+          null,
+
+        minimumPrice:
+          pricingConfig.minimumPrice ??
+          null,
+
+        maximumPrice:
+          pricingConfig.maximumPrice ??
+          null,
       },
+
+      pricingSource:
+        pricingConfig.source,
 
       availabilityConfirmed: true,
 

@@ -37,8 +37,8 @@ export interface DynamicPriceInput {
   basePrice: number;
 
   /**
-   * Ocupação do mês:
-   * 0.70 representa 70%.
+   * Ocupação do mês.
+   * Exemplo: 0.70 representa 70%.
    */
   monthlyOccupancy?: number;
 
@@ -56,14 +56,30 @@ export interface DynamicPriceInput {
 
   /**
    * Preço manual definido pelo administrador.
-   * Quando informado, substitui todos os cálculos.
+   * Quando informado, substitui os cálculos.
    */
   manualPrice?: number;
 
   /**
-   * Mínimo de noites definido manualmente.
+   * Mínimo de noites definido manualmente
+   * para uma data específica.
    */
   manualMinimumNights?: number;
+
+  /**
+   * Mínimo padrão de noites definido no painel.
+   */
+  defaultMinimumNights?: number;
+
+  /**
+   * Limite mínimo absoluto definido no painel.
+   */
+  minimumPrice?: number;
+
+  /**
+   * Limite máximo absoluto definido no painel.
+   */
+  maximumPrice?: number;
 }
 
 export interface DynamicPriceResult {
@@ -147,9 +163,10 @@ function differenceInCalendarDays(
     24 * 60 * 60 * 1000;
 
   return Math.round(
-    (laterDate.getTime() -
-      earlierDate.getTime()) /
-      millisecondsPerDay
+    (
+      laterDate.getTime() -
+      earlierDate.getTime()
+    ) / millisecondsPerDay
   );
 }
 
@@ -234,6 +251,9 @@ export function calculateDynamicPrice({
   referenceDate = getTodayDateOnly(),
   manualPrice,
   manualMinimumNights,
+  defaultMinimumNights,
+  minimumPrice,
+  maximumPrice,
 }: DynamicPriceInput): DynamicPriceResult {
   if (
     !Number.isFinite(basePrice) ||
@@ -267,9 +287,25 @@ export function calculateDynamicPrice({
   const adjustments: PriceAdjustment[] =
     [];
 
-  let minimumNights =
-    specialRule?.minimumNights ?? 1;
+  const configuredMinimumNights =
+    defaultMinimumNights !== undefined &&
+    Number.isInteger(defaultMinimumNights) &&
+    defaultMinimumNights > 0
+      ? defaultMinimumNights
+      : 1;
 
+  /*
+   * O mínimo da data especial prevalece quando
+   * for maior que o mínimo padrão do imóvel.
+   */
+  let minimumNights = Math.max(
+    specialRule?.minimumNights ?? 1,
+    configuredMinimumNights
+  );
+
+  /*
+   * O mínimo manual por data possui prioridade.
+   */
   if (
     manualMinimumNights !== undefined &&
     Number.isFinite(manualMinimumNights) &&
@@ -280,6 +316,10 @@ export function calculateDynamicPrice({
     );
   }
 
+  /*
+   * O preço manual substitui todas as regras
+   * de cálculo automático.
+   */
   if (
     manualPrice !== undefined &&
     Number.isFinite(manualPrice) &&
@@ -306,6 +346,10 @@ export function calculateDynamicPrice({
     };
   }
 
+  /*
+   * Caso o preço dinâmico esteja desativado,
+   * retorna somente o preço-base.
+   */
   if (!dynamicPricingSettings.enabled) {
     return {
       date,
@@ -325,8 +369,7 @@ export function calculateDynamicPrice({
 
   /*
    * Em datas especiais, o multiplicador do
-   * evento substitui o ajuste comum do dia
-   * da semana, evitando cobranças duplicadas.
+   * evento substitui o ajuste do dia da semana.
    */
   if (specialRule) {
     calculatedPrice = applyMultiplier(
@@ -359,12 +402,15 @@ export function calculateDynamicPrice({
 
   /*
    * Ajustes de antecedência.
-   * As regras de última hora e de reserva
-   * antecipada são mutuamente exclusivas.
+   * Última hora e reserva antecipada
+   * são mutuamente exclusivos.
    */
   if (daysBeforeCheckIn >= 0) {
     const lastMinuteRule =
-      [...dynamicPricingSettings.lastMinuteRules]
+      [
+        ...dynamicPricingSettings
+          .lastMinuteRules,
+      ]
         .sort(
           (firstRule, secondRule) =>
             firstRule
@@ -422,6 +468,9 @@ export function calculateDynamicPrice({
     }
   }
 
+  /*
+   * Ajuste conforme a ocupação mensal.
+   */
   const occupancyRule =
     [
       ...dynamicPricingSettings
@@ -450,6 +499,10 @@ export function calculateDynamicPrice({
     );
   }
 
+  /*
+   * Ajuste para pequenos espaços
+   * vazios entre reservas.
+   */
   if (isOrphanGap) {
     calculatedPrice = applyMultiplier(
       calculatedPrice,
@@ -465,36 +518,68 @@ export function calculateDynamicPrice({
     );
   }
 
-  const minimumPrice =
-    basePrice *
-    dynamicPricingSettings
-      .minimumPriceMultiplier;
+  /*
+   * Usa os limites absolutos do painel quando
+   * estiverem preenchidos. Caso contrário,
+   * utiliza os multiplicadores padrão.
+   */
+  const calculatedMinimumPrice =
+    minimumPrice !== undefined &&
+    Number.isFinite(minimumPrice) &&
+    minimumPrice > 0
+      ? minimumPrice
+      : basePrice *
+        dynamicPricingSettings
+          .minimumPriceMultiplier;
 
-  const maximumPrice =
-    basePrice *
-    dynamicPricingSettings
-      .maximumPriceMultiplier;
+  const calculatedMaximumPrice =
+    maximumPrice !== undefined &&
+    Number.isFinite(maximumPrice) &&
+    maximumPrice > 0
+      ? maximumPrice
+      : basePrice *
+        dynamicPricingSettings
+          .maximumPriceMultiplier;
 
-  if (calculatedPrice < minimumPrice) {
+  if (
+    calculatedMinimumPrice >
+    calculatedMaximumPrice
+  ) {
+    throw new Error(
+      "O preço mínimo não pode ser maior que o preço máximo."
+    );
+  }
+
+  if (
+    calculatedPrice <
+    calculatedMinimumPrice
+  ) {
     adjustments.push({
       type: "minimum-limit",
       label: "Aplicação do preço mínimo",
       valueBefore: calculatedPrice,
-      valueAfter: minimumPrice,
+      valueAfter:
+        calculatedMinimumPrice,
     });
 
-    calculatedPrice = minimumPrice;
+    calculatedPrice =
+      calculatedMinimumPrice;
   }
 
-  if (calculatedPrice > maximumPrice) {
+  if (
+    calculatedPrice >
+    calculatedMaximumPrice
+  ) {
     adjustments.push({
       type: "maximum-limit",
       label: "Aplicação do preço máximo",
       valueBefore: calculatedPrice,
-      valueAfter: maximumPrice,
+      valueAfter:
+        calculatedMaximumPrice,
     });
 
-    calculatedPrice = maximumPrice;
+    calculatedPrice =
+      calculatedMaximumPrice;
   }
 
   let finalPrice = roundPrice(
@@ -503,8 +588,11 @@ export function calculateDynamicPrice({
   );
 
   finalPrice = Math.min(
-    Math.max(finalPrice, minimumPrice),
-    maximumPrice
+    Math.max(
+      finalPrice,
+      calculatedMinimumPrice
+    ),
+    calculatedMaximumPrice
   );
 
   return {

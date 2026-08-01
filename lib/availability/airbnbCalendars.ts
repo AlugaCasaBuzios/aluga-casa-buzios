@@ -3,9 +3,6 @@ import "server-only";
 /**
  * Relaciona cada imóvel à variável segura
  * que contém seu calendário iCal do Airbnb.
- *
- * Os links privados permanecem somente no
- * arquivo .env.local e nas variáveis da Vercel.
  */
 const calendarEnvironmentVariables: Record<
   string,
@@ -28,6 +25,9 @@ const calendarEnvironmentVariables: Record<
 
   "centro-top":
     process.env.AIRBNB_ICAL_CENTRO_TOP,
+
+  "conforto":
+    process.env.AIRBNB_ICAL_CONFORTO,
 };
 
 /**

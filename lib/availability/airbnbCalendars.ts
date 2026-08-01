@@ -28,6 +28,9 @@ const calendarEnvironmentVariables: Record<
 
   "conforto":
     process.env.AIRBNB_ICAL_CONFORTO,
+
+  "flat-tartaruga":
+    process.env.AIRBNB_ICAL_FLAT_TARTARUGA,
 };
 
 /**

@@ -5,6 +5,10 @@ import {
 } from "@/lib/availability/getAirbnbAvailability";
 
 import {
+  getManualAvailabilityBlocks,
+} from "@/lib/availability/getManualAvailabilityBlocks";
+
+import {
   calculatePropertyStayPrice,
 } from "@/lib/pricing/calculatePropertyStayPrice";
 
@@ -153,8 +157,7 @@ export async function POST(
     }
 
     /*
-     * Busca os preços e regras gerais
-     * do imóvel no Supabase.
+     * Busca preços e regras gerais do imóvel.
      */
     const pricingConfig =
       await getPropertyPricingConfig(
@@ -162,7 +165,7 @@ export async function POST(
       );
 
     /*
-     * Busca os períodos especiais ativos.
+     * Busca períodos especiais ativos.
      */
     const specialPricingConfig =
       await getSpecialPricingRules();
@@ -179,37 +182,49 @@ export async function POST(
       );
 
     /*
-     * Consulta o calendário do Airbnb.
+     * Busca bloqueios manuais cadastrados
+     * pelo administrador.
      */
-    const blockedPeriods =
-      await getAirbnbBlockedPeriods(
-        property.id
+    const manualBlocks =
+      await getManualAvailabilityBlocks(
+        property.id,
+        checkIn,
+        checkOut
       );
 
-    const conflictingPeriod =
-      blockedPeriods.find((period) =>
-        periodsOverlap(
-          checkIn,
-          checkOut,
-          period.startDate,
-          period.endDateExclusive
-        )
+    /*
+     * Verifica primeiro os bloqueios manuais.
+     */
+    const manualConflict =
+      manualBlocks.periods.find(
+        (period) =>
+          periodsOverlap(
+            checkIn,
+            checkOut,
+            period.startDate,
+            period.endDateExclusive
+          )
       );
 
-    if (conflictingPeriod) {
+    if (manualConflict) {
       return Response.json(
         {
           success: false,
 
           error:
-            "O imóvel não está disponível durante todo o período selecionado. Escolha outras datas.",
+            "O imóvel está bloqueado durante parte do período selecionado. Escolha outras datas.",
+
+          conflictSource: "manual",
 
           unavailablePeriod: {
             startDate:
-              conflictingPeriod.startDate,
+              manualConflict.startDate,
 
             endDateExclusive:
-              conflictingPeriod.endDateExclusive,
+              manualConflict.endDateExclusive,
+
+            reason:
+              manualConflict.reason,
           },
         },
         {
@@ -218,6 +233,53 @@ export async function POST(
       );
     }
 
+    /*
+     * Consulta o calendário do Airbnb.
+     */
+    const airbnbBlockedPeriods =
+      await getAirbnbBlockedPeriods(
+        property.id
+      );
+
+    const airbnbConflict =
+      airbnbBlockedPeriods.find(
+        (period) =>
+          periodsOverlap(
+            checkIn,
+            checkOut,
+            period.startDate,
+            period.endDateExclusive
+          )
+      );
+
+    if (airbnbConflict) {
+      return Response.json(
+        {
+          success: false,
+
+          error:
+            "O imóvel não está disponível durante todo o período selecionado. Escolha outras datas.",
+
+          conflictSource: "airbnb",
+
+          unavailablePeriod: {
+            startDate:
+              airbnbConflict.startDate,
+
+            endDateExclusive:
+              airbnbConflict.endDateExclusive,
+          },
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+     * Calcula o orçamento somente quando
+     * não existe conflito de disponibilidade.
+     */
     const quote =
       calculatePropertyStayPrice({
         property: {
@@ -288,6 +350,9 @@ export async function POST(
 
       dateOverridesSource:
         dateOverrides.source,
+
+      manualAvailabilitySource:
+        manualBlocks.source,
 
       appliedDateOverrides: {
         manualPrices:

@@ -5,45 +5,47 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
-import { logout } from "./actions";
-
 export const dynamic = "force-dynamic";
 
-type AdminPageProps = {
+type ManualBlocksPageProps = {
   searchParams: Promise<{
+    criado?: string;
     salvo?: string;
-    erro?: string;
+    excluido?: string;
   }>;
+};
+
+type ManualAvailabilityBlock = {
+  id: string;
+  property_id: string;
+  start_date: string;
+  end_date_exclusive: string;
+  reason: string | null;
+  active: boolean;
 };
 
 type PropertyPricing = {
   property_id: string;
   property_name: string;
-  base_price: number;
-  cleaning_fee: number | null;
-  minimum_nights: number | null;
-  minimum_price: number | null;
-  maximum_price: number | null;
-  active: boolean;
 };
 
-function formatCurrency(
-  value: number | null
+function formatDate(
+  date: string
 ): string {
-  if (value === null) {
-    return "Não definido";
-  }
+  const [year, month, day] =
+    date.split("-");
 
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+  return `${day}/${month}/${year}`;
 }
 
-export default async function AdminPage({
+export default async function ManualBlocksPage({
   searchParams,
-}: AdminPageProps) {
-  const { salvo } = await searchParams;
+}: ManualBlocksPageProps) {
+  const {
+    criado,
+    salvo,
+    excluido,
+  } = await searchParams;
 
   const supabase =
     await createSupabaseServerClient();
@@ -56,49 +58,86 @@ export default async function AdminPage({
     redirect("/admin/login");
   }
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("property_pricing")
-    .select(`
-      property_id,
-      property_name,
-      base_price,
-      cleaning_fee,
-      minimum_nights,
-      minimum_price,
-      maximum_price,
-      active
-    `)
-    .order("property_name", {
-      ascending: true,
-    });
+  const [
+    blocksResult,
+    propertiesResult,
+  ] = await Promise.all([
+    supabase
+      .from("manual_availability_blocks")
+      .select(`
+        id,
+        property_id,
+        start_date,
+        end_date_exclusive,
+        reason,
+        active
+      `)
+      .order("start_date", {
+        ascending: true,
+      }),
 
-  if (error) {
+    supabase
+      .from("property_pricing")
+      .select(`
+        property_id,
+        property_name
+      `)
+      .order("property_name", {
+        ascending: true,
+      }),
+  ]);
+
+  if (blocksResult.error) {
     console.error(
-      "Erro ao carregar os imóveis:",
-      error
+      "Erro ao carregar bloqueios:",
+      blocksResult.error
     );
 
     return (
       <main className="min-h-screen bg-slate-100 px-4 py-12">
         <div className="mx-auto max-w-6xl rounded-3xl bg-white p-8 shadow-lg">
           <h1 className="text-2xl font-bold text-red-700">
-            Não foi possível carregar os imóveis
+            Não foi possível carregar os bloqueios
           </h1>
 
           <p className="mt-3 text-slate-600">
-            Verifique as permissões da tabela
-            property_pricing no Supabase.
+            Verifique a conexão e as permissões da
+            tabela manual_availability_blocks.
           </p>
+
+          <Link
+            href="/admin"
+            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white"
+          >
+            Voltar ao painel
+          </Link>
         </div>
       </main>
     );
   }
 
+  if (propertiesResult.error) {
+    console.error(
+      "Erro ao carregar os imóveis:",
+      propertiesResult.error
+    );
+  }
+
+  const blocks =
+    (blocksResult.data ??
+      []) as ManualAvailabilityBlock[];
+
   const properties =
-    (data ?? []) as PropertyPricing[];
+    (propertiesResult.data ??
+      []) as PropertyPricing[];
+
+  const propertyNames =
+    new Map(
+      properties.map((property) => [
+        property.property_id,
+        property.property_name,
+      ])
+    );
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -111,88 +150,85 @@ export default async function AdminPage({
               </p>
 
               <h1 className="mt-2 text-3xl font-bold">
-                Painel administrativo
+                Bloqueios manuais
               </h1>
 
               <p className="mt-2 text-blue-100">
-                Gerenciamento de preços, períodos e disponibilidade
+                Manutenção, uso do proprietário e reservas externas
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/admin/bloqueios"
+                href="/admin/bloqueios/novo"
                 className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold shadow-sm transition hover:bg-blue-100"
                 style={{
                   color: "#172554",
                 }}
               >
-                Bloqueios manuais
+                Novo bloqueio
               </Link>
 
               <Link
-                href="/admin/precos-por-data"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold shadow-sm transition hover:bg-blue-100"
-                style={{
-                  color: "#172554",
-                }}
+                href="/admin"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-center font-bold text-white transition hover:bg-white hover:text-blue-950"
               >
-                Preços por data
+                Voltar ao painel
               </Link>
-
-              <Link
-                href="/admin/periodos"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold shadow-sm transition hover:bg-blue-100"
-                style={{
-                  color: "#172554",
-                }}
-              >
-                Períodos especiais
-              </Link>
-
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 font-bold text-white transition hover:bg-white hover:text-blue-950"
-                >
-                  Sair do painel
-                </button>
-              </form>
             </div>
           </div>
         </header>
 
+        {criado === "1" && (
+          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800">
+            Bloqueio cadastrado com sucesso.
+          </div>
+        )}
+
         {salvo === "1" && (
-          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">
-            Alterações salvas com sucesso.
+          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800">
+            Bloqueio atualizado com sucesso.
+          </div>
+        )}
+
+        {excluido === "1" && (
+          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800">
+            Bloqueio excluído com sucesso.
           </div>
         )}
 
         <section className="overflow-hidden rounded-3xl bg-white shadow-lg">
           <div className="border-b border-slate-200 px-6 py-5">
             <h2 className="text-xl font-bold text-slate-900">
-              Imóveis cadastrados
+              Bloqueios cadastrados
             </h2>
 
             <p className="mt-1 text-sm text-slate-600">
-              {properties.length} imóveis encontrados
+              {blocks.length} bloqueios encontrados
             </p>
           </div>
 
-          {properties.length === 0 ? (
+          {blocks.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <h3 className="text-lg font-bold text-slate-900">
-                Nenhum imóvel encontrado
+                Nenhum bloqueio cadastrado
               </h3>
 
               <p className="mt-2 text-slate-600">
-                Não existem imóveis cadastrados na tabela
-                property_pricing.
+                Cadastre um período indisponível para
+                um dos imóveis.
               </p>
+
+              <Link
+                href="/admin/bloqueios/novo"
+                className="mt-6 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold text-white transition hover:bg-blue-900"
+              >
+                Cadastrar bloqueio
+              </Link>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px] text-left">
+              <table className="w-full min-w-[1000px] text-left">
                 <thead className="bg-slate-50 text-sm text-slate-700">
                   <tr>
                     <th className="px-5 py-4">
@@ -200,23 +236,15 @@ export default async function AdminPage({
                     </th>
 
                     <th className="px-5 py-4">
-                      Preço-base
+                      Entrada
                     </th>
 
                     <th className="px-5 py-4">
-                      Limpeza
+                      Saída
                     </th>
 
                     <th className="px-5 py-4">
-                      Mínimo de noites
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Preço mínimo
-                    </th>
-
-                    <th className="px-5 py-4">
-                      Preço máximo
+                      Motivo
                     </th>
 
                     <th className="px-5 py-4">
@@ -230,67 +258,58 @@ export default async function AdminPage({
                 </thead>
 
                 <tbody className="divide-y divide-slate-200">
-                  {properties.map((property) => (
+                  {blocks.map((block) => (
                     <tr
-                      key={property.property_id}
+                      key={block.id}
                       className="text-sm text-slate-700"
                     >
                       <td className="px-5 py-4">
                         <p className="font-semibold text-slate-900">
-                          {property.property_name}
+                          {propertyNames.get(
+                            block.property_id
+                          ) ??
+                            block.property_id}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          {property.property_id}
+                          {block.property_id}
                         </p>
                       </td>
 
                       <td className="px-5 py-4 font-semibold">
-                        {formatCurrency(
-                          property.base_price
+                        {formatDate(
+                          block.start_date
                         )}
                       </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.cleaning_fee
+                      <td className="px-5 py-4 font-semibold">
+                        {formatDate(
+                          block.end_date_exclusive
                         )}
                       </td>
 
-                      <td className="px-5 py-4">
-                        {property.minimum_nights ??
-                          "Não definido"}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.minimum_price
-                        )}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.maximum_price
-                        )}
+                      <td className="max-w-sm px-5 py-4">
+                        {block.reason ??
+                          "Sem motivo informado"}
                       </td>
 
                       <td className="px-5 py-4">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                            property.active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
+                            block.active
+                              ? "bg-red-100 text-red-800"
+                              : "bg-slate-200 text-slate-700"
                           }`}
                         >
-                          {property.active
-                            ? "Ativo"
+                          {block.active
+                            ? "Bloqueado"
                             : "Inativo"}
                         </span>
                       </td>
 
                       <td className="px-5 py-4">
                         <Link
-                          href={`/admin/imoveis/${property.property_id}`}
+                          href={`/admin/bloqueios/${block.id}`}
                           className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
                         >
                           Editar

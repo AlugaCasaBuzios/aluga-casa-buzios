@@ -107,7 +107,10 @@ export default async function ManualBlocksPage({
 
           <Link
             href="/admin"
-            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white"
+            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold"
+            style={{
+              color: "#ffffff",
+            }}
           >
             Voltar ao painel
           </Link>
@@ -171,7 +174,10 @@ export default async function ManualBlocksPage({
 
               <Link
                 href="/admin"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-center font-bold text-white transition hover:bg-white hover:text-blue-950"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 text-center font-bold transition hover:bg-white"
+                style={{
+                  color: "#ffffff",
+                }}
               >
                 Voltar ao painel
               </Link>
@@ -221,7 +227,10 @@ export default async function ManualBlocksPage({
 
               <Link
                 href="/admin/bloqueios/novo"
-                className="mt-6 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold text-white transition hover:bg-blue-900"
+                className="mt-6 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold transition hover:bg-blue-900"
+                style={{
+                  color: "#ffffff",
+                }}
               >
                 Cadastrar bloqueio
               </Link>
@@ -310,7 +319,10 @@ export default async function ManualBlocksPage({
                       <td className="px-5 py-4">
                         <Link
                           href={`/admin/bloqueios/${block.id}`}
-                          className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                          className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-5 py-2.5 font-bold shadow-sm transition hover:bg-blue-900"
+                          style={{
+                            color: "#ffffff",
+                          }}
                         >
                           Editar
                         </Link>

@@ -9,6 +9,10 @@ import {
 } from "@/lib/pricing/calculatePropertyStayPrice";
 
 import {
+  getDatePricingOverrides,
+} from "@/lib/pricing/getDatePricingOverrides";
+
+import {
   getPropertyPricingConfig,
 } from "@/lib/pricing/getPropertyPricingConfig";
 
@@ -149,15 +153,8 @@ export async function POST(
     }
 
     /*
-     * Busca no Supabase:
-     * - preço-base;
-     * - taxa de limpeza;
-     * - mínimo de noites;
-     * - preço mínimo;
-     * - preço máximo.
-     *
-     * Caso o Supabase esteja indisponível,
-     * utiliza automaticamente properties.ts.
+     * Busca os preços e regras gerais
+     * do imóvel no Supabase.
      */
     const pricingConfig =
       await getPropertyPricingConfig(
@@ -165,27 +162,30 @@ export async function POST(
       );
 
     /*
-     * Busca os períodos especiais ativos
-     * cadastrados no Supabase.
-     *
-     * Caso a consulta falhe, utiliza
-     * automaticamente specialPricing.ts.
+     * Busca os períodos especiais ativos.
      */
     const specialPricingConfig =
       await getSpecialPricingRules();
 
     /*
-     * Consulta o calendário iCal do Airbnb.
+     * Busca preços manuais e mínimos de noites
+     * cadastrados para datas específicas.
+     */
+    const dateOverrides =
+      await getDatePricingOverrides(
+        property.id,
+        checkIn,
+        checkOut
+      );
+
+    /*
+     * Consulta o calendário do Airbnb.
      */
     const blockedPeriods =
       await getAirbnbBlockedPeriods(
         property.id
       );
 
-    /*
-     * Verifica se as datas selecionadas
-     * atravessam algum período bloqueado.
-     */
     const conflictingPeriod =
       blockedPeriods.find((period) =>
         periodsOverlap(
@@ -218,12 +218,6 @@ export async function POST(
       );
     }
 
-    /*
-     * Calcula o orçamento usando:
-     * - valores do Supabase;
-     * - períodos especiais do Supabase;
-     * - disponibilidade do Airbnb.
-     */
     const quote =
       calculatePropertyStayPrice({
         property: {
@@ -249,6 +243,12 @@ export async function POST(
 
         specialPricingRules:
           specialPricingConfig.rules,
+
+        manualPrices:
+          dateOverrides.manualPrices,
+
+        manualMinimumNights:
+          dateOverrides.manualMinimumNights,
       });
 
     return Response.json({
@@ -285,6 +285,17 @@ export async function POST(
 
       specialPricingSource:
         specialPricingConfig.source,
+
+      dateOverridesSource:
+        dateOverrides.source,
+
+      appliedDateOverrides: {
+        manualPrices:
+          dateOverrides.manualPrices,
+
+        manualMinimumNights:
+          dateOverrides.manualMinimumNights,
+      },
 
       availabilityConfirmed: true,
 

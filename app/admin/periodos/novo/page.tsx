@@ -1,49 +1,23 @@
 import Link from "next/link";
-import {
-  notFound,
-  redirect,
-} from "next/navigation";
+import { redirect } from "next/navigation";
 
 import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
 import {
-  updateSpecialPricingRule,
+  createSpecialPricingRule,
 } from "./actions";
-
-import {
-  DeletePeriodButton,
-} from "./DeletePeriodButton";
 
 export const dynamic = "force-dynamic";
 
-type EditSpecialPeriodPageProps = {
-  params: Promise<{
-    id: string;
-  }>;
-
+type NewSpecialPeriodPageProps = {
   searchParams: Promise<{
     erro?: string;
   }>;
 };
 
-type SpecialPricingRule = {
-  id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  multiplier: number | string;
-  minimum_nights: number;
-  priority: number;
-  label: string;
-  active: boolean;
-};
-
-const errorMessages: Record<
-  string,
-  string
-> = {
+const errorMessages: Record<string, string> = {
   nome:
     "Informe o nome do período especial.",
 
@@ -65,18 +39,16 @@ const errorMessages: Record<
   categoria:
     "Informe a categoria do período.",
 
-  salvar:
-    "Não foi possível salvar as alterações. Tente novamente.",
+  duplicado:
+    "Já existe um período com este nome e esta data inicial.",
 
-  excluir:
-    "Não foi possível excluir o período. Tente novamente.",
+  salvar:
+    "Não foi possível cadastrar o período. Tente novamente.",
 };
 
-export default async function EditSpecialPeriodPage({
-  params,
+export default async function NewSpecialPeriodPage({
   searchParams,
-}: EditSpecialPeriodPageProps) {
-  const { id } = await params;
+}: NewSpecialPeriodPageProps) {
   const { erro } = await searchParams;
 
   const supabase =
@@ -90,64 +62,6 @@ export default async function EditSpecialPeriodPage({
     redirect("/admin/login");
   }
 
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("special_pricing_rules")
-    .select(`
-      id,
-      name,
-      start_date,
-      end_date,
-      multiplier,
-      minimum_nights,
-      priority,
-      label,
-      active
-    `)
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    console.error(
-      "Erro ao carregar período especial:",
-      error
-    );
-
-    return (
-      <main className="min-h-screen bg-slate-100 px-4 py-12">
-        <div className="mx-auto max-w-3xl rounded-3xl bg-white p-8 shadow-lg">
-          <h1 className="text-2xl font-bold text-red-700">
-            Não foi possível carregar o período
-          </h1>
-
-          <p className="mt-3 text-slate-600">
-            Verifique a conexão e as permissões do
-            Supabase.
-          </p>
-
-          <Link
-            href="/admin/periodos"
-            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white"
-          >
-            Voltar aos períodos
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  if (!data) {
-    notFound();
-  }
-
-  const period =
-    data as SpecialPricingRule;
-
-  const multiplier =
-    Number(period.multiplier);
-
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-4xl">
@@ -157,11 +71,11 @@ export default async function EditSpecialPeriodPage({
           </p>
 
           <h1 className="mt-2 text-3xl font-bold">
-            Editar período especial
+            Novo período especial
           </h1>
 
           <p className="mt-2 text-blue-100">
-            {period.name}
+            Cadastre feriados, eventos e períodos de alta temporada
           </p>
         </header>
 
@@ -173,15 +87,9 @@ export default async function EditSpecialPeriodPage({
         )}
 
         <form
-          action={updateSpecialPricingRule}
+          action={createSpecialPricingRule}
           className="rounded-3xl bg-white p-6 shadow-lg sm:p-8"
         >
-          <input
-            type="hidden"
-            name="id"
-            value={period.id}
-          />
-
           <div className="grid gap-6 md:grid-cols-2">
             <div className="md:col-span-2">
               <label
@@ -196,7 +104,7 @@ export default async function EditSpecialPeriodPage({
                 name="name"
                 type="text"
                 required
-                defaultValue={period.name}
+                placeholder="Exemplo: Dia do Trabalhador"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -214,9 +122,6 @@ export default async function EditSpecialPeriodPage({
                 name="startDate"
                 type="date"
                 required
-                defaultValue={
-                  period.start_date
-                }
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -234,9 +139,6 @@ export default async function EditSpecialPeriodPage({
                 name="endDate"
                 type="date"
                 required
-                defaultValue={
-                  period.end_date
-                }
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -256,13 +158,13 @@ export default async function EditSpecialPeriodPage({
                 required
                 min="0.01"
                 step="0.01"
-                defaultValue={multiplier}
+                defaultValue="1.35"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
 
               <p className="mt-2 text-xs text-slate-500">
-                Exemplo: 1,35 representa um
-                acréscimo de 35%.
+                1,35 representa acréscimo de 35%.
+                Para dobrar o preço, use 2,00.
               </p>
             </div>
 
@@ -281,9 +183,7 @@ export default async function EditSpecialPeriodPage({
                 required
                 min="1"
                 step="1"
-                defaultValue={
-                  period.minimum_nights
-                }
+                defaultValue="3"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
             </div>
@@ -303,15 +203,13 @@ export default async function EditSpecialPeriodPage({
                 required
                 min="0"
                 step="1"
-                defaultValue={
-                  period.priority
-                }
+                defaultValue="10"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
 
               <p className="mt-2 text-xs text-slate-500">
-                Quando duas regras coincidirem,
-                prevalece a de maior prioridade.
+                Quando dois períodos coincidirem,
+                prevalece o de maior prioridade.
               </p>
             </div>
 
@@ -328,7 +226,7 @@ export default async function EditSpecialPeriodPage({
                 name="label"
                 type="text"
                 required
-                defaultValue={period.label}
+                defaultValue="Feriado"
                 placeholder="Exemplo: Feriado"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-100"
               />
@@ -339,9 +237,7 @@ export default async function EditSpecialPeriodPage({
                 <input
                   name="active"
                   type="checkbox"
-                  defaultChecked={
-                    period.active
-                  }
+                  defaultChecked
                   className="h-5 w-5 rounded border-slate-300"
                 />
 
@@ -351,8 +247,7 @@ export default async function EditSpecialPeriodPage({
                   </span>
 
                   <span className="mt-1 block text-sm text-slate-600">
-                    Quando desmarcado, esta regra
-                    deixa de participar do cálculo.
+                    Quando marcado, a regra será usada no cálculo dos preços.
                   </span>
                 </span>
               </label>
@@ -371,31 +266,10 @@ export default async function EditSpecialPeriodPage({
               type="submit"
               className="rounded-xl bg-blue-950 px-6 py-3 font-bold text-white transition hover:bg-blue-900"
             >
-              Salvar alterações
+              Cadastrar período
             </button>
           </div>
         </form>
-
-        <section className="mt-8 rounded-3xl border border-red-200 bg-white p-6 shadow-lg sm:p-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-red-700">
-                Excluir período
-              </h2>
-
-              <p className="mt-2 text-sm text-slate-600">
-                Esta ação remove definitivamente o
-                período especial e não poderá ser
-                desfeita.
-              </p>
-            </div>
-
-            <DeletePeriodButton
-              id={period.id}
-              name={period.name}
-            />
-          </div>
-        </section>
       </div>
     </main>
   );

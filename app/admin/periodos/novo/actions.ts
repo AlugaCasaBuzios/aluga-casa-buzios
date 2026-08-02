@@ -26,22 +26,50 @@ function parseNumberValue(
   );
 }
 
-function isDateOnly(
+function isValidDateOnly(
   value: string
 ): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(
-    value
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) {
+    return false;
+  }
+
+  const [year, month, day] = value
+    .split("-")
+    .map(Number);
+
+  const parsedDate = new Date(
+    Date.UTC(year, month - 1, day)
+  );
+
+  return (
+    parsedDate.getUTCFullYear() === year &&
+    parsedDate.getUTCMonth() === month - 1 &&
+    parsedDate.getUTCDate() === day
   );
 }
 
-export async function updateSpecialPricingRule(
+function createRuleId(
+  name: string,
+  startDate: string
+): string {
+  const normalizedName = name
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${normalizedName}-${startDate}`;
+}
+
+export async function createSpecialPricingRule(
   formData: FormData
 ): Promise<void> {
-  const id = getTextValue(
-    formData,
-    "id"
-  );
-
   const name = getTextValue(
     formData,
     "name"
@@ -86,30 +114,24 @@ export async function updateSpecialPricingRule(
   const active =
     formData.get("active") === "on";
 
-  if (!id) {
-    redirect(
-      "/admin/periodos?erro=id"
-    );
-  }
-
   if (!name) {
     redirect(
-      `/admin/periodos/${id}?erro=nome`
+      "/admin/periodos/novo?erro=nome"
     );
   }
 
   if (
-    !isDateOnly(startDate) ||
-    !isDateOnly(endDate)
+    !isValidDateOnly(startDate) ||
+    !isValidDateOnly(endDate)
   ) {
     redirect(
-      `/admin/periodos/${id}?erro=datas`
+      "/admin/periodos/novo?erro=datas"
     );
   }
 
   if (endDate < startDate) {
     redirect(
-      `/admin/periodos/${id}?erro=periodo`
+      "/admin/periodos/novo?erro=periodo"
     );
   }
 
@@ -118,7 +140,7 @@ export async function updateSpecialPricingRule(
     multiplier <= 0
   ) {
     redirect(
-      `/admin/periodos/${id}?erro=multiplicador`
+      "/admin/periodos/novo?erro=multiplicador"
     );
   }
 
@@ -127,7 +149,7 @@ export async function updateSpecialPricingRule(
     minimumNights < 1
   ) {
     redirect(
-      `/admin/periodos/${id}?erro=noites`
+      "/admin/periodos/novo?erro=noites"
     );
   }
 
@@ -136,13 +158,13 @@ export async function updateSpecialPricingRule(
     priority < 0
   ) {
     redirect(
-      `/admin/periodos/${id}?erro=prioridade`
+      "/admin/periodos/novo?erro=prioridade"
     );
   }
 
   if (!label) {
     redirect(
-      `/admin/periodos/${id}?erro=categoria`
+      "/admin/periodos/novo?erro=categoria"
     );
   }
 
@@ -157,83 +179,38 @@ export async function updateSpecialPricingRule(
     redirect("/admin/login");
   }
 
+  const id = createRuleId(
+    name,
+    startDate
+  );
+
   const { error } = await supabase
     .from("special_pricing_rules")
-    .update({
+    .insert({
+      id,
       name,
       start_date: startDate,
       end_date: endDate,
       multiplier,
-      minimum_nights:
-        minimumNights,
+      minimum_nights: minimumNights,
       priority,
       label,
       active,
-    })
-    .eq("id", id);
+    });
 
   if (error) {
     console.error(
-      "Erro ao atualizar período especial:",
+      "Erro ao cadastrar período especial:",
       error
     );
 
-    redirect(
-      `/admin/periodos/${id}?erro=salvar`
-    );
-  }
-
-  revalidatePath(
-    "/admin/periodos"
-  );
-
-  revalidatePath(
-    `/admin/periodos/${id}`
-  );
-
-  redirect(
-    "/admin/periodos?salvo=1"
-  );
-}
-
-export async function deleteSpecialPricingRule(
-  formData: FormData
-): Promise<void> {
-  const id = getTextValue(
-    formData,
-    "id"
-  );
-
-  if (!id) {
-    redirect(
-      "/admin/periodos?erro=id"
-    );
-  }
-
-  const supabase =
-    await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/admin/login");
-  }
-
-  const { error } = await supabase
-    .from("special_pricing_rules")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    console.error(
-      "Erro ao excluir período especial:",
-      error
-    );
+    const errorCode =
+      error.code === "23505"
+        ? "duplicado"
+        : "salvar";
 
     redirect(
-      `/admin/periodos/${id}?erro=excluir`
+      `/admin/periodos/novo?erro=${errorCode}`
     );
   }
 
@@ -242,6 +219,6 @@ export async function deleteSpecialPricingRule(
   );
 
   redirect(
-    "/admin/periodos?excluido=1"
+    "/admin/periodos?criado=1"
   );
 }

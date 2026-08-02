@@ -28,11 +28,8 @@ type SpecialPricingRule = {
   active: boolean;
 };
 
-function formatDate(
-  date: string
-): string {
-  const [year, month, day] =
-    date.split("-");
+function formatDate(date: string): string {
+  const [year, month, day] = date.split("-");
 
   return `${day}/${month}/${year}`;
 }
@@ -40,18 +37,12 @@ function formatDate(
 function formatPercentage(
   multiplier: number | string
 ): string {
-  const numericMultiplier =
-    Number(multiplier);
+  const numericMultiplier = Number(multiplier);
+  const percentage = (numericMultiplier - 1) * 100;
 
-  const percentage =
-    (numericMultiplier - 1) * 100;
-
-  return `${percentage.toLocaleString(
-    "pt-BR",
-    {
-      maximumFractionDigits: 2,
-    }
-  )}%`;
+  return `${percentage.toLocaleString("pt-BR", {
+    maximumFractionDigits: 2,
+  })}%`;
 }
 
 export default async function SpecialPeriodsPage({
@@ -115,6 +106,9 @@ export default async function SpecialPeriodsPage({
           <Link
             href="/admin"
             className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white"
+            style={{
+              color: "#ffffff",
+            }}
           >
             Voltar ao painel
           </Link>
@@ -210,6 +204,9 @@ export default async function SpecialPeriodsPage({
               <Link
                 href="/admin/periodos/novo"
                 className="mt-6 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold text-white transition hover:bg-blue-900"
+                style={{
+                  color: "#ffffff",
+                }}
               >
                 Cadastrar período
               </Link>
@@ -321,6 +318,9 @@ export default async function SpecialPeriodsPage({
                         <Link
                           href={`/admin/periodos/${period.id}`}
                           className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                          style={{
+                            color: "#ffffff",
+                          }}
                         >
                           Editar
                         </Link>

@@ -30,11 +30,8 @@ type PropertyPricing = {
   property_name: string;
 };
 
-function formatDate(
-  date: string
-): string {
-  const [year, month, day] =
-    date.split("-");
+function formatDate(date: string): string {
+  const [year, month, day] = date.split("-");
 
   return `${day}/${month}/${year}`;
 }
@@ -46,13 +43,10 @@ function formatCurrency(
     return "Não definido";
   }
 
-  return new Intl.NumberFormat(
-    "pt-BR",
-    {
-      style: "currency",
-      currency: "BRL",
-    }
-  ).format(Number(value));
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(value));
 }
 
 export default async function DatePricingPage({
@@ -126,6 +120,9 @@ export default async function DatePricingPage({
           <Link
             href="/admin"
             className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white"
+            style={{
+              color: "#ffffff",
+            }}
           >
             Voltar ao painel
           </Link>
@@ -149,13 +146,12 @@ export default async function DatePricingPage({
     (propertiesResult.data ??
       []) as PropertyPricing[];
 
-  const propertyNames =
-    new Map(
-      properties.map((property) => [
-        property.property_id,
-        property.property_name,
-      ])
-    );
+  const propertyNames = new Map(
+    properties.map((property) => [
+      property.property_id,
+      property.property_name,
+    ])
+  );
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -241,6 +237,9 @@ export default async function DatePricingPage({
               <Link
                 href="/admin/precos-por-data/novo"
                 className="mt-6 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold text-white transition hover:bg-blue-900"
+                style={{
+                  color: "#ffffff",
+                }}
               >
                 Cadastrar preço por data
               </Link>
@@ -339,6 +338,9 @@ export default async function DatePricingPage({
                         <Link
                           href={`/admin/precos-por-data/${override.id}`}
                           className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                          style={{
+                            color: "#ffffff",
+                          }}
                         >
                           Editar
                         </Link>

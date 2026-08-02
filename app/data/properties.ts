@@ -348,9 +348,9 @@ export const properties: Property[] = [
 
   whatsapp: "5524998288846",
 
-  rating: 0,
+  rating: 5,
 
-  reviews: 0,
+  reviews: 1,
 
   keywords: [
     "Casa Doce Mar Búzios",
@@ -476,7 +476,7 @@ gallery: [
   // Atualize quando confirmar os números atuais.
   rating: 4.95,
 
-  reviews: 63,
+  reviews: 64,
 
   keywords: [
     "Casa em Búzios próxima a Geribá",
@@ -595,9 +595,9 @@ gallery: [
   whatsapp: "5524998288846",
 
   // Atualize quando confirmar as avaliações.
-  rating: 0,
+    rating: 0,
 
-  reviews: 0,
+    reviews: 0,
 
   keywords: [
     "Casa Toriba Búzios",
@@ -806,8 +806,8 @@ gallery: [
 
     whatsapp: "5524998288846",
 
-    rating: 0,
-    reviews: 0,
+    rating: 5,
+    reviews: 12,
 
     keywords: [
       "Casa Conforto Búzios",

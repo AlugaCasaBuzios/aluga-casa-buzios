@@ -34,13 +34,10 @@ function formatCurrency(
     return "Não definido";
   }
 
-  return new Intl.NumberFormat(
-    "pt-BR",
-    {
-      style: "currency",
-      currency: "BRL",
-    }
-  ).format(value);
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 }
 
 export default async function AdminPage({
@@ -102,7 +99,7 @@ export default async function AdminPage({
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 rounded-3xl bg-blue-950 p-8 text-white shadow-lg">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-widest text-blue-200">
                 Aluga Casa Búzios
@@ -120,7 +117,10 @@ export default async function AdminPage({
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/admin/periodos"
-                className="rounded-xl bg-white px-5 py-3 text-center font-bold text-blue-950 transition hover:bg-blue-100"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:bg-blue-100"
+                style={{
+                  color: "#172554",
+                }}
               >
                 Períodos especiais
               </Link>
@@ -128,7 +128,7 @@ export default async function AdminPage({
               <form action={logout}>
                 <button
                   type="submit"
-                  className="w-full rounded-xl border border-white/30 bg-white/10 px-5 py-3 font-bold text-white transition hover:bg-white hover:text-blue-950"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 font-bold text-white transition hover:bg-white hover:text-blue-950"
                 >
                   Sair do painel
                 </button>
@@ -193,82 +193,74 @@ export default async function AdminPage({
               </thead>
 
               <tbody className="divide-y divide-slate-200">
-                {properties.map(
-                  (property) => (
-                    <tr
-                      key={
-                        property.property_id
-                      }
-                      className="text-sm text-slate-700"
-                    >
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900">
-                          {
-                            property.property_name
-                          }
-                        </p>
+                {properties.map((property) => (
+                  <tr
+                    key={property.property_id}
+                    className="text-sm text-slate-700"
+                  >
+                    <td className="px-5 py-4">
+                      <p className="font-semibold text-slate-900">
+                        {property.property_name}
+                      </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {
-                            property.property_id
-                          }
-                        </p>
-                      </td>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {property.property_id}
+                      </p>
+                    </td>
 
-                      <td className="px-5 py-4 font-semibold">
-                        {formatCurrency(
-                          property.base_price
-                        )}
-                      </td>
+                    <td className="px-5 py-4 font-semibold">
+                      {formatCurrency(
+                        property.base_price
+                      )}
+                    </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.cleaning_fee
-                        )}
-                      </td>
+                    <td className="px-5 py-4">
+                      {formatCurrency(
+                        property.cleaning_fee
+                      )}
+                    </td>
 
-                      <td className="px-5 py-4">
-                        {property.minimum_nights ??
-                          "Não definido"}
-                      </td>
+                    <td className="px-5 py-4">
+                      {property.minimum_nights ??
+                        "Não definido"}
+                    </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.minimum_price
-                        )}
-                      </td>
+                    <td className="px-5 py-4">
+                      {formatCurrency(
+                        property.minimum_price
+                      )}
+                    </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.maximum_price
-                        )}
-                      </td>
+                    <td className="px-5 py-4">
+                      {formatCurrency(
+                        property.maximum_price
+                      )}
+                    </td>
 
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                            property.active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {property.active
-                            ? "Ativo"
-                            : "Inativo"}
-                        </span>
-                      </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                          property.active
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {property.active
+                          ? "Ativo"
+                          : "Inativo"}
+                      </span>
+                    </td>
 
-                      <td className="px-5 py-4">
-                        <Link
-                          href={`/admin/imoveis/${property.property_id}`}
-                          className="inline-flex rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
-                        >
-                          Editar
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                )}
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/admin/imoveis/${property.property_id}`}
+                        className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                      >
+                        Editar
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

@@ -229,9 +229,9 @@ export const properties: Property[] = [
 
   whatsapp: "5524998288846",
 
-  rating: 0,
+  rating: 4.94,
 
-  reviews: 0,
+  reviews: 17,
 
   keywords: [
     "Casa da Margarida Búzios",

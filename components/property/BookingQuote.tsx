@@ -16,6 +16,7 @@ interface BookingQuoteProps {
   propertyId: string;
   propertyTitle: string;
   whatsapp: string;
+  maximumGuests: number;
 }
 
 interface BlockedPeriod {
@@ -229,6 +230,7 @@ export default function BookingQuote({
   propertyId,
   propertyTitle,
   whatsapp,
+  maximumGuests,
 }: BookingQuoteProps) {
   const [
     selectedRange,
@@ -268,6 +270,9 @@ export default function BookingQuote({
 
   const [error, setError] =
     useState("");
+
+  const [guestCount, setGuestCount] =
+    useState("1");
 
   const [
     isLoading,
@@ -562,6 +567,24 @@ export default function BookingQuote({
     setError("");
     setQuote(null);
 
+    const numberOfGuests =
+      Number(guestCount);
+
+    if (
+      !Number.isInteger(
+        numberOfGuests
+      ) ||
+      numberOfGuests < 1 ||
+      numberOfGuests >
+        maximumGuests
+    ) {
+      setError(
+        `Informe uma quantidade de hóspedes entre 1 e ${maximumGuests}.`
+      );
+
+      return;
+    }
+
     if (
       !selectedRange?.from ||
       !selectedRange.to ||
@@ -631,22 +654,44 @@ export default function BookingQuote({
       return `https://wa.me/${whatsapp}`;
     }
 
+    const propertyUrl =
+      `https://alugacasabuzios.com.br/imoveis/${propertyId}`;
+
+    const numberOfGuests =
+      Number(guestCount);
+
     const message = [
-      "Olá! Gostaria de consultar uma hospedagem.",
+      "Olá! Vim pelo site da Aluga Casa Búzios e gostaria de consultar uma hospedagem.",
       "",
-      `Imóvel: ${propertyTitle}`,
-      `Check-in: ${formatDate(
+      `🏠 Imóvel: ${propertyTitle}`,
+      `📅 Check-in: ${formatDate(
         quote.checkIn
       )}`,
-      `Check-out: ${formatDate(
+      `📅 Check-out: ${formatDate(
         quote.checkOut
       )}`,
-      `Quantidade de noites: ${quote.nights}`,
-      `Valor estimado: ${formatCurrency(
+      `🌙 Quantidade de noites: ${quote.nights}`,
+      `👥 Hóspedes: ${numberOfGuests}`,
+      "",
+      "Resumo do orçamento:",
+      `Hospedagem: ${formatCurrency(
+        quote.accommodationSubtotal
+      )}`,
+      `Taxa de limpeza: ${formatCurrency(
+        quote.cleaningFee
+      )}`,
+      `Valor total estimado: ${formatCurrency(
         quote.total
       )}`,
+      `Mínimo exigido: ${quote.requiredMinimumNights} ${
+        quote.requiredMinimumNights === 1
+          ? "noite"
+          : "noites"
+      }`,
       "",
-      "Poderia confirmar a disponibilidade?",
+      `Página do imóvel: ${propertyUrl}`,
+      "",
+      "Poderia confirmar a disponibilidade e informar as condições para a reserva?",
     ].join("\n");
 
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(
@@ -836,6 +881,43 @@ export default function BookingQuote({
           </div>
         )}
 
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <label
+            htmlFor={`guest-count-${propertyId}`}
+            className="block font-bold text-blue-950"
+          >
+            Quantidade de hóspedes
+          </label>
+
+          <input
+            id={`guest-count-${propertyId}`}
+            name="guestCount"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={maximumGuests}
+            step={1}
+            required
+            value={guestCount}
+            onChange={(event) => {
+              setGuestCount(
+                event.target.value
+              );
+              setQuote(null);
+              setError("");
+            }}
+            className="mt-3 min-h-12 w-full rounded-xl border border-zinc-300 px-4 text-blue-950 outline-none transition focus:border-sky-600 focus:ring-2 focus:ring-sky-200"
+          />
+
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Este imóvel acomoda no máximo{" "}
+            {maximumGuests}{" "}
+            {maximumGuests === 1
+              ? "hóspede"
+              : "hóspedes"}.
+          </p>
+        </div>
+
         <button
           type="submit"
           disabled={
@@ -885,6 +967,16 @@ export default function BookingQuote({
           </div>
 
           <div className="mt-5 space-y-3 text-zinc-700">
+            <div className="flex justify-between gap-4">
+              <span>
+                Hóspedes
+              </span>
+
+              <strong>
+                {guestCount}
+              </strong>
+            </div>
+
             <div className="flex justify-between gap-4">
               <span>
                 Hospedagem
@@ -952,7 +1044,8 @@ export default function BookingQuote({
           <p className="mt-4 text-center text-xs leading-5 text-zinc-500">
             Valor estimado sujeito à confirmação
             da disponibilidade e das condições da
-            reserva.
+            reserva. Nenhuma reserva é realizada
+            automaticamente pelo site.
           </p>
         </div>
       )}

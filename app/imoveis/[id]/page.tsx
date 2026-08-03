@@ -481,6 +481,7 @@ export default async function PropertyPage({
                   propertyId={property.id}
                   propertyTitle={property.title}
                   whatsapp={property.whatsapp}
+                  maximumGuests={property.guests}
                 />
               </div>
             </aside>

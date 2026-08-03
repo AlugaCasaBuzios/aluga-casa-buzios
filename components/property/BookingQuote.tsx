@@ -1034,6 +1034,14 @@ export default function BookingQuote({
               href={createWhatsAppUrl()}
               target="_blank"
               rel="noopener noreferrer"
+              data-analytics-event="generate_lead"
+              data-property-id={propertyId}
+              data-property-title={propertyTitle}
+              data-check-in={quote.checkIn}
+              data-check-out={quote.checkOut}
+              data-nights={quote.nights}
+              data-guests={guestCount}
+              data-quote-total={quote.total}
               className="mt-6 flex w-full items-center justify-center rounded-full bg-green-900 px-6 py-4 text-center font-bold !text-white transition hover:bg-green-950"
             >
               Consultar disponibilidade no

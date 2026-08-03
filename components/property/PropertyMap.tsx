@@ -7,15 +7,22 @@ interface PropertyMapProps {
 export default function PropertyMap({
   property,
 }: PropertyMapProps) {
-  const location =
+  const hasCoordinates =
     property.latitude !== undefined &&
-    property.longitude !== undefined
-      ? `${property.latitude},${property.longitude}`
-      : property.address || property.neighborhood;
+    property.longitude !== undefined;
 
-  const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(
-    location
-  )}&z=15&output=embed`;
+  const location = hasCoordinates
+    ? `${property.latitude},${property.longitude}`
+    : property.address || property.neighborhood;
+
+  const encodedLocation =
+    encodeURIComponent(location);
+
+  const mapEmbedUrl =
+    `https://www.google.com/maps?q=${encodedLocation}&z=15&output=embed`;
+
+  const googleMapsUrl =
+    `https://www.google.com/maps/search/?api=1&query=${encodedLocation}`;
 
   return (
     <section className="mt-16">
@@ -29,14 +36,16 @@ export default function PropertyMap({
         </h2>
 
         <p className="mt-3 text-zinc-600">
-          📍 {property.address || property.neighborhood}
+          📍{" "}
+          {property.address ||
+            property.neighborhood}
         </p>
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg">
         <iframe
-          src={mapUrl}
-          title={`Mapa da localização do imóvel ${property.title}`}
+          src={mapEmbedUrl}
+          title={`Mapa da localização aproximada do imóvel ${property.title}`}
           width="100%"
           height="450"
           loading="lazy"
@@ -45,10 +54,27 @@ export default function PropertyMap({
         />
       </div>
 
-      <p className="mt-4 text-sm leading-6 text-zinc-500">
-        A localização exibida pode ser aproximada. O endereço completo é
-        informado após a confirmação da reserva.
-      </p>
+      <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="max-w-2xl text-sm leading-6 text-zinc-500">
+          A localização exibida é aproximada.
+          O endereço completo e o número do
+          imóvel são informados após a
+          confirmação da reserva.
+        </p>
+
+        <a
+          href={googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-blue-950 px-6 py-3 text-center font-bold shadow-md transition hover:-translate-y-0.5 hover:bg-blue-900"
+          style={{
+            color: "#ffffff",
+          }}
+          aria-label={`Abrir a localização aproximada de ${property.title} no Google Maps`}
+        >
+          Abrir no Google Maps ↗
+        </a>
+      </div>
     </section>
   );
 }

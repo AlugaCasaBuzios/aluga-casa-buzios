@@ -18,7 +18,7 @@ export default function Hero({
         alt="Vista aérea de Armação dos Búzios"
         fill
         sizes="100vw"
-        preload
+        fetchPriority="high"
         className="object-cover"
       />
 

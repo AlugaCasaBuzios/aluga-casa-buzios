@@ -4,6 +4,9 @@ export const properties: Property[] = [
   {
   id: "arete-top",
 
+  latitude: -22.753,
+  longitude: -41.959,
+
   title: "Aretê Top – Casa Premium com Piscina",
 
   neighborhood: "Condomínio Aretê",
@@ -133,6 +136,9 @@ export const properties: Property[] = [
   {
   id: "casa-da-margarida",
 
+  latitude: -22.741,
+  longitude: -41.986,
+
   title: "Casa da Margarida com Piscina Privativa",
 
   neighborhood: "Armação dos Búzios",
@@ -246,6 +252,9 @@ export const properties: Property[] = [
 
   {
   id: "casa-doce-mar",
+
+  latitude: -22.79,
+  longitude: -41.932,
 
   title: "Casa Doce Mar com Piscina e Área Gourmet",
 
@@ -367,6 +376,9 @@ export const properties: Property[] = [
 
   {
   id: "casa-em-buzios",
+
+  latitude: -22.781,
+  longitude: -41.945,
 
   title: "Casa em Búzios Próxima a Geribá",
 
@@ -492,6 +504,8 @@ gallery: [
 
   {
     id: "casa-toriba",
+    latitude: -22.753,
+    longitude: -41.96,
     title: "Casa Toriba no Condomínio Aretê",
 
   neighborhood: "Condomínio Aretê",
@@ -684,8 +698,8 @@ gallery: [
     rating: 4.96,
     reviews: 147,
 
-    latitude: -22.7466,
-    longitude: -41.8813,
+    latitude: -22.76,
+    longitude: -41.89,
 
     keywords: [
       "Casa em Búzios",
@@ -699,6 +713,8 @@ gallery: [
 
   {
     id: "conforto",
+    latitude: -22.752,
+    longitude: -41.959,
     title: "Casa Conforto no Condomínio Aretê",
     neighborhood: "Condomínio Aretê",
 
@@ -823,6 +839,9 @@ gallery: [
 
   {
   id: "flat-tartaruga",
+
+  latitude: -22.762,
+  longitude: -41.899,
 
   title: "Flat próximo à Praia da Tartaruga",
 

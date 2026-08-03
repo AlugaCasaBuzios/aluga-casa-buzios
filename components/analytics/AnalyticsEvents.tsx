@@ -3,13 +3,13 @@
 import { useEffect } from "react";
 import { sendGAEvent } from "@next/third-parties/google";
 
-function getSafeLinkUrl(linkUrl: string): string {
+function getSafeLinkUrl(linkUrl: string) {
   try {
     const url = new URL(linkUrl);
 
     return `${url.origin}${url.pathname}`;
   } catch {
-    return "WhatsApp";
+    return "";
   }
 }
 
@@ -20,10 +20,10 @@ function parseNumericValue(
     return undefined;
   }
 
-  const parsedValue = Number(value);
+  const numericValue = Number(value);
 
-  return Number.isFinite(parsedValue)
-    ? parsedValue
+  return Number.isFinite(numericValue)
+    ? numericValue
     : undefined;
 }
 
@@ -56,75 +56,73 @@ export default function AnalyticsEvents() {
         return;
       }
 
+      const pagePath =
+        window.location.pathname;
+
       const linkText =
         link.textContent
           ?.trim()
           .replace(/\s+/g, " ")
           .slice(0, 100) || "WhatsApp";
 
-      const safeLinkUrl =
-        getSafeLinkUrl(linkUrl);
-
-      sendGAEvent("event", "whatsapp_click", {
-        link_url: safeLinkUrl,
-        link_text: linkText,
-        page_path: window.location.pathname,
-      });
-
+      /*
+       * Cotação calculada.
+       * Enviamos primeiro e somente com
+       * parâmetros simples.
+       */
       if (
-        link.dataset.analyticsEvent !==
+        link.dataset.analyticsEvent ===
         "generate_lead"
       ) {
-        return;
+        const quoteTotal =
+          parseNumericValue(
+            link.dataset.quoteTotal
+          );
+
+        const nights =
+          parseNumericValue(
+            link.dataset.nights
+          );
+
+        const guests =
+          parseNumericValue(
+            link.dataset.guests
+          );
+
+        sendGAEvent(
+          "event",
+          "generate_lead",
+          {
+            currency: "BRL",
+            value: quoteTotal ?? 0,
+            lead_source:
+              "whatsapp_quote",
+            property_id:
+              link.dataset.propertyId ??
+              "nao_informado",
+            property_title:
+              link.dataset.propertyTitle ??
+              "Imóvel",
+            nights: nights ?? 0,
+            guests: guests ?? 0,
+            page_path: pagePath,
+          }
+        );
       }
 
-      const quoteTotal = parseNumericValue(
-        link.dataset.quoteTotal
+      /*
+       * Todo clique em um botão do WhatsApp.
+       */
+      sendGAEvent(
+        "event",
+        "whatsapp_click",
+        {
+          link_url:
+            getSafeLinkUrl(linkUrl),
+          link_text: linkText,
+          page_path: pagePath,
+        }
       );
-
-      const nights = parseNumericValue(
-        link.dataset.nights
-      );
-
-      const guests = parseNumericValue(
-        link.dataset.guests
-      );
-
-      const propertyId =
-        link.dataset.propertyId || "unknown";
-
-      const propertyTitle =
-        link.dataset.propertyTitle ||
-        "Imóvel não identificado";
-
-      sendGAEvent("event", "generate_lead", {
-        currency: "BRL",
-        ...(quoteTotal !== undefined
-          ? {
-              value: quoteTotal,
-            }
-          : {}),
-        lead_source: "whatsapp_quote",
-        property_id: propertyId,
-        property_title: propertyTitle,
-        check_in: link.dataset.checkIn || "",
-        check_out: link.dataset.checkOut || "",
-        nights: nights ?? 0,
-        guests: guests ?? 0,
-        page_path: window.location.pathname,
-        items: [
-          {
-            item_id: propertyId,
-            item_name: propertyTitle,
-            ...(quoteTotal !== undefined
-              ? {
-                  price: quoteTotal,
-                }
-              : {}),
-            quantity: 1,
-          },
-        ],
-      });
     }
 
     document.addEventListener(

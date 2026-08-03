@@ -13,7 +13,8 @@ export default function PropertyMap({
 
   const location = hasCoordinates
     ? `${property.latitude},${property.longitude}`
-    : property.address || property.neighborhood;
+    : property.address ||
+      property.neighborhood;
 
   const encodedLocation =
     encodeURIComponent(location);
@@ -66,6 +67,11 @@ export default function PropertyMap({
           href={googleMapsUrl}
           target="_blank"
           rel="noopener noreferrer"
+          data-analytics-event="map_click"
+          data-property-id={property.id}
+          data-property-title={
+            property.title
+          }
           className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-blue-950 px-6 py-3 text-center font-bold shadow-md transition hover:-translate-y-0.5 hover:bg-blue-900"
           style={{
             color: "#ffffff",

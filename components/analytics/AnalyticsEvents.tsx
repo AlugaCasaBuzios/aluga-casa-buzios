@@ -56,6 +56,39 @@ function parseNumericValue(
     : undefined;
 }
 
+function isGoogleMapsUrl(
+  linkUrl: string
+): boolean {
+  try {
+    const url = new URL(linkUrl);
+
+    const hostname =
+      url.hostname.toLowerCase();
+
+    const isGoogleDomain =
+      hostname === "google.com" ||
+      hostname === "www.google.com" ||
+      hostname.endsWith(".google.com") ||
+      hostname === "google.com.br" ||
+      hostname === "www.google.com.br" ||
+      hostname.endsWith(".google.com.br");
+
+    const isGoogleMapsPath =
+      url.pathname.startsWith("/maps");
+
+    const isGoogleMapsShortLink =
+      hostname === "maps.app.goo.gl";
+
+    return (
+      (isGoogleDomain &&
+        isGoogleMapsPath) ||
+      isGoogleMapsShortLink
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function AnalyticsEvents() {
   useEffect(() => {
     function handleClick(
@@ -120,6 +153,45 @@ export default function AnalyticsEvents() {
               getAirbnbDestination(
                 linkUrl
               ),
+            page_path: pagePath,
+          }
+        );
+
+        return;
+      }
+
+      const isMapLink =
+        link.dataset
+          .analyticsEvent ===
+          "map_click" ||
+        isGoogleMapsUrl(linkUrl);
+
+      /*
+       * Registra o interesse do
+       * visitante na localização
+       * aproximada do imóvel.
+       *
+       * Coordenadas e endereço não
+       * são enviados ao Analytics.
+       */
+      if (isMapLink) {
+        sendGAEvent(
+          "event",
+          "map_click",
+          {
+            link_url:
+              getSafeLinkUrl(
+                linkUrl
+              ),
+            link_text: linkText,
+            property_id:
+              link.dataset
+                .propertyId ??
+              "nao_informado",
+            property_title:
+              link.dataset
+                .propertyTitle ??
+              "Imóvel",
             page_path: pagePath,
           }
         );

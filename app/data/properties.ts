@@ -695,8 +695,8 @@ gallery: [
 
     whatsapp: "5524998288846",
 
-    rating: 4.96,
-    reviews: 147,
+    rating: 5,
+    reviews: 4,
 
     latitude: -22.76,
     longitude: -41.89,

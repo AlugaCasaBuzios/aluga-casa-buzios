@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { sendGAEvent } from "@next/third-parties/google";
 
 interface PropertyShareProps {
   propertyId: string;
@@ -11,6 +12,10 @@ type ShareFeedback =
   | "idle"
   | "copied"
   | "error";
+
+type ShareMethod =
+  | "native_share"
+  | "copy_link";
 
 export default function PropertyShare({
   propertyId,
@@ -25,6 +30,24 @@ export default function PropertyShare({
     }, 3000);
   }
 
+  function trackShare(
+    method: ShareMethod
+  ) {
+    sendGAEvent(
+      "event",
+      "share",
+      {
+        method,
+        content_type: "property",
+        item_id: propertyId,
+        property_title:
+          propertyTitle,
+        page_path:
+          window.location.pathname,
+      }
+    );
+  }
+
   async function copyPropertyLink(
     propertyUrl: string
   ) {
@@ -34,6 +57,9 @@ export default function PropertyShare({
       );
 
       setFeedback("copied");
+
+      trackShare("copy_link");
+
       clearFeedback();
     } catch {
       setFeedback("error");
@@ -47,8 +73,10 @@ export default function PropertyShare({
 
     const shareData = {
       title: propertyTitle,
+
       text:
         `Conheça este imóvel da Aluga Casa Búzios: ${propertyTitle}`,
+
       url: propertyUrl,
     };
 
@@ -56,6 +84,10 @@ export default function PropertyShare({
       try {
         await navigator.share(
           shareData
+        );
+
+        trackShare(
+          "native_share"
         );
 
         return;

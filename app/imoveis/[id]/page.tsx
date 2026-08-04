@@ -14,6 +14,7 @@ import PropertyMap from "@/components/property/PropertyMap";
 import PropertyReviews from "@/components/property/PropertyReviews";
 import PropertyShare from "@/components/property/PropertyShare";
 import PropertySummary from "@/components/property/PropertySummary";
+import RelatedProperties from "@/components/property/RelatedProperties";
 
 const siteUrl =
   "https://alugacasabuzios.com.br";
@@ -554,7 +555,12 @@ export default async function PropertyPage({
               </div>
             </aside>
           </div>
+
         </section>
+
+        <RelatedProperties
+          property={property}
+        />
       </main>
 
       <Footer />

@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import {
+  useEffect,
+  useRef,
+} from "react";
+import { usePathname } from "next/navigation";
 import { sendGAEvent } from "@next/third-parties/google";
 
 function getSafeLinkUrl(
@@ -89,7 +93,138 @@ function isGoogleMapsUrl(
   }
 }
 
+function getPropertyFromPathname(
+  pathname: string
+): string | null {
+  const pathParts = pathname
+    .split("/")
+    .filter(Boolean);
+
+  if (
+    pathParts.length !== 2 ||
+    pathParts[0] !== "imoveis"
+  ) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(
+      pathParts[1]
+    );
+  } catch {
+    return pathParts[1];
+  }
+}
+
+function getPropertyTitle(
+  propertyId: string
+): string {
+  const pageTitle =
+    document.title.trim();
+
+  const withoutBrand =
+    pageTitle.split(
+      " | Aluga Casa Búzios"
+    )[0];
+
+  const withoutDescription =
+    withoutBrand.split(
+      " — Casa de temporada"
+    )[0];
+
+  return (
+    withoutDescription.trim() ||
+    propertyId
+  );
+}
+
 export default function AnalyticsEvents() {
+  const pathname = usePathname();
+
+  const lastTrackedPropertyPath =
+    useRef<string | null>(null);
+
+  /*
+   * Registra a visualização de uma
+   * página de imóvel.
+   */
+  useEffect(() => {
+    const propertyId =
+      getPropertyFromPathname(
+        pathname
+      );
+
+    if (!propertyId) {
+      lastTrackedPropertyPath.current =
+        null;
+
+      return;
+    }
+
+    if (
+      lastTrackedPropertyPath.current ===
+      pathname
+    ) {
+      return;
+    }
+
+    /*
+     * Aguarda o Google Analytics
+     * terminar de carregar.
+     */
+    const timeoutId =
+      window.setTimeout(() => {
+        if (
+          lastTrackedPropertyPath.current ===
+          pathname
+        ) {
+          return;
+        }
+
+        lastTrackedPropertyPath.current =
+          pathname;
+
+        const propertyTitle =
+          getPropertyTitle(
+            propertyId
+          );
+
+        sendGAEvent(
+          "event",
+          "view_item",
+          {
+            property_id: propertyId,
+
+            property_title:
+              propertyTitle,
+
+            page_path: pathname,
+
+            items: [
+              {
+                item_id: propertyId,
+
+                item_name:
+                  propertyTitle,
+
+                item_category:
+                  "Casa de temporada",
+              },
+            ],
+          }
+        );
+      }, 3000);
+
+    return () => {
+      window.clearTimeout(
+        timeoutId
+      );
+    };
+  }, [pathname]);
+
+  /*
+   * Registra cliques importantes.
+   */
   useEffect(() => {
     function handleClick(
       event: MouseEvent
@@ -148,11 +283,14 @@ export default function AnalyticsEvents() {
               getSafeLinkUrl(
                 linkUrl
               ),
+
             link_text: linkText,
+
             airbnb_destination:
               getAirbnbDestination(
                 linkUrl
               ),
+
             page_path: pagePath,
           }
         );
@@ -183,15 +321,19 @@ export default function AnalyticsEvents() {
               getSafeLinkUrl(
                 linkUrl
               ),
+
             link_text: linkText,
+
             property_id:
               link.dataset
                 .propertyId ??
               "nao_informado",
+
             property_title:
               link.dataset
                 .propertyTitle ??
               "Imóvel",
+
             page_path: pagePath,
           }
         );
@@ -241,20 +383,29 @@ export default function AnalyticsEvents() {
           "generate_lead",
           {
             currency: "BRL",
+
             value:
               quoteTotal ?? 0,
+
             lead_source:
               "whatsapp_quote",
+
             property_id:
               link.dataset
                 .propertyId ??
               "nao_informado",
+
             property_title:
               link.dataset
                 .propertyTitle ??
               "Imóvel",
-            nights: nights ?? 0,
-            guests: guests ?? 0,
+
+            nights:
+              nights ?? 0,
+
+            guests:
+              guests ?? 0,
+
             page_path: pagePath,
           }
         );
@@ -272,7 +423,9 @@ export default function AnalyticsEvents() {
             getSafeLinkUrl(
               linkUrl
             ),
+
           link_text: linkText,
+
           page_path: pagePath,
         }
       );

@@ -138,6 +138,43 @@ function getPropertyTitle(
   );
 }
 
+function getPropertyListDetails(
+  pagePath: string
+): {
+  id: string;
+  name: string;
+} {
+  if (pagePath === "/") {
+    return {
+      id: "home_properties",
+      name: "Imóveis da página inicial",
+    };
+  }
+
+  if (pagePath === "/casas") {
+    return {
+      id: "properties_catalog",
+      name: "Catálogo de imóveis",
+    };
+  }
+
+  if (
+    pagePath.startsWith(
+      "/imoveis/"
+    )
+  ) {
+    return {
+      id: "related_properties",
+      name: "Imóveis relacionados",
+    };
+  }
+
+  return {
+    id: "property_cards",
+    name: "Lista de imóveis",
+  };
+}
+
 export default function AnalyticsEvents() {
   const pathname = usePathname();
 
@@ -262,6 +299,103 @@ export default function AnalyticsEvents() {
       const pagePath =
         window.location.pathname;
 
+      /*
+       * Registra qual cartão de
+       * imóvel foi escolhido.
+       */
+      if (
+        link.dataset
+          .analyticsEvent ===
+        "select_item"
+      ) {
+        const propertyId =
+          link.dataset
+            .propertyId ??
+          "nao_informado";
+
+        const propertyTitle =
+          link.dataset
+            .propertyTitle ??
+          "Imóvel";
+
+        const propertyNeighborhood =
+          link.dataset
+            .propertyNeighborhood ??
+          "Armação dos Búzios";
+
+        const propertyPrice =
+          parseNumericValue(
+            link.dataset
+              .propertyPrice
+          );
+
+        const propertyList =
+          getPropertyListDetails(
+            pagePath
+          );
+
+        sendGAEvent(
+          "event",
+          "select_item",
+          {
+            item_list_id:
+              propertyList.id,
+
+            item_list_name:
+              propertyList.name,
+
+            property_id:
+              propertyId,
+
+            property_title:
+              propertyTitle,
+
+            page_path: pagePath,
+
+            ...(propertyPrice !==
+            undefined
+              ? {
+                  currency: "BRL",
+                  value:
+                    propertyPrice,
+                }
+              : {}),
+
+            items: [
+              {
+                item_id:
+                  propertyId,
+
+                item_name:
+                  propertyTitle,
+
+                item_category:
+                  "Casa de temporada",
+
+                item_category2:
+                  propertyNeighborhood,
+
+                item_list_id:
+                  propertyList.id,
+
+                item_list_name:
+                  propertyList.name,
+
+                ...(propertyPrice !==
+                undefined
+                  ? {
+                      price:
+                        propertyPrice,
+                    }
+                  : {}),
+              },
+            ],
+          }
+        );
+
+        return;
+      }
+
       const isAirbnbLink =
         linkUrl.includes(
           "airbnb.com.br/"
@@ -365,7 +499,8 @@ export default function AnalyticsEvents() {
       ) {
         const quoteTotal =
           parseNumericValue(
-            link.dataset.quoteTotal
+            link.dataset
+              .quoteTotal
           );
 
         const nights =

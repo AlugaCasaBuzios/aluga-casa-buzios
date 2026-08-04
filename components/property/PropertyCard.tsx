@@ -21,7 +21,9 @@ export default function PropertyCard({
 
   const neighborhood =
     property.neighborhood &&
-    !property.neighborhood.toUpperCase().includes("EDITAR")
+    !property.neighborhood
+      .toUpperCase()
+      .includes("EDITAR")
       ? property.neighborhood
       : "Armação dos Búzios";
 
@@ -37,6 +39,15 @@ export default function PropertyCard({
         href={`/imoveis/${property.id}`}
         className="block"
         aria-label={`Conhecer o imóvel ${property.title}`}
+        data-analytics-event="select_item"
+        data-property-id={property.id}
+        data-property-title={property.title}
+        data-property-neighborhood={neighborhood}
+        data-property-price={
+          property.price > 0
+            ? property.price
+            : undefined
+        }
       >
         {/* Foto */}
         <div className="relative h-72 overflow-hidden bg-zinc-100">
@@ -48,7 +59,9 @@ export default function PropertyCard({
           {/* Avaliação */}
           {property.rating > 0 && (
             <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 font-bold text-zinc-900 shadow-md backdrop-blur">
-              <span aria-hidden="true">⭐</span>
+              <span aria-hidden="true">
+                ⭐
+              </span>
 
               <span>
                 {property.rating.toFixed(2)}
@@ -62,7 +75,7 @@ export default function PropertyCard({
               <>
                 {formattedPrice}
 
-                <span className="text-sm font-medium">
+                <span className="ml-1 text-sm font-medium">
                   /noite
                 </span>
               </>
@@ -79,7 +92,10 @@ export default function PropertyCard({
           </h2>
 
           <p className="mt-3 flex items-center gap-2 text-zinc-500">
-            <span aria-hidden="true">📍</span>
+            <span aria-hidden="true">
+              📍
+            </span>
+
             {neighborhood}
           </p>
 
@@ -87,7 +103,9 @@ export default function PropertyCard({
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm text-zinc-700">
               {property.guests > 0 && (
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true">👥</span>
+                  <span aria-hidden="true">
+                    👥
+                  </span>
 
                   {property.guests}{" "}
                   {property.guests === 1
@@ -98,7 +116,9 @@ export default function PropertyCard({
 
               {property.bedrooms > 0 && (
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true">🛏️</span>
+                  <span aria-hidden="true">
+                    🛏️
+                  </span>
 
                   {property.bedrooms}{" "}
                   {property.bedrooms === 1
@@ -109,7 +129,9 @@ export default function PropertyCard({
 
               {property.bathrooms > 0 && (
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true">🚿</span>
+                  <span aria-hidden="true">
+                    🚿
+                  </span>
 
                   {property.bathrooms}{" "}
                   {property.bathrooms === 1
@@ -120,7 +142,9 @@ export default function PropertyCard({
 
               {property.garage > 0 && (
                 <span className="flex items-center gap-2">
-                  <span aria-hidden="true">🚗</span>
+                  <span aria-hidden="true">
+                    🚗
+                  </span>
 
                   {property.garage}{" "}
                   {property.garage === 1

@@ -7,12 +7,17 @@ import {
   createSupabaseAdminClient,
 } from "@/lib/supabaseAdmin";
 
+import {
+  sendPropertyLeadNotification,
+} from "@/lib/propertyLeadEmail";
+
 export const runtime = "nodejs";
 
 const STORAGE_BUCKET =
   "property-lead-photos";
 
 const MAX_PHOTOS = 25;
+
 const MAX_FILE_SIZE =
   10 * 1024 * 1024;
 
@@ -102,9 +107,7 @@ function validateUploads(
     );
   }
 
-  if (
-    value.length > MAX_PHOTOS
-  ) {
+  if (value.length > MAX_PHOTOS) {
     throw new ValidationError(
       `São permitidas no máximo ${MAX_PHOTOS} fotos.`
     );
@@ -113,116 +116,107 @@ function validateUploads(
   const uniquePaths =
     new Set<string>();
 
-  const uploads =
-    value.map(
-      (
-        item,
-        index
-      ): ValidatedPhoto => {
-        if (
-          !item ||
-          typeof item !== "object"
-        ) {
-          throw new ValidationError(
-            `A foto ${index + 1} é inválida.`
-          );
-        }
-
-        const photo =
-          item as FinalizePhotoInput;
-
-        const originalName =
-          requiredText(
-            photo.originalName,
-            `nome da foto ${
-              index + 1
-            }`,
-            180
-          );
-
-        const mimeType =
-          requiredText(
-            photo.mimeType,
-            `tipo da foto ${
-              index + 1
-            }`,
-            100
-          ).toLowerCase();
-
-        const path =
-          requiredText(
-            photo.path,
-            `caminho da foto ${
-              index + 1
-            }`,
-            500
-          );
-
-        const size =
-          Number(photo.size);
-
-        if (
-          !ALLOWED_FILE_TYPES.has(
-            mimeType
-          )
-        ) {
-          throw new ValidationError(
-            `O formato da foto ${originalName} não é permitido.`
-          );
-        }
-
-        if (
-          !Number.isFinite(size) ||
-          size <= 0 ||
-          size > MAX_FILE_SIZE
-        ) {
-          throw new ValidationError(
-            `A foto ${originalName} possui um tamanho inválido.`
-          );
-        }
-
-        if (
-          !path.startsWith(
-            `${leadId}/`
-          )
-        ) {
-          throw new ValidationError(
-            "O caminho de uma das fotos não pertence a esta proposta."
-          );
-        }
-
-        const pathParts =
-          path.split("/");
-
-        if (
-          pathParts.length !== 2 ||
-          !pathParts[1]
-        ) {
-          throw new ValidationError(
-            "O caminho de uma das fotos é inválido."
-          );
-        }
-
-        if (
-          uniquePaths.has(path)
-        ) {
-          throw new ValidationError(
-            "A mesma foto foi informada mais de uma vez."
-          );
-        }
-
-        uniquePaths.add(path);
-
-        return {
-          originalName,
-          mimeType,
-          size,
-          path,
-        };
+  return value.map(
+    (
+      item,
+      index
+    ): ValidatedPhoto => {
+      if (
+        !item ||
+        typeof item !== "object"
+      ) {
+        throw new ValidationError(
+          `A foto ${index + 1} é inválida.`
+        );
       }
-    );
 
-  return uploads;
+      const photo =
+        item as FinalizePhotoInput;
+
+      const originalName =
+        requiredText(
+          photo.originalName,
+          `nome da foto ${index + 1}`,
+          180
+        );
+
+      const mimeType =
+        requiredText(
+          photo.mimeType,
+          `tipo da foto ${index + 1}`,
+          100
+        ).toLowerCase();
+
+      const path =
+        requiredText(
+          photo.path,
+          `caminho da foto ${index + 1}`,
+          500
+        );
+
+      const size =
+        Number(photo.size);
+
+      if (
+        !ALLOWED_FILE_TYPES.has(
+          mimeType
+        )
+      ) {
+        throw new ValidationError(
+          `O formato da foto ${originalName} não é permitido.`
+        );
+      }
+
+      if (
+        !Number.isFinite(size) ||
+        size <= 0 ||
+        size > MAX_FILE_SIZE
+      ) {
+        throw new ValidationError(
+          `A foto ${originalName} possui um tamanho inválido.`
+        );
+      }
+
+      if (
+        !path.startsWith(
+          `${leadId}/`
+        )
+      ) {
+        throw new ValidationError(
+          "O caminho de uma das fotos não pertence a esta proposta."
+        );
+      }
+
+      const pathParts =
+        path.split("/");
+
+      if (
+        pathParts.length !== 2 ||
+        !pathParts[1]
+      ) {
+        throw new ValidationError(
+          "O caminho de uma das fotos é inválido."
+        );
+      }
+
+      if (
+        uniquePaths.has(path)
+      ) {
+        throw new ValidationError(
+          "A mesma foto foi informada mais de uma vez."
+        );
+      }
+
+      uniquePaths.add(path);
+
+      return {
+        originalName,
+        mimeType,
+        size,
+        path,
+      };
+    }
+  );
 }
 
 export async function POST(
@@ -262,6 +256,10 @@ export async function POST(
     const supabase =
       createSupabaseAdminClient();
 
+    /*
+     * Carrega também os dados usados
+     * no e-mail de notificação.
+     */
     const {
       data: lead,
       error: leadError,
@@ -269,7 +267,16 @@ export async function POST(
       .from(
         "property_management_leads"
       )
-      .select("id")
+      .select(`
+        id,
+        owner_name,
+        property_name,
+        property_type,
+        neighborhood,
+        city,
+        state,
+        notification_sent_at
+      `)
       .eq("id", id)
       .maybeSingle();
 
@@ -304,6 +311,10 @@ export async function POST(
       );
     }
 
+    /*
+     * Confere quais arquivos realmente
+     * chegaram ao Storage do Supabase.
+     */
     const {
       data: storedFiles,
       error: listError,
@@ -366,6 +377,11 @@ export async function POST(
         }
       );
 
+    /*
+     * Substitui os registros de fotos
+     * da proposta pelos arquivos que
+     * foram realmente confirmados.
+     */
     const {
       error: deleteError,
     } = await supabase
@@ -486,6 +502,111 @@ export async function POST(
       );
     }
 
+    /*
+     * O horário também funciona como
+     * uma trava para impedir que duas
+     * requisições enviem o mesmo e-mail.
+     */
+    let notificationSent = false;
+
+    if (
+      !lead.notification_sent_at
+    ) {
+      const notificationClaimedAt =
+        new Date().toISOString();
+
+      const {
+        data: claimedLead,
+        error: claimError,
+      } = await supabase
+        .from(
+          "property_management_leads"
+        )
+        .update({
+          notification_sent_at:
+            notificationClaimedAt,
+        })
+        .eq("id", id)
+        .is(
+          "notification_sent_at",
+          null
+        )
+        .select("id")
+        .maybeSingle();
+
+      if (claimError) {
+        /*
+         * A proposta já foi salva.
+         * Uma falha no e-mail não deve
+         * causar erro para o visitante.
+         */
+        console.error(
+          "Erro ao reservar notificação da proposta:",
+          claimError
+        );
+      } else if (claimedLead) {
+        const notificationResult =
+          await sendPropertyLeadNotification({
+            leadId: id,
+
+            ownerName:
+              lead.owner_name ||
+              "Proprietário não informado",
+
+            propertyName:
+              lead.property_name ||
+              lead.property_type ||
+              "Imóvel sem nome",
+
+            neighborhood:
+              lead.neighborhood,
+
+            city:
+              lead.city,
+
+            state:
+              lead.state,
+
+            photosConfirmed:
+              confirmedUploads.length,
+          });
+
+        notificationSent =
+          notificationResult.sent;
+
+        /*
+         * Se o Resend falhar, libera a
+         * proposta para uma nova tentativa.
+         */
+        if (
+          !notificationResult.sent
+        ) {
+          const {
+            error: releaseError,
+          } = await supabase
+            .from(
+              "property_management_leads"
+            )
+            .update({
+              notification_sent_at:
+                null,
+            })
+            .eq("id", id)
+            .eq(
+              "notification_sent_at",
+              notificationClaimedAt
+            );
+
+          if (releaseError) {
+            console.error(
+              "Erro ao liberar nova tentativa de notificação:",
+              releaseError
+            );
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
 
@@ -497,6 +618,8 @@ export async function POST(
       photosNotConfirmed:
         uploads.length -
         confirmedUploads.length,
+
+      notificationSent,
     });
   } catch (error) {
     if (
@@ -506,7 +629,8 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          message: error.message,
+          message:
+            error.message,
         },
         {
           status: 400,

@@ -169,7 +169,7 @@ export async function sendPropertyLeadNotification(
       data,
       error,
     } = await resend.emails.send({
-      from: "Aluga Casa Búzios <onboarding@resend.dev>",
+      from: "Aluga Casa Búzios <propostas@notificacoes.alugacasabuzios.com.br>",
 
       to: recipients,
 

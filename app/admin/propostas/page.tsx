@@ -31,6 +31,12 @@ type ProposalRecord = {
   bathrooms: number | null;
 
   photo_count: number | null;
+  status: string;
+};
+
+type StatusInformation = {
+  label: string;
+  className: string;
 };
 
 function formatDateTime(
@@ -88,7 +94,8 @@ function formatPropertyType(
     apartment: "Apartamento",
     flat: "Flat",
     loft: "Loft",
-    guesthouse: "Casa de hóspedes",
+    guesthouse:
+      "Casa de hóspedes",
     other: "Outro",
   };
 
@@ -100,6 +107,48 @@ function formatPropertyType(
     propertyTypes[value] ||
     value
   );
+}
+
+function getStatusInformation(
+  status: string
+): StatusInformation {
+  switch (status) {
+    case "contacted":
+      return {
+        label: "Em contato",
+        className:
+          "bg-amber-100 text-amber-800",
+      };
+
+    case "evaluating":
+      return {
+        label: "Em avaliação",
+        className:
+          "bg-purple-100 text-purple-800",
+      };
+
+    case "approved":
+      return {
+        label: "Aprovada",
+        className:
+          "bg-green-100 text-green-800",
+      };
+
+    case "rejected":
+      return {
+        label: "Recusada",
+        className:
+          "bg-red-100 text-red-800",
+      };
+
+    case "new":
+    default:
+      return {
+        label: "Nova",
+        className:
+          "bg-sky-100 text-sky-800",
+      };
+  }
 }
 
 function getWhatsAppUrl(
@@ -162,7 +211,8 @@ export default async function ProposalsPage() {
       maximum_guests,
       bedrooms,
       bathrooms,
-      photo_count
+      photo_count,
+      status
     `)
     .order("created_at", {
       ascending: false,
@@ -205,6 +255,33 @@ export default async function ProposalsPage() {
     (data ??
       []) as ProposalRecord[];
 
+  const newProposals =
+    proposals.filter(
+      (proposal) =>
+        proposal.status === "new"
+    ).length;
+
+  const contactedProposals =
+    proposals.filter(
+      (proposal) =>
+        proposal.status ===
+        "contacted"
+    ).length;
+
+  const evaluatingProposals =
+    proposals.filter(
+      (proposal) =>
+        proposal.status ===
+        "evaluating"
+    ).length;
+
+  const approvedProposals =
+    proposals.filter(
+      (proposal) =>
+        proposal.status ===
+        "approved"
+    ).length;
+
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-7xl">
@@ -237,6 +314,38 @@ export default async function ProposalsPage() {
             </Link>
           </div>
         </header>
+
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatusSummary
+            label="Novas"
+            value={newProposals}
+            className="border-sky-200 bg-sky-50 text-sky-900"
+          />
+
+          <StatusSummary
+            label="Em contato"
+            value={
+              contactedProposals
+            }
+            className="border-amber-200 bg-amber-50 text-amber-900"
+          />
+
+          <StatusSummary
+            label="Em avaliação"
+            value={
+              evaluatingProposals
+            }
+            className="border-purple-200 bg-purple-50 text-purple-900"
+          />
+
+          <StatusSummary
+            label="Aprovadas"
+            value={
+              approvedProposals
+            }
+            className="border-green-200 bg-green-50 text-green-900"
+          />
+        </section>
 
         <section className="mt-8">
           <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -286,6 +395,11 @@ export default async function ProposalsPage() {
                       proposal.owner_whatsapp
                     );
 
+                  const statusInformation =
+                    getStatusInformation(
+                      proposal.status
+                    );
+
                   return (
                     <article
                       key={proposal.id}
@@ -313,14 +427,24 @@ export default async function ProposalsPage() {
                             </p>
                           </div>
 
-                          <span className="inline-flex w-fit rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-900">
-                            {proposal.photo_count ??
-                              0}{" "}
-                            {(proposal.photo_count ??
-                              0) === 1
-                              ? "foto"
-                              : "fotos"}
-                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            <span
+                              className={`inline-flex rounded-full px-4 py-2 text-sm font-bold ${statusInformation.className}`}
+                            >
+                              {
+                                statusInformation.label
+                              }
+                            </span>
+
+                            <span className="inline-flex rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-900">
+                              {proposal.photo_count ??
+                                0}{" "}
+                              {(proposal.photo_count ??
+                                0) === 1
+                                ? "foto"
+                                : "fotos"}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -430,6 +554,32 @@ export default async function ProposalsPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+type StatusSummaryProps = {
+  label: string;
+  value: number;
+  className: string;
+};
+
+function StatusSummary({
+  label,
+  value,
+  className,
+}: StatusSummaryProps) {
+  return (
+    <article
+      className={`rounded-2xl border p-5 shadow-sm ${className}`}
+    >
+      <p className="text-sm font-bold uppercase tracking-wider">
+        {label}
+      </p>
+
+      <p className="mt-2 text-3xl font-black">
+        {value}
+      </p>
+    </article>
   );
 }
 

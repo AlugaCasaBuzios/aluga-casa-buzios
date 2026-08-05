@@ -12,6 +12,8 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
+import ProposalStatusForm from "./ProposalStatusForm";
+
 export const dynamic = "force-dynamic";
 
 const STORAGE_BUCKET =
@@ -20,6 +22,10 @@ const STORAGE_BUCKET =
 type ProposalDetailPageProps = {
   params: Promise<{
     id: string;
+  }>;
+
+  searchParams: Promise<{
+    salvo?: string;
   }>;
 };
 
@@ -150,8 +156,10 @@ function formatText(
   const normalized =
     value?.trim();
 
-  return normalized ||
-    "Não informado";
+  return (
+    normalized ||
+    "Não informado"
+  );
 }
 
 function formatOwnerRole(
@@ -193,7 +201,10 @@ function formatPreferredContact(
     return "Não informado";
   }
 
-  return contacts[value] || value;
+  return (
+    contacts[value] ||
+    value
+  );
 }
 
 function formatPropertyType(
@@ -207,7 +218,8 @@ function formatPropertyType(
     apartment: "Apartamento",
     flat: "Flat",
     loft: "Loft",
-    guesthouse: "Casa de hóspedes",
+    guesthouse:
+      "Casa de hóspedes",
     other: "Outro",
   };
 
@@ -349,8 +361,15 @@ function getFullAddress(
 
 export default async function ProposalDetailPage({
   params,
+  searchParams,
 }: ProposalDetailPageProps) {
-  const { id } = await params;
+  const [
+    { id },
+    { salvo },
+  ] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
   const authenticationClient =
     await createSupabaseServerClient();
@@ -433,7 +452,10 @@ export default async function ProposalDetailPage({
 
           <Link
             href="/admin/propostas"
-            className="mt-7 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold text-white"
+            style={{
+              color: "#ffffff",
+            }}
+            className="mt-7 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold"
           >
             Voltar para propostas
           </Link>
@@ -597,7 +619,10 @@ export default async function ProposalDetailPage({
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-green-600 px-6 py-3 font-bold text-white shadow-sm transition hover:bg-green-700"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl bg-green-600 px-6 py-3 font-bold shadow-sm transition hover:bg-green-700"
                 >
                   Falar pelo WhatsApp
                 </a>
@@ -605,6 +630,15 @@ export default async function ProposalDetailPage({
             </div>
           </div>
         </header>
+
+        {salvo === "1" && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800"
+          >
+            Andamento da proposta salvo com sucesso.
+          </div>
+        )}
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,2fr)_360px]">
           <div className="space-y-8">
@@ -665,7 +699,10 @@ export default async function ProposalDetailPage({
                     href={whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-xl bg-green-600 px-5 py-3 font-bold text-white transition hover:bg-green-700"
+                    style={{
+                      color: "#ffffff",
+                    }}
+                    className="inline-flex items-center justify-center rounded-xl bg-green-600 px-5 py-3 font-bold transition hover:bg-green-700"
                   >
                     Abrir WhatsApp
                   </a>
@@ -734,7 +771,10 @@ export default async function ProposalDetailPage({
                   href={mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-950 px-5 py-3 font-bold text-white transition hover:bg-blue-900"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-950 px-5 py-3 font-bold transition hover:bg-blue-900"
                 >
                   Abrir localização no Google Maps
                 </a>
@@ -955,6 +995,10 @@ export default async function ProposalDetailPage({
           </div>
 
           <aside className="space-y-8">
+            <ProposalStatusForm
+              proposalId={proposal.id}
+            />
+
             <section className="rounded-3xl bg-white p-6 shadow-lg">
               <h2 className="text-xl font-bold text-slate-900">
                 Resumo

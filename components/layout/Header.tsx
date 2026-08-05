@@ -9,7 +9,14 @@ import {
   useState,
 } from "react";
 
-const navigation = [
+type NavigationItem = {
+  label: string;
+  href: string;
+  activePath?: string;
+  highlight: boolean;
+};
+
+const navigation: NavigationItem[] = [
   {
     label: "Início",
     href: "/",
@@ -32,7 +39,9 @@ const navigation = [
   },
   {
     label: "Anuncie conosco",
-    href: "/anuncie-conosco",
+    href: "/anuncie-conosco#formulario",
+    activePath:
+      "/anuncie-conosco",
     highlight: true,
   },
 ];
@@ -52,7 +61,7 @@ export default function Header() {
 
   function isActive(
     href: string
-  ) {
+  ): boolean {
     if (href === "/") {
       return pathname === "/";
     }
@@ -73,12 +82,14 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 shadow-sm backdrop-blur">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6">
         <div className="flex h-20 items-center justify-between gap-3 sm:h-24">
           {/* Marca */}
           <Link
             href="/"
-            onClick={closeMobileMenu}
+            onClick={
+              closeMobileMenu
+            }
             className="flex min-w-0 items-center gap-3 sm:gap-4"
             aria-label="Página inicial da Aluga Casa Búzios"
           >
@@ -97,28 +108,35 @@ export default function Header() {
               </p>
 
               <p className="truncate text-sm text-zinc-500">
-                Casas de Temporada em Búzios
+                Casas de Temporada em
+                Búzios
               </p>
             </div>
           </Link>
 
           {/* Navegação no computador */}
           <nav
-            className="hidden items-center gap-1 lg:flex xl:gap-2"
+            className="hidden shrink-0 items-center gap-1 xl:flex 2xl:gap-2"
             aria-label="Navegação principal"
           >
             {navigation.map(
               (item) => {
+                const activePath =
+                  item.activePath ??
+                  item.href.split(
+                    "#"
+                  )[0];
+
                 const active =
                   isActive(
-                    item.href
+                    activePath
                   );
 
                 const className =
                   item.highlight
                     ? active
-                      ? "bg-blue-950 text-white shadow-md"
-                      : "bg-sky-100 text-blue-950 hover:bg-sky-200"
+                      ? "bg-blue-950 shadow-md hover:bg-blue-900"
+                      : "bg-sky-700 shadow-md hover:bg-sky-800"
                     : active
                       ? "bg-sky-50 text-sky-700"
                       : "text-zinc-800 hover:bg-zinc-100 hover:text-sky-700";
@@ -131,7 +149,20 @@ export default function Header() {
                     href={
                       item.href
                     }
-                    className={`rounded-full px-3 py-3 text-sm font-semibold transition xl:px-4 xl:text-base ${className}`}
+                    aria-current={
+                      active
+                        ? "page"
+                        : undefined
+                    }
+                    className={`whitespace-nowrap rounded-full px-3 py-3 text-sm font-semibold transition xl:px-4 xl:text-base ${className}`}
+                    style={
+                      item.highlight
+                        ? {
+                            color:
+                              "#ffffff",
+                          }
+                        : undefined
+                    }
                   >
                     {
                       item.label
@@ -143,7 +174,7 @@ export default function Header() {
           </nav>
 
           {/* Ações */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <a
               href="https://instagram.com/aluga.casa.buzios"
               target="_blank"
@@ -158,13 +189,16 @@ export default function Header() {
               href="https://wa.me/5524998288846?text=Olá! Gostaria de conhecer as casas disponíveis em Búzios."
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-green-700 sm:px-5"
+              className="inline-flex items-center justify-center rounded-full bg-green-600 px-4 py-3 text-sm font-bold shadow-lg transition hover:-translate-y-0.5 hover:bg-green-700 sm:px-5"
+              style={{
+                color: "#ffffff",
+              }}
             >
-              <span className="sm:hidden">
+              <span className="md:hidden">
                 WhatsApp
               </span>
 
-              <span className="hidden sm:inline">
+              <span className="hidden md:inline">
                 Reservar pelo WhatsApp
               </span>
             </a>
@@ -189,7 +223,7 @@ export default function Header() {
                   ? "Fechar menu"
                   : "Abrir menu"
               }
-              className="flex h-12 w-12 flex-none items-center justify-center rounded-full border border-zinc-200 bg-white text-blue-950 shadow-sm transition hover:bg-zinc-100 lg:hidden"
+              className="flex h-12 w-12 flex-none items-center justify-center rounded-full border border-zinc-200 bg-white text-blue-950 shadow-sm transition hover:bg-zinc-100 xl:hidden"
             >
               {mobileMenuOpen ? (
                 <span
@@ -219,7 +253,7 @@ export default function Header() {
       {mobileMenuOpen && (
         <div
           id="mobile-navigation"
-          className="border-t border-zinc-200 bg-white px-4 py-5 shadow-xl lg:hidden"
+          className="border-t border-zinc-200 bg-white px-4 py-5 shadow-xl xl:hidden"
         >
           <nav
             className="mx-auto flex max-w-7xl flex-col gap-2"
@@ -227,19 +261,32 @@ export default function Header() {
           >
             {navigation.map(
               (item) => {
+                const activePath =
+                  item.activePath ??
+                  item.href.split(
+                    "#"
+                  )[0];
+
                 const active =
                   isActive(
-                    item.href
+                    activePath
                   );
 
                 const className =
                   item.highlight
                     ? active
-                      ? "bg-blue-950 text-white"
-                      : "bg-sky-100 text-blue-950 hover:bg-sky-200"
+                      ? "bg-blue-950 shadow-md"
+                      : "bg-sky-700 shadow-md hover:bg-sky-800"
                     : active
-                      ? "bg-sky-50 text-sky-700"
-                      : "text-blue-950 hover:bg-zinc-100";
+                      ? "bg-sky-50"
+                      : "hover:bg-zinc-100";
+
+                const linkColor =
+                  item.highlight
+                    ? "#ffffff"
+                    : active
+                      ? "#0369a1"
+                      : "#172554";
 
                 return (
                   <Link
@@ -252,7 +299,16 @@ export default function Header() {
                     onClick={
                       closeMobileMenu
                     }
+                    aria-current={
+                      active
+                        ? "page"
+                        : undefined
+                    }
                     className={`flex items-center justify-between rounded-2xl px-5 py-4 text-lg font-bold transition ${className}`}
+                    style={{
+                      color:
+                        linkColor,
+                    }}
                   >
                     <span>
                       {
@@ -278,7 +334,8 @@ export default function Header() {
                 }
                 className="flex items-center justify-center rounded-2xl border border-zinc-200 px-5 py-4 font-bold text-zinc-700 transition hover:bg-zinc-100 hover:text-pink-600"
               >
-                📸 Acompanhar no Instagram
+                📸 Acompanhar no
+                Instagram
               </a>
             </div>
           </nav>

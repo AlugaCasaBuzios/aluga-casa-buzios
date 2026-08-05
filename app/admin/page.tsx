@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import {
+  createSupabaseAdminClient,
+} from "@/lib/supabaseAdmin";
+
+import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
@@ -34,16 +38,20 @@ function formatCurrency(
     return "Não definido";
   }
 
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+  return new Intl.NumberFormat(
+    "pt-BR",
+    {
+      style: "currency",
+      currency: "BRL",
+    }
+  ).format(value);
 }
 
 export default async function AdminPage({
   searchParams,
 }: AdminPageProps) {
-  const { salvo } = await searchParams;
+  const { salvo } =
+    await searchParams;
 
   const supabase =
     await createSupabaseServerClient();
@@ -56,24 +64,59 @@ export default async function AdminPage({
     redirect("/admin/login");
   }
 
+  const adminSupabase =
+    createSupabaseAdminClient();
+
+  const [
+    pricingResult,
+    newProposalsResult,
+  ] = await Promise.all([
+    supabase
+      .from("property_pricing")
+      .select(`
+        property_id,
+        property_name,
+        base_price,
+        cleaning_fee,
+        minimum_nights,
+        minimum_price,
+        maximum_price,
+        active
+      `)
+      .order("property_name", {
+        ascending: true,
+      }),
+
+    adminSupabase
+      .from(
+        "property_management_leads"
+      )
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .eq("status", "new"),
+  ]);
+
   const {
     data,
     error,
-  } = await supabase
-    .from("property_pricing")
-    .select(`
-      property_id,
-      property_name,
-      base_price,
-      cleaning_fee,
-      minimum_nights,
-      minimum_price,
-      maximum_price,
-      active
-    `)
-    .order("property_name", {
-      ascending: true,
-    });
+  } = pricingResult;
+
+  const {
+    count: newProposalsCount,
+    error: proposalsCountError,
+  } = newProposalsResult;
+
+  if (proposalsCountError) {
+    console.error(
+      "Erro ao contar propostas novas:",
+      proposalsCountError
+    );
+  }
+
+  const newProposals =
+    newProposalsCount ?? 0;
 
   if (error) {
     console.error(
@@ -95,7 +138,10 @@ export default async function AdminPage({
 
           <Link
             href="/admin"
-            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white transition hover:bg-blue-900"
+            style={{
+              color: "#ffffff",
+            }}
+            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold transition hover:bg-blue-900"
           >
             Tentar novamente
           </Link>
@@ -128,49 +174,70 @@ export default async function AdminPage({
             </div>
 
             <nav
-  aria-label="Opções do painel administrativo"
-  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
->
-  <Link
-    href="/admin/propostas"
-    style={{
-      color: "#172554",
-    }}
-    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-sky-300 px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-200"
-  >
-    Propostas de imóveis
-  </Link>
+              aria-label="Opções do painel administrativo"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              <Link
+                href="/admin/propostas"
+                style={{
+                  color: "#172554",
+                }}
+                aria-label={
+                  newProposals > 0
+                    ? `Propostas de imóveis: ${newProposals} novas`
+                    : "Propostas de imóveis"
+                }
+                className="relative inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-sky-300 px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-200"
+              >
+                <span>
+                  Propostas de imóveis
+                </span>
 
-  <Link
-    href="/admin/bloqueios"
-    style={{
-      color: "#172554",
-    }}
-    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
-  >
-    Bloqueios manuais
-  </Link>
+                {newProposals > 0 && (
+                  <span
+                    style={{
+                      color: "#ffffff",
+                    }}
+                    className="inline-flex rounded-full bg-red-600 px-3 py-1 text-xs font-black shadow-sm"
+                  >
+                    {newProposals}{" "}
+                    {newProposals === 1
+                      ? "nova"
+                      : "novas"}
+                  </span>
+                )}
+              </Link>
 
-  <Link
-    href="/admin/precos-por-data"
-    style={{
-      color: "#172554",
-    }}
-    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
-  >
-    Preços por data
-  </Link>
+              <Link
+                href="/admin/bloqueios"
+                style={{
+                  color: "#172554",
+                }}
+                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+              >
+                Bloqueios manuais
+              </Link>
 
-  <Link
-    href="/admin/periodos"
-    style={{
-      color: "#172554",
-    }}
-    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
-  >
-    Períodos especiais
-  </Link>
-</nav>
+              <Link
+                href="/admin/precos-por-data"
+                style={{
+                  color: "#172554",
+                }}
+                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+              >
+                Preços por data
+              </Link>
+
+              <Link
+                href="/admin/periodos"
+                style={{
+                  color: "#172554",
+                }}
+                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+              >
+                Períodos especiais
+              </Link>
+            </nav>
 
             <div className="flex justify-end">
               <form action={logout}>
@@ -351,7 +418,10 @@ export default async function AdminPage({
                         <td className="px-5 py-4">
                           <Link
                             href={`/admin/imoveis/${property.property_id}`}
-                            className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                            style={{
+                              color: "#ffffff",
+                            }}
+                            className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold transition hover:bg-blue-900"
                           >
                             Editar
                           </Link>

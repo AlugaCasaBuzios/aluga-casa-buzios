@@ -92,6 +92,13 @@ export default async function AdminPage({
             Verifique as permissões da tabela
             property_pricing no Supabase.
           </p>
+
+          <Link
+            href="/admin"
+            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white transition hover:bg-blue-900"
+          >
+            Tentar novamente
+          </Link>
         </div>
       </main>
     );
@@ -104,7 +111,7 @@ export default async function AdminPage({
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 rounded-3xl bg-blue-950 p-8 text-white shadow-lg">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-7">
             <div>
               <p className="text-sm font-semibold uppercase tracking-widest text-blue-200">
                 Aluga Casa Búzios
@@ -115,45 +122,61 @@ export default async function AdminPage({
               </h1>
 
               <p className="mt-2 text-blue-100">
-                Gerenciamento de preços, períodos e disponibilidade
+                Gerenciamento de preços, períodos,
+                disponibilidade e propostas de imóveis
               </p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-              <Link
-                href="/admin/bloqueios"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold shadow-sm transition hover:bg-blue-100"
-                style={{
-                  color: "#172554",
-                }}
-              >
-                Bloqueios manuais
-              </Link>
+            <nav
+  aria-label="Opções do painel administrativo"
+  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+>
+  <Link
+    href="/admin/propostas"
+    style={{
+      color: "#172554",
+    }}
+    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-sky-300 px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-200"
+  >
+    Propostas de imóveis
+  </Link>
 
-              <Link
-                href="/admin/precos-por-data"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold shadow-sm transition hover:bg-blue-100"
-                style={{
-                  color: "#172554",
-                }}
-              >
-                Preços por data
-              </Link>
+  <Link
+    href="/admin/bloqueios"
+    style={{
+      color: "#172554",
+    }}
+    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+  >
+    Bloqueios manuais
+  </Link>
 
-              <Link
-                href="/admin/periodos"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 text-center font-bold shadow-sm transition hover:bg-blue-100"
-                style={{
-                  color: "#172554",
-                }}
-              >
-                Períodos especiais
-              </Link>
+  <Link
+    href="/admin/precos-por-data"
+    style={{
+      color: "#172554",
+    }}
+    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+  >
+    Preços por data
+  </Link>
 
+  <Link
+    href="/admin/periodos"
+    style={{
+      color: "#172554",
+    }}
+    className="inline-flex min-h-14 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+  >
+    Períodos especiais
+  </Link>
+</nav>
+
+            <div className="flex justify-end">
               <form action={logout}>
                 <button
                   type="submit"
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 font-bold text-white transition hover:bg-white hover:text-blue-950"
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-6 py-3 font-bold text-white transition hover:bg-white hover:text-blue-950"
                 >
                   Sair do painel
                 </button>
@@ -163,7 +186,10 @@ export default async function AdminPage({
         </header>
 
         {salvo === "1" && (
-          <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-semibold text-green-800">
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-semibold text-green-800"
+          >
             Alterações salvas com sucesso.
           </div>
         )}
@@ -175,7 +201,10 @@ export default async function AdminPage({
             </h2>
 
             <p className="mt-1 text-sm text-slate-600">
-              {properties.length} imóveis encontrados
+              {properties.length}{" "}
+              {properties.length === 1
+                ? "imóvel encontrado"
+                : "imóveis encontrados"}
             </p>
           </div>
 
@@ -186,8 +215,8 @@ export default async function AdminPage({
               </h3>
 
               <p className="mt-2 text-slate-600">
-                Não existem imóveis cadastrados na tabela
-                property_pricing.
+                Não existem imóveis cadastrados na
+                tabela property_pricing.
               </p>
             </div>
           ) : (
@@ -195,109 +224,141 @@ export default async function AdminPage({
               <table className="w-full min-w-[1100px] text-left">
                 <thead className="bg-slate-50 text-sm text-slate-700">
                   <tr>
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Imóvel
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Preço-base
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Limpeza
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Mínimo de noites
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Preço mínimo
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Preço máximo
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Status
                     </th>
 
-                    <th className="px-5 py-4">
+                    <th
+                      scope="col"
+                      className="px-5 py-4"
+                    >
                       Ações
                     </th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-slate-200">
-                  {properties.map((property) => (
-                    <tr
-                      key={property.property_id}
-                      className="text-sm text-slate-700"
-                    >
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900">
-                          {property.property_name}
-                        </p>
+                  {properties.map(
+                    (property) => (
+                      <tr
+                        key={
+                          property.property_id
+                        }
+                        className="text-sm text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-slate-900">
+                            {
+                              property.property_name
+                            }
+                          </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {property.property_id}
-                        </p>
-                      </td>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {
+                              property.property_id
+                            }
+                          </p>
+                        </td>
 
-                      <td className="px-5 py-4 font-semibold">
-                        {formatCurrency(
-                          property.base_price
-                        )}
-                      </td>
+                        <td className="px-5 py-4 font-semibold">
+                          {formatCurrency(
+                            property.base_price
+                          )}
+                        </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.cleaning_fee
-                        )}
-                      </td>
+                        <td className="px-5 py-4">
+                          {formatCurrency(
+                            property.cleaning_fee
+                          )}
+                        </td>
 
-                      <td className="px-5 py-4">
-                        {property.minimum_nights ??
-                          "Não definido"}
-                      </td>
+                        <td className="px-5 py-4">
+                          {property.minimum_nights ??
+                            "Não definido"}
+                        </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.minimum_price
-                        )}
-                      </td>
+                        <td className="px-5 py-4">
+                          {formatCurrency(
+                            property.minimum_price
+                          )}
+                        </td>
 
-                      <td className="px-5 py-4">
-                        {formatCurrency(
-                          property.maximum_price
-                        )}
-                      </td>
+                        <td className="px-5 py-4">
+                          {formatCurrency(
+                            property.maximum_price
+                          )}
+                        </td>
 
-                      <td className="px-5 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                            property.active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {property.active
-                            ? "Ativo"
-                            : "Inativo"}
-                        </span>
-                      </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                              property.active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {property.active
+                              ? "Ativo"
+                              : "Inativo"}
+                          </span>
+                        </td>
 
-                      <td className="px-5 py-4">
-                        <Link
-                          href={`/admin/imoveis/${property.property_id}`}
-                          className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
-                        >
-                          Editar
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-5 py-4">
+                          <Link
+                            href={`/admin/imoveis/${property.property_id}`}
+                            className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                          >
+                            Editar
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             </div>

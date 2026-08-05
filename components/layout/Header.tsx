@@ -2,51 +2,73 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import {
+  usePathname,
+} from "next/navigation";
+import {
+  useState,
+} from "react";
 
 const navigation = [
   {
     label: "Início",
     href: "/",
+    highlight: false,
   },
   {
     label: "Casas",
     href: "/casas",
+    highlight: false,
   },
   {
     label: "Sobre",
     href: "/sobre",
+    highlight: false,
   },
   {
     label: "Contato",
     href: "/contato",
+    highlight: false,
+  },
+  {
+    label: "Anuncie conosco",
+    href: "/anuncie-conosco",
+    highlight: true,
   },
 ];
 
 export default function Header() {
-  const pathname = usePathname();
+  const pathname =
+    usePathname();
 
-  const [mobileMenuOpen, setMobileMenuOpen] =
-    useState(false);
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] = useState(false);
 
   function closeMobileMenu() {
     setMobileMenuOpen(false);
   }
 
-  function isActive(href: string) {
+  function isActive(
+    href: string
+  ) {
     if (href === "/") {
       return pathname === "/";
     }
 
     if (
       href === "/casas" &&
-      pathname.startsWith("/imoveis/")
+      pathname.startsWith(
+        "/imoveis/"
+      )
     ) {
       return true;
     }
 
-    return pathname.startsWith(href);
+    return pathname.startsWith(
+      href
+    );
   }
 
   return (
@@ -82,26 +104,42 @@ export default function Header() {
 
           {/* Navegação no computador */}
           <nav
-            className="hidden items-center gap-2 lg:flex"
+            className="hidden items-center gap-1 lg:flex xl:gap-2"
             aria-label="Navegação principal"
           >
-            {navigation.map((item) => {
-              const active = isActive(item.href);
+            {navigation.map(
+              (item) => {
+                const active =
+                  isActive(
+                    item.href
+                  );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-full px-4 py-3 font-semibold transition ${
-                    active
+                const className =
+                  item.highlight
+                    ? active
+                      ? "bg-blue-950 text-white shadow-md"
+                      : "bg-sky-100 text-blue-950 hover:bg-sky-200"
+                    : active
                       ? "bg-sky-50 text-sky-700"
-                      : "text-zinc-800 hover:bg-zinc-100 hover:text-sky-700"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+                      : "text-zinc-800 hover:bg-zinc-100 hover:text-sky-700";
+
+                return (
+                  <Link
+                    key={
+                      item.href
+                    }
+                    href={
+                      item.href
+                    }
+                    className={`rounded-full px-3 py-3 text-sm font-semibold transition xl:px-4 xl:text-base ${className}`}
+                  >
+                    {
+                      item.label
+                    }
+                  </Link>
+                );
+              }
+            )}
           </nav>
 
           {/* Ações */}
@@ -111,7 +149,7 @@ export default function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Abrir Instagram da Aluga Casa Búzios"
-              className="hidden text-sm font-medium text-zinc-600 transition hover:text-pink-600 xl:block"
+              className="hidden text-sm font-medium text-zinc-600 transition hover:text-pink-600 2xl:block"
             >
               📸 @aluga.casa.buzios
             </a>
@@ -135,9 +173,16 @@ export default function Header() {
             <button
               type="button"
               onClick={() =>
-                setMobileMenuOpen((current) => !current)
+                setMobileMenuOpen(
+                  (
+                    current
+                  ) =>
+                    !current
+                )
               }
-              aria-expanded={mobileMenuOpen}
+              aria-expanded={
+                mobileMenuOpen
+              }
               aria-controls="mobile-navigation"
               aria-label={
                 mobileMenuOpen
@@ -159,7 +204,9 @@ export default function Header() {
                   className="flex flex-col gap-1.5"
                 >
                   <span className="block h-0.5 w-6 rounded bg-current" />
+
                   <span className="block h-0.5 w-6 rounded bg-current" />
+
                   <span className="block h-0.5 w-6 rounded bg-current" />
                 </span>
               )}
@@ -178,35 +225,57 @@ export default function Header() {
             className="mx-auto flex max-w-7xl flex-col gap-2"
             aria-label="Navegação no celular"
           >
-            {navigation.map((item) => {
-              const active = isActive(item.href);
+            {navigation.map(
+              (item) => {
+                const active =
+                  isActive(
+                    item.href
+                  );
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={closeMobileMenu}
-                  className={`flex items-center justify-between rounded-2xl px-5 py-4 text-lg font-bold transition ${
-                    active
+                const className =
+                  item.highlight
+                    ? active
+                      ? "bg-blue-950 text-white"
+                      : "bg-sky-100 text-blue-950 hover:bg-sky-200"
+                    : active
                       ? "bg-sky-50 text-sky-700"
-                      : "text-blue-950 hover:bg-zinc-100"
-                  }`}
-                >
-                  <span>{item.label}</span>
+                      : "text-blue-950 hover:bg-zinc-100";
 
-                  <span aria-hidden="true">
-                    →
-                  </span>
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={
+                      item.href
+                    }
+                    href={
+                      item.href
+                    }
+                    onClick={
+                      closeMobileMenu
+                    }
+                    className={`flex items-center justify-between rounded-2xl px-5 py-4 text-lg font-bold transition ${className}`}
+                  >
+                    <span>
+                      {
+                        item.label
+                      }
+                    </span>
+
+                    <span aria-hidden="true">
+                      →
+                    </span>
+                  </Link>
+                );
+              }
+            )}
 
             <div className="mt-3 border-t border-zinc-200 pt-5">
               <a
                 href="https://instagram.com/aluga.casa.buzios"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={closeMobileMenu}
+                onClick={
+                  closeMobileMenu
+                }
                 className="flex items-center justify-center rounded-2xl border border-zinc-200 px-5 py-4 font-bold text-zinc-700 transition hover:bg-zinc-100 hover:text-pink-600"
               >
                 📸 Acompanhar no Instagram

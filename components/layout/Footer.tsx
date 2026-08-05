@@ -106,6 +106,13 @@ export default function Footer() {
               </Link>
 
               <Link
+                href="/anuncie-conosco"
+                className="font-bold text-sky-300 transition hover:translate-x-1 hover:text-white"
+              >
+                Anuncie conosco →
+              </Link>
+
+              <Link
                 href="/privacidade"
                 className="transition hover:translate-x-1 hover:text-white"
               >
@@ -161,34 +168,43 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Reserva */}
+          {/* Ações */}
           <div>
             <h2 className="text-lg font-bold">
               Planeje sua viagem
             </h2>
 
             <p className="mt-6 leading-7 text-white/70">
-              Informe as datas e a quantidade de hóspedes para receber as
-              melhores opções disponíveis.
+              Consulte casas disponíveis para suas datas e quantidade de
+              hóspedes.
             </p>
 
             <a
               href="https://wa.me/5524998288846?text=Olá! Gostaria de consultar casas disponíveis para minha viagem a Búzios."
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-green-800 px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-900"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-green-700 px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-800"
             >
               Consultar disponibilidade
             </a>
 
-            <a
-              href="https://www.airbnb.com.br/p/alugacasabuzios"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 block text-sm font-semibold text-sky-300 transition hover:text-white"
-            >
-              Ver perfil no Airbnb →
-            </a>
+            <div className="mt-8 border-t border-white/10 pt-7">
+              <h2 className="text-lg font-bold">
+                Você possui um imóvel?
+              </h2>
+
+              <p className="mt-3 leading-7 text-white/70">
+                Apresente sua casa para nossa equipe e conheça nosso trabalho de
+                administração e divulgação.
+              </p>
+
+              <Link
+                href="/anuncie-conosco"
+                className="mt-5 inline-flex items-center justify-center rounded-full bg-sky-400 px-6 py-3 font-bold text-blue-950 shadow-lg transition hover:-translate-y-1 hover:bg-sky-300"
+              >
+                Anuncie conosco
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -206,6 +222,13 @@ export default function Footer() {
             <span>
               alugacasabuzios.com.br
             </span>
+
+            <Link
+              href="/anuncie-conosco"
+              className="font-semibold text-sky-300 transition hover:text-white"
+            >
+              Anuncie conosco
+            </Link>
 
             <Link
               href="/privacidade"

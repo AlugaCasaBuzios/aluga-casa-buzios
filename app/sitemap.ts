@@ -2,50 +2,61 @@ import type { MetadataRoute } from "next";
 
 import { properties } from "@/app/data/properties";
 
-const baseUrl = "https://alugacasabuzios.com.br";
+const baseUrl =
+  "https://alugacasabuzios.com.br";
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const lastModified = new Date();
+
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${baseUrl}/casas`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/anuncie-conosco`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/sobre`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
       url: `${baseUrl}/contato`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "monthly",
       priority: 0.8,
     },
     {
       url: `${baseUrl}/privacidade`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "yearly",
       priority: 0.3,
     },
   ];
 
-  const propertyPages: MetadataRoute.Sitemap = properties.map(
-    (property) => ({
+  const propertyPages: MetadataRoute.Sitemap =
+    properties.map((property) => ({
       url: `${baseUrl}/imoveis/${property.id}`,
-      lastModified: new Date(),
+      lastModified,
       changeFrequency: "weekly",
       priority: 0.8,
-    })
-  );
+    }));
 
-  return [...staticPages, ...propertyPages];
+  return [
+    ...staticPages,
+    ...propertyPages,
+  ];
 }

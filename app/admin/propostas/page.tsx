@@ -11,7 +11,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type PropertyManagementLead = {
+type ProposalRecord = {
   id: string;
   created_at: string;
 
@@ -20,10 +20,11 @@ type PropertyManagementLead = {
   owner_email: string | null;
 
   property_name: string | null;
-  property_type: string;
-  neighborhood: string;
-  city: string;
-  state: string;
+  property_type: string | null;
+
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
 
   maximum_guests: number | null;
   bedrooms: number | null;
@@ -32,15 +33,13 @@ type PropertyManagementLead = {
   photo_count: number | null;
 };
 
-function formatDate(
+function formatDateTime(
   value: string
 ): string {
   const date = new Date(value);
 
   if (
-    Number.isNaN(
-      date.getTime()
-    )
+    Number.isNaN(date.getTime())
   ) {
     return "Data não informada";
   }
@@ -56,16 +55,64 @@ function formatDate(
   ).format(date);
 }
 
-function getWhatsAppUrl(
-  whatsapp: string
+function formatText(
+  value: string | null
 ): string {
-  const digits =
-    whatsapp.replace(
-      /\D/g,
-      ""
-    );
+  return (
+    value?.trim() ||
+    "Não informado"
+  );
+}
 
-  const number =
+function formatNumber(
+  value: number | null
+): string {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "Não informado";
+  }
+
+  return String(value);
+}
+
+function formatPropertyType(
+  value: string | null
+): string {
+  const propertyTypes: Record<
+    string,
+    string
+  > = {
+    house: "Casa",
+    apartment: "Apartamento",
+    flat: "Flat",
+    loft: "Loft",
+    guesthouse: "Casa de hóspedes",
+    other: "Outro",
+  };
+
+  if (!value) {
+    return "Não informado";
+  }
+
+  return (
+    propertyTypes[value] ||
+    value
+  );
+}
+
+function getWhatsAppUrl(
+  value: string
+): string | null {
+  const digits =
+    value.replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  const normalizedNumber =
     digits.startsWith("55")
       ? digits
       : `55${digits}`;
@@ -73,34 +120,24 @@ function getWhatsAppUrl(
   const message =
     "Olá! Recebemos sua proposta de imóvel pelo site da Aluga Casa Búzios e gostaríamos de conversar.";
 
-  return (
-    `https://wa.me/${number}` +
-    `?text=${encodeURIComponent(
-      message
-    )}`
-  );
+  return `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(
+    message
+  )}`;
 }
 
-export default async function PropostasPage() {
-  const authSupabase =
+export default async function ProposalsPage() {
+  const authenticationClient =
     await createSupabaseServerClient();
 
   const {
-    data: {
-      user,
-    },
+    data: { user },
   } =
-    await authSupabase.auth.getUser();
+    await authenticationClient.auth.getUser();
 
   if (!user) {
     redirect("/admin/login");
   }
 
-  /*
-   * O cliente administrativo é
-   * utilizado somente depois da
-   * confirmação do usuário autenticado.
-   */
   const supabase =
     createSupabaseAdminClient();
 
@@ -127,12 +164,9 @@ export default async function PropostasPage() {
       bathrooms,
       photo_count
     `)
-    .order(
-      "created_at",
-      {
-        ascending: false,
-      }
-    )
+    .order("created_at", {
+      ascending: false,
+    })
     .limit(200);
 
   if (error) {
@@ -144,21 +178,21 @@ export default async function PropostasPage() {
     return (
       <main className="min-h-screen bg-slate-100 px-4 py-12">
         <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 shadow-lg">
-          <p className="text-sm font-bold uppercase tracking-widest text-red-600">
-            Erro
-          </p>
-
-          <h1 className="mt-3 text-3xl font-bold text-slate-950">
+          <h1 className="text-2xl font-bold text-red-700">
             Não foi possível carregar as propostas
           </h1>
 
-          <p className="mt-4 leading-7 text-slate-600">
-            Verifique a conexão com o Supabase e tente novamente.
+          <p className="mt-3 text-slate-600">
+            Ocorreu um erro ao consultar as propostas
+            no Supabase.
           </p>
 
           <Link
             href="/admin"
-            className="mt-7 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold text-white transition hover:bg-blue-900"
+            style={{
+              color: "#ffffff",
+            }}
+            className="mt-7 inline-flex rounded-xl bg-blue-950 px-6 py-3 font-bold transition hover:bg-blue-900"
           >
             Voltar ao painel
           </Link>
@@ -167,61 +201,65 @@ export default async function PropostasPage() {
     );
   }
 
-  const leads =
-    (data ?? []) as
-      PropertyManagementLead[];
+  const proposals =
+    (data ??
+      []) as ProposalRecord[];
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-7xl">
-        <header className="rounded-3xl bg-blue-950 p-6 text-white shadow-lg sm:p-8">
+        <header className="rounded-3xl bg-blue-950 p-7 text-white shadow-lg sm:p-9">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-sky-300">
-                Captação de imóveis
+              <p className="text-sm font-semibold uppercase tracking-widest text-sky-300">
+                Aluga Casa Búzios
               </p>
 
-              <h1 className="mt-3 text-3xl font-black sm:text-4xl">
-                Propostas recebidas
+              <h1 className="mt-2 text-3xl font-black">
+                Propostas de imóveis
               </h1>
 
-              <p className="mt-3 max-w-2xl leading-7 text-blue-100">
-                Consulte proprietários que desejam anunciar ou administrar seus
-                imóveis com a Aluga Casa Búzios.
+              <p className="mt-3 text-blue-100">
+                Consulte os imóveis enviados por
+                proprietários interessados na
+                administração da Aluga Casa Búzios.
               </p>
             </div>
 
             <Link
               href="/admin"
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 font-bold text-blue-950 shadow-sm transition hover:bg-blue-100"
+              style={{
+                color: "#172554",
+              }}
+              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 font-bold shadow-sm transition hover:bg-blue-100"
             >
-              Voltar ao painel
+              ← Voltar ao painel
             </Link>
           </div>
         </header>
 
-        <section className="mt-8 rounded-3xl bg-white p-6 shadow-lg sm:p-8">
-          <div className="flex flex-col gap-3 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <section className="mt-8">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-950">
-                Novos proprietários
+              <h2 className="text-2xl font-bold text-slate-900">
+                Propostas recebidas
               </h2>
 
-              <p className="mt-2 text-slate-600">
-                Propostas ordenadas da mais recente para a mais antiga.
+              <p className="mt-1 text-slate-600">
+                {proposals.length}{" "}
+                {proposals.length === 1
+                  ? "proposta encontrada"
+                  : "propostas encontradas"}
               </p>
             </div>
 
-            <div className="inline-flex w-fit rounded-full bg-sky-100 px-4 py-2 text-sm font-bold text-sky-800">
-              {leads.length}{" "}
-              {leads.length === 1
-                ? "proposta"
-                : "propostas"}
-            </div>
+            <p className="text-sm text-slate-500">
+              Mais recentes primeiro
+            </p>
           </div>
 
-          {leads.length === 0 ? (
-            <div className="py-16 text-center">
+          {proposals.length === 0 ? (
+            <div className="rounded-3xl bg-white px-6 py-16 text-center shadow-lg">
               <div
                 aria-hidden="true"
                 className="text-5xl"
@@ -229,143 +267,212 @@ export default async function PropostasPage() {
                 🏠
               </div>
 
-              <h3 className="mt-5 text-xl font-bold text-slate-950">
+              <h2 className="mt-5 text-2xl font-bold text-slate-900">
                 Nenhuma proposta recebida
-              </h3>
+              </h2>
 
-              <p className="mt-2 text-slate-600">
-                As propostas enviadas pelo formulário aparecerão aqui.
+              <p className="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
+                Quando um proprietário preencher o
+                formulário “Anuncie conosco”, a
+                proposta aparecerá aqui.
               </p>
             </div>
           ) : (
-            <div className="mt-8 grid gap-6 lg:grid-cols-2">
-              {leads.map(
-                (lead) => (
-                  <article
-                    key={lead.id}
-                    className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-sky-300 hover:shadow-md"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-500">
-                          Recebida em{" "}
-                          {formatDate(
-                            lead.created_at
+            <div className="grid gap-6 lg:grid-cols-2">
+              {proposals.map(
+                (proposal) => {
+                  const whatsappUrl =
+                    getWhatsAppUrl(
+                      proposal.owner_whatsapp
+                    );
+
+                  return (
+                    <article
+                      key={proposal.id}
+                      className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg"
+                    >
+                      <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold uppercase tracking-wider text-sky-700">
+                              {formatPropertyType(
+                                proposal.property_type
+                              )}
+                            </p>
+
+                            <h2 className="mt-2 text-2xl font-bold text-blue-950">
+                              {proposal.property_name ||
+                                "Imóvel sem nome"}
+                            </h2>
+
+                            <p className="mt-2 text-sm text-slate-500">
+                              Enviada em{" "}
+                              {formatDateTime(
+                                proposal.created_at
+                              )}
+                            </p>
+                          </div>
+
+                          <span className="inline-flex w-fit rounded-full bg-blue-100 px-4 py-2 text-sm font-bold text-blue-900">
+                            {proposal.photo_count ??
+                              0}{" "}
+                            {(proposal.photo_count ??
+                              0) === 1
+                              ? "foto"
+                              : "fotos"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-6">
+                        <div className="grid gap-5 sm:grid-cols-2">
+                          <InfoItem
+                            label="Proprietário"
+                            value={formatText(
+                              proposal.owner_name
+                            )}
+                          />
+
+                          <InfoItem
+                            label="WhatsApp"
+                            value={formatText(
+                              proposal.owner_whatsapp
+                            )}
+                          />
+
+                          <InfoItem
+                            label="E-mail"
+                            value={formatText(
+                              proposal.owner_email
+                            )}
+                          />
+
+                          <InfoItem
+                            label="Localização"
+                            value={[
+                              proposal.neighborhood,
+                              proposal.city,
+                              proposal.state,
+                            ]
+                              .filter(Boolean)
+                              .join(" — ") ||
+                              "Não informada"}
+                          />
+                        </div>
+
+                        <div className="mt-6 grid grid-cols-3 gap-3">
+                          <SummaryItem
+                            label="Hóspedes"
+                            value={formatNumber(
+                              proposal.maximum_guests
+                            )}
+                          />
+
+                          <SummaryItem
+                            label="Quartos"
+                            value={formatNumber(
+                              proposal.bedrooms
+                            )}
+                          />
+
+                          <SummaryItem
+                            label="Banheiros"
+                            value={formatNumber(
+                              proposal.bathrooms
+                            )}
+                          />
+                        </div>
+
+                        <div className="mt-7 flex flex-col gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:flex-wrap">
+                          <Link
+                            href={`/admin/propostas/${proposal.id}`}
+                            style={{
+                              color: "#ffffff",
+                            }}
+                            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-blue-950 px-5 py-3 text-center font-bold shadow-sm transition hover:bg-blue-900"
+                          >
+                            Ver proposta completa
+                          </Link>
+
+                          {whatsappUrl && (
+                            <a
+                              href={whatsappUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: "#ffffff",
+                              }}
+                              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-green-600 px-5 py-3 text-center font-bold shadow-sm transition hover:bg-green-700"
+                            >
+                              WhatsApp
+                            </a>
                           )}
-                        </p>
 
-                        <h3 className="mt-2 text-2xl font-bold text-blue-950">
-                          {lead.property_name ||
-                            `${lead.property_type} em ${lead.neighborhood}`}
-                        </h3>
-
-                        <p className="mt-2 text-slate-600">
-                          📍 {lead.neighborhood},{" "}
-                          {lead.city} —{" "}
-                          {lead.state}
-                        </p>
+                          {proposal.owner_email && (
+                            <a
+                              href={`mailto:${proposal.owner_email}`}
+                              style={{
+                                color: "#172554",
+                              }}
+                              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-blue-950 px-5 py-3 text-center font-bold transition hover:bg-blue-50"
+                            >
+                              E-mail
+                            </a>
+                          )}
+                        </div>
                       </div>
-
-                      <span className="inline-flex w-fit shrink-0 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-800">
-                        Nova proposta
-                      </span>
-                    </div>
-
-                    <div className="mt-6 rounded-2xl bg-slate-50 p-5">
-                      <p className="text-sm text-slate-500">
-                        Proprietário ou responsável
-                      </p>
-
-                      <p className="mt-1 text-lg font-bold text-slate-950">
-                        {lead.owner_name}
-                      </p>
-
-                      <p className="mt-3 font-medium text-slate-700">
-                        WhatsApp:{" "}
-                        {lead.owner_whatsapp}
-                      </p>
-
-                      {lead.owner_email && (
-                        <p className="mt-1 break-words text-slate-700">
-                          E-mail:{" "}
-                          {lead.owner_email}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div className="rounded-xl border border-slate-200 p-3 text-center">
-                        <p className="text-xs text-slate-500">
-                          Tipo
-                        </p>
-
-                        <p className="mt-1 font-bold text-slate-900">
-                          {lead.property_type}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 p-3 text-center">
-                        <p className="text-xs text-slate-500">
-                          Hóspedes
-                        </p>
-
-                        <p className="mt-1 font-bold text-slate-900">
-                          {lead.maximum_guests ??
-                            "—"}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 p-3 text-center">
-                        <p className="text-xs text-slate-500">
-                          Quartos
-                        </p>
-
-                        <p className="mt-1 font-bold text-slate-900">
-                          {lead.bedrooms ??
-                            "—"}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 p-3 text-center">
-                        <p className="text-xs text-slate-500">
-                          Fotos
-                        </p>
-
-                        <p className="mt-1 font-bold text-slate-900">
-                          {lead.photo_count ??
-                            0}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                      <a
-                        href={getWhatsAppUrl(
-                          lead.owner_whatsapp
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl bg-green-600 px-5 py-3 text-center font-bold text-white transition hover:bg-green-700"
-                      >
-                        Falar pelo WhatsApp
-                      </a>
-
-                      {lead.owner_email && (
-                        <a
-                          href={`mailto:${lead.owner_email}`}
-                          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-xl border border-blue-950 px-5 py-3 text-center font-bold text-blue-950 transition hover:bg-blue-950 hover:text-white"
-                        >
-                          Enviar e-mail
-                        </a>
-                      )}
-                    </div>
-                  </article>
-                )
+                    </article>
+                  );
+                }
               )}
             </div>
           )}
         </section>
       </div>
     </main>
+  );
+}
+
+type InfoItemProps = {
+  label: string;
+  value: string;
+};
+
+function InfoItem({
+  label,
+  value,
+}: InfoItemProps) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words font-semibold text-slate-900">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+type SummaryItemProps = {
+  label: string;
+  value: string;
+};
+
+function SummaryItem({
+  label,
+  value,
+}: SummaryItemProps) {
+  return (
+    <div className="rounded-2xl bg-slate-50 px-3 py-4 text-center">
+      <p className="text-xl font-black text-blue-950">
+        {value}
+      </p>
+
+      <p className="mt-1 text-xs font-semibold text-slate-500">
+        {label}
+      </p>
+    </div>
   );
 }

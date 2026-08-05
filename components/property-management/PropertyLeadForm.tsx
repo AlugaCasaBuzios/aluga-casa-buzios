@@ -11,6 +11,10 @@ import type {
 } from "react";
 
 import {
+  sendGAEvent,
+} from "@next/third-parties/google";
+
+import {
   createSupabaseBrowserClient,
 } from "@/lib/supabase";
 
@@ -711,6 +715,36 @@ export default function PropertyLeadForm() {
             "Proposta enviada com sucesso! Nossa equipe entrará em contato pelo canal informado.",
         });
       }
+
+      /*
+       * Registra a captação no
+       * Google Analytics somente
+       * depois da confirmação da API.
+       *
+       * Nenhum dado pessoal do
+       * proprietário é enviado.
+       */
+      sendGAEvent(
+        "event",
+        "generate_lead",
+        {
+          lead_source:
+            "property_management_form",
+
+          form_name:
+            "anuncie_conosco",
+
+          photos_confirmed:
+            finalizeData
+              .photosConfirmed ?? 0,
+
+          photos_not_confirmed:
+            photosNotConfirmed,
+
+          page_path:
+            window.location.pathname,
+        }
+      );
 
       formRef.current?.reset();
 

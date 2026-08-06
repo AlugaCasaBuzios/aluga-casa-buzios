@@ -33,6 +33,7 @@ type ProposalDetailPageProps = {
 type ProposalRecord = {
   id: string;
   created_at: string;
+  archived_at: string | null;
 
   owner_name: string;
   owner_whatsapp: string;
@@ -408,6 +409,57 @@ async function archiveProposal(
   );
 }
 
+async function restoreProposal(
+  proposalId: string,
+  _formData: FormData
+): Promise<void> {
+  "use server";
+
+  const authenticationClient =
+    await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } =
+    await authenticationClient.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const { error } = await supabase
+    .from(
+      "property_management_leads"
+    )
+    .update({
+      archived_at: null,
+    })
+    .eq("id", proposalId)
+    .not(
+      "archived_at",
+      "is",
+      null
+    );
+
+  if (error) {
+    console.error(
+      "Erro ao restaurar proposta:",
+      error
+    );
+
+    redirect(
+      `/admin/propostas/${proposalId}?erro=restaurar`
+    );
+  }
+
+  redirect(
+    "/admin/propostas/arquivadas?restaurado=1"
+  );
+}
+
 export default async function ProposalDetailPage({
   params,
   searchParams,
@@ -445,6 +497,7 @@ export default async function ProposalDetailPage({
     .select(`
       id,
       created_at,
+      archived_at,
       owner_name,
       owner_whatsapp,
       owner_email,
@@ -479,7 +532,6 @@ export default async function ProposalDetailPage({
       utm_campaign
     `)
     .eq("id", id)
-    .is("archived_at", null)
     .maybeSingle();
 
   if (proposalError) {
@@ -626,11 +678,27 @@ export default async function ProposalDetailPage({
   const fullAddress =
     getFullAddress(proposal);
 
+  const isArchived =
+    Boolean(
+      proposal.archived_at
+    );
+
   const archiveProposalAction =
     archiveProposal.bind(
       null,
       proposal.id
     );
+
+  const restoreProposalAction =
+    restoreProposal.bind(
+      null,
+      proposal.id
+    );
+
+  const proposalsBackHref =
+    isArchived
+      ? "/admin/propostas/arquivadas"
+      : "/admin/propostas";
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -661,13 +729,15 @@ export default async function ProposalDetailPage({
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/admin/propostas"
+                href={proposalsBackHref}
                 style={{
                   color: "#172554",
                 }}
                 className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 py-3 font-bold shadow-sm transition hover:bg-blue-100"
               >
-                ← Voltar às propostas
+                {isArchived
+                  ? "← Voltar às arquivadas"
+                  : "← Voltar às propostas"}
               </Link>
 
               {whatsappUrl && (
@@ -696,12 +766,41 @@ export default async function ProposalDetailPage({
           </div>
         )}
 
+        {isArchived && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-amber-950"
+          >
+            <p className="font-bold">
+              Esta proposta está arquivada.
+            </p>
+
+            <p className="mt-1 text-sm">
+              Arquivada em{" "}
+              {proposal.archived_at
+                ? formatDateTime(
+                    proposal.archived_at
+                  )
+                : "data não informada"}.
+            </p>
+          </div>
+        )}
+
         {erro === "arquivar" && (
           <div
             role="alert"
             className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 font-semibold text-red-800"
           >
             Não foi possível arquivar a proposta. Tente novamente.
+          </div>
+        )}
+
+        {erro === "restaurar" && (
+          <div
+            role="alert"
+            className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 font-semibold text-red-800"
+          >
+            Não foi possível restaurar a proposta. Tente novamente.
           </div>
         )}
 
@@ -1060,9 +1159,11 @@ export default async function ProposalDetailPage({
           </div>
 
           <aside className="space-y-8">
-            <ProposalStatusForm
-              proposalId={proposal.id}
-            />
+            {!isArchived && (
+              <ProposalStatusForm
+                proposalId={proposal.id}
+              />
+            )}
 
             <section className="rounded-3xl bg-white p-6 shadow-lg">
               <h2 className="text-xl font-bold text-slate-900">
@@ -1173,43 +1274,83 @@ export default async function ProposalDetailPage({
               </div>
             </section>
 
-            <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-lg">
-              <h2 className="text-xl font-bold text-amber-950">
-                Arquivar proposta
-              </h2>
+            {isArchived ? (
+              <section className="rounded-3xl border border-green-200 bg-green-50 p-6 shadow-lg">
+                <h2 className="text-xl font-bold text-green-950">
+                  Restaurar proposta
+                </h2>
 
-              <p className="mt-3 text-sm leading-6 text-amber-900">
-                A proposta deixará de aparecer na lista principal, mas seus
-                dados e fotos permanecerão salvos.
-              </p>
+                <p className="mt-3 text-sm leading-6 text-green-900">
+                  A proposta voltará a aparecer na lista principal com os
+                  mesmos dados, fotos e andamento anteriores.
+                </p>
 
-              <details className="mt-5">
-                <summary
-                  className="inline-flex min-h-12 cursor-pointer list-none items-center justify-center rounded-xl border border-amber-700 bg-white px-5 py-3 text-center font-bold text-amber-900 transition hover:bg-amber-100"
-                >
-                  Arquivar proposta
-                </summary>
-
-                <div className="mt-4 rounded-2xl border border-amber-300 bg-white p-4">
-                  <p className="text-sm font-semibold leading-6 text-slate-700">
-                    Confirme somente quando esta proposta não precisar mais
-                    aparecer entre as propostas ativas.
-                  </p>
-
-                  <form
-                    action={archiveProposalAction}
-                    className="mt-4"
+                <details className="mt-5">
+                  <summary
+                    className="inline-flex min-h-12 cursor-pointer list-none items-center justify-center rounded-xl border border-green-700 bg-white px-5 py-3 text-center font-bold text-green-900 transition hover:bg-green-100"
                   >
-                    <button
-                      type="submit"
-                      className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-amber-700 px-5 py-3 text-center font-bold text-white shadow-sm transition hover:bg-amber-800"
+                    Restaurar proposta
+                  </summary>
+
+                  <div className="mt-4 rounded-2xl border border-green-300 bg-white p-4">
+                    <p className="text-sm font-semibold leading-6 text-slate-700">
+                      Confirme para devolver esta proposta à lista de propostas
+                      ativas.
+                    </p>
+
+                    <form
+                      action={restoreProposalAction}
+                      className="mt-4"
                     >
-                      Confirmar arquivamento
-                    </button>
-                  </form>
-                </div>
-              </details>
-            </section>
+                      <button
+                        type="submit"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-green-700 px-5 py-3 text-center font-bold text-white shadow-sm transition hover:bg-green-800"
+                      >
+                        Confirmar restauração
+                      </button>
+                    </form>
+                  </div>
+                </details>
+              </section>
+            ) : (
+              <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-lg">
+                <h2 className="text-xl font-bold text-amber-950">
+                  Arquivar proposta
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-amber-900">
+                  A proposta deixará de aparecer na lista principal, mas seus
+                  dados e fotos permanecerão salvos.
+                </p>
+
+                <details className="mt-5">
+                  <summary
+                    className="inline-flex min-h-12 cursor-pointer list-none items-center justify-center rounded-xl border border-amber-700 bg-white px-5 py-3 text-center font-bold text-amber-900 transition hover:bg-amber-100"
+                  >
+                    Arquivar proposta
+                  </summary>
+
+                  <div className="mt-4 rounded-2xl border border-amber-300 bg-white p-4">
+                    <p className="text-sm font-semibold leading-6 text-slate-700">
+                      Confirme somente quando esta proposta não precisar mais
+                      aparecer entre as propostas ativas.
+                    </p>
+
+                    <form
+                      action={archiveProposalAction}
+                      className="mt-4"
+                    >
+                      <button
+                        type="submit"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-amber-700 px-5 py-3 text-center font-bold text-white shadow-sm transition hover:bg-amber-800"
+                      >
+                        Confirmar arquivamento
+                      </button>
+                    </form>
+                  </div>
+                </details>
+              </section>
+            )}
 
             <ProposalDeleteForm
               proposalId={proposal.id}

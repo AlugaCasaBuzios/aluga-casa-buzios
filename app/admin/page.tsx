@@ -70,6 +70,7 @@ export default async function AdminPage({
   const [
     pricingResult,
     newProposalsResult,
+    archivedProposalsResult,
   ] = await Promise.all([
     supabase
       .from("property_pricing")
@@ -95,7 +96,22 @@ export default async function AdminPage({
         count: "exact",
         head: true,
       })
-      .eq("status", "new"),
+      .eq("status", "new")
+      .is("archived_at", null),
+
+    adminSupabase
+      .from(
+        "property_management_leads"
+      )
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .not(
+        "archived_at",
+        "is",
+        null
+      ),
   ]);
 
   const {
@@ -108,6 +124,11 @@ export default async function AdminPage({
     error: proposalsCountError,
   } = newProposalsResult;
 
+  const {
+    count: archivedProposalsCount,
+    error: archivedProposalsCountError,
+  } = archivedProposalsResult;
+
   if (proposalsCountError) {
     console.error(
       "Erro ao contar propostas novas:",
@@ -115,8 +136,20 @@ export default async function AdminPage({
     );
   }
 
+  if (
+    archivedProposalsCountError
+  ) {
+    console.error(
+      "Erro ao contar propostas arquivadas:",
+      archivedProposalsCountError
+    );
+  }
+
   const newProposals =
     newProposalsCount ?? 0;
+
+  const archivedProposals =
+    archivedProposalsCount ?? 0;
 
   if (error) {
     console.error(
@@ -175,7 +208,7 @@ export default async function AdminPage({
 
             <nav
               aria-label="Opções do painel administrativo"
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
             >
               <Link
                 href="/admin/propostas"
@@ -206,6 +239,30 @@ export default async function AdminPage({
                       : "novas"}
                   </span>
                 )}
+              </Link>
+
+              <Link
+                href="/admin/propostas/arquivadas"
+                style={{
+                  color: "#78350f",
+                }}
+                aria-label={
+                  archivedProposals === 1
+                    ? "1 proposta arquivada"
+                    : `${archivedProposals} propostas arquivadas`
+                }
+                className="relative inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-amber-100 px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-200"
+              >
+                <span>
+                  Propostas arquivadas
+                </span>
+
+                <span className="inline-flex rounded-full bg-amber-700 px-3 py-1 text-xs font-black text-white shadow-sm">
+                  {archivedProposals}{" "}
+                  {archivedProposals === 1
+                    ? "arquivada"
+                    : "arquivadas"}
+                </span>
               </Link>
 
               <Link

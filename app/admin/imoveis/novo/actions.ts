@@ -149,6 +149,10 @@ export async function createProperty(
     formData.get("image") ?? ""
   ).trim();
 
+  const photoUploadStatus = String(
+    formData.get("photoUploadStatus") ?? ""
+  ).trim();
+
   const airbnb = String(
     formData.get("airbnb") ?? ""
   ).trim();
@@ -394,6 +398,23 @@ export async function createProperty(
     parseLines(
       formData.get("gallery")
     );
+
+  if (
+    photoUploadStatus === "pending"
+  ) {
+    redirect(
+      buildErrorUrl("fotos-pendentes")
+    );
+  }
+
+  if (
+    !image ||
+    gallery.length === 0
+  ) {
+    redirect(
+      buildErrorUrl("fotos")
+    );
+  }
 
   const amenities =
     parseLines(

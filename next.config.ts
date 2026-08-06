@@ -44,6 +44,20 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname:
+          "jbhzzbnvejpldipfljwc.supabase.co",
+        port: "",
+        pathname:
+          "/storage/v1/object/public/property-photos/**",
+        search: "",
+      },
+    ],
+  },
+
   async headers() {
     return [
       {

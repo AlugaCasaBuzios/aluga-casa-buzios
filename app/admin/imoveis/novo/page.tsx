@@ -3,6 +3,8 @@ import {
   redirect,
 } from "next/navigation";
 
+import PropertyPhotoUploader from "@/components/admin/PropertyPhotoUploader";
+
 import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
@@ -68,6 +70,12 @@ function getErrorMessage(
 
     case "intervalo":
       return "O preço mínimo não pode ser maior que o preço máximo.";
+
+    case "fotos-pendentes":
+      return "Aguarde o envio das fotos terminar antes de cadastrar a casa.";
+
+    case "fotos":
+      return "Envie pelo menos uma foto da casa antes de concluir o cadastro.";
 
     case "salvar-precos":
       return "O catálogo foi revertido porque não foi possível salvar os preços.";
@@ -483,36 +491,11 @@ export default async function NewPropertyPage({
                 Fotos
               </legend>
 
-              <div>
-                <label htmlFor="image" className={labelClassName}>
-                  Foto principal
-                </label>
+              <p className="text-sm leading-6 text-slate-600">
+                Preencha primeiro o título ou o identificador da casa. Depois selecione as fotos e clique em <strong>Enviar fotos</strong>. A primeira imagem será usada como foto principal.
+              </p>
 
-                <input
-                  id="image"
-                  name="image"
-                  className={inputClassName}
-                  placeholder="URL ou caminho da imagem"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gallery" className={labelClassName}>
-                  Galeria
-                </label>
-
-                <textarea
-                  id="gallery"
-                  name="gallery"
-                  rows={6}
-                  className={inputClassName}
-                  placeholder={"Uma URL ou caminho por linha\n/imagens/casa/foto-1.jpg\n/imagens/casa/foto-2.jpg"}
-                />
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Nesta etapa, informe uma imagem por linha. O upload direto será configurado depois.
-                </p>
-              </div>
+              <PropertyPhotoUploader />
             </fieldset>
 
             <fieldset className="space-y-6">

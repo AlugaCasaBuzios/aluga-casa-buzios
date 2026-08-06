@@ -11,6 +11,41 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type ProposalsPageProps = {
+  searchParams: Promise<{
+    busca?: string;
+    status?: string;
+    ordem?: string;
+    excluido?: string;
+  }>;
+};
+
+type StatusFilter =
+  | "all"
+  | "new"
+  | "contacted"
+  | "evaluating"
+  | "approved"
+  | "rejected";
+
+type SortOrder =
+  | "newest"
+  | "oldest";
+
+const statusFilters: StatusFilter[] = [
+  "all",
+  "new",
+  "contacted",
+  "evaluating",
+  "approved",
+  "rejected",
+];
+
+const sortOrders: SortOrder[] = [
+  "newest",
+  "oldest",
+];
+
 type ProposalRecord = {
   id: string;
   created_at: string;
@@ -174,7 +209,104 @@ function getWhatsAppUrl(
   )}`;
 }
 
-export default async function ProposalsPage() {
+function normalizeSearchText(
+  value: string | null | undefined
+): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .toLowerCase();
+}
+
+function parseStatusFilter(
+  value: string | undefined
+): StatusFilter {
+  if (
+    statusFilters.includes(
+      value as StatusFilter
+    )
+  ) {
+    return value as StatusFilter;
+  }
+
+  return "all";
+}
+
+function parseSortOrder(
+  value: string | undefined
+): SortOrder {
+  if (
+    sortOrders.includes(
+      value as SortOrder
+    )
+  ) {
+    return value as SortOrder;
+  }
+
+  return "newest";
+}
+
+function buildStatusHref(
+  status: StatusFilter,
+  searchTerm: string,
+  sortOrder: SortOrder
+): string {
+  const params =
+    new URLSearchParams();
+
+  if (searchTerm) {
+    params.set(
+      "busca",
+      searchTerm
+    );
+  }
+
+  if (status !== "all") {
+    params.set(
+      "status",
+      status
+    );
+  }
+
+  if (sortOrder !== "newest") {
+    params.set(
+      "ordem",
+      sortOrder
+    );
+  }
+
+  const queryString =
+    params.toString();
+
+  return queryString
+    ? `/admin/propostas?${queryString}`
+    : "/admin/propostas";
+}
+
+export default async function ProposalsPage({
+  searchParams,
+}: ProposalsPageProps) {
+  const {
+    busca,
+    status,
+    ordem,
+    excluido,
+  } = await searchParams;
+
+  const searchTerm =
+    (busca ?? "")
+      .trim()
+      .slice(0, 100);
+
+  const selectedStatus =
+    parseStatusFilter(status);
+
+  const selectedSortOrder =
+    parseSortOrder(ordem);
+
   const authenticationClient =
     await createSupabaseServerClient();
 
@@ -251,36 +383,141 @@ export default async function ProposalsPage() {
     );
   }
 
-  const proposals =
+  const allProposals =
     (data ??
       []) as ProposalRecord[];
 
   const newProposals =
-    proposals.filter(
+    allProposals.filter(
       (proposal) =>
         proposal.status === "new"
     ).length;
 
   const contactedProposals =
-    proposals.filter(
+    allProposals.filter(
       (proposal) =>
         proposal.status ===
         "contacted"
     ).length;
 
   const evaluatingProposals =
-    proposals.filter(
+    allProposals.filter(
       (proposal) =>
         proposal.status ===
         "evaluating"
     ).length;
 
   const approvedProposals =
-    proposals.filter(
+    allProposals.filter(
       (proposal) =>
         proposal.status ===
         "approved"
     ).length;
+
+  const rejectedProposals =
+    allProposals.filter(
+      (proposal) =>
+        proposal.status ===
+        "rejected"
+    ).length;
+
+  const normalizedSearchTerm =
+    normalizeSearchText(
+      searchTerm
+    );
+
+  const searchDigits =
+    searchTerm.replace(
+      /\D/g,
+      ""
+    );
+
+  const proposals =
+    allProposals
+      .filter((proposal) => {
+        const matchesStatus =
+          selectedStatus ===
+            "all" ||
+          proposal.status ===
+            selectedStatus;
+
+        if (!matchesStatus) {
+          return false;
+        }
+
+        if (!searchTerm) {
+          return true;
+        }
+
+        const searchableText =
+          normalizeSearchText(
+            [
+              proposal.owner_name,
+              proposal.owner_whatsapp,
+              proposal.owner_email,
+              proposal.property_name,
+              proposal.property_type,
+              formatPropertyType(
+                proposal.property_type
+              ),
+              proposal.neighborhood,
+              proposal.city,
+              proposal.state,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          );
+
+        const matchesText =
+          searchableText.includes(
+            normalizedSearchTerm
+          );
+
+        const matchesPhone =
+          Boolean(searchDigits) &&
+          proposal.owner_whatsapp
+            .replace(/\D/g, "")
+            .includes(searchDigits);
+
+        return (
+          matchesText ||
+          matchesPhone
+        );
+      })
+      .sort((first, second) => {
+        const firstTime =
+          new Date(
+            first.created_at
+          ).getTime();
+
+        const secondTime =
+          new Date(
+            second.created_at
+          ).getTime();
+
+        const safeFirstTime =
+          Number.isNaN(firstTime)
+            ? 0
+            : firstTime;
+
+        const safeSecondTime =
+          Number.isNaN(secondTime)
+            ? 0
+            : secondTime;
+
+        return selectedSortOrder ===
+          "oldest"
+          ? safeFirstTime -
+              safeSecondTime
+          : safeSecondTime -
+              safeFirstTime;
+      });
+
+  const filtersAreActive =
+    Boolean(searchTerm) ||
+    selectedStatus !== "all" ||
+    selectedSortOrder !==
+      "newest";
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -315,11 +552,28 @@ export default async function ProposalsPage() {
           </div>
         </header>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {excluido === "1" && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800"
+          >
+            Proposta e fotos excluídas com sucesso.
+          </div>
+        )}
+
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatusSummary
             label="Novas"
             value={newProposals}
             className="border-sky-200 bg-sky-50 text-sky-900"
+            href={buildStatusHref(
+              "new",
+              searchTerm,
+              selectedSortOrder
+            )}
+            active={
+              selectedStatus === "new"
+            }
           />
 
           <StatusSummary
@@ -328,6 +582,15 @@ export default async function ProposalsPage() {
               contactedProposals
             }
             className="border-amber-200 bg-amber-50 text-amber-900"
+            href={buildStatusHref(
+              "contacted",
+              searchTerm,
+              selectedSortOrder
+            )}
+            active={
+              selectedStatus ===
+              "contacted"
+            }
           />
 
           <StatusSummary
@@ -336,6 +599,15 @@ export default async function ProposalsPage() {
               evaluatingProposals
             }
             className="border-purple-200 bg-purple-50 text-purple-900"
+            href={buildStatusHref(
+              "evaluating",
+              searchTerm,
+              selectedSortOrder
+            )}
+            active={
+              selectedStatus ===
+              "evaluating"
+            }
           />
 
           <StatusSummary
@@ -344,7 +616,154 @@ export default async function ProposalsPage() {
               approvedProposals
             }
             className="border-green-200 bg-green-50 text-green-900"
+            href={buildStatusHref(
+              "approved",
+              searchTerm,
+              selectedSortOrder
+            )}
+            active={
+              selectedStatus ===
+              "approved"
+            }
           />
+
+          <StatusSummary
+            label="Recusadas"
+            value={rejectedProposals}
+            className="border-red-200 bg-red-50 text-red-900"
+            href={buildStatusHref(
+              "rejected",
+              searchTerm,
+              selectedSortOrder
+            )}
+            active={
+              selectedStatus ===
+              "rejected"
+            }
+          />
+        </section>
+
+        <section className="mt-8 rounded-3xl bg-white p-6 shadow-lg">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">
+              Pesquisar e filtrar
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-600">
+              Encontre uma proposta pelo proprietário,
+              imóvel, bairro, telefone ou e-mail.
+            </p>
+          </div>
+
+          <form
+            action="/admin/propostas"
+            method="get"
+            className="mt-6 grid gap-4 lg:grid-cols-4"
+          >
+            <div className="lg:col-span-2">
+              <label
+                htmlFor="proposal-search"
+                className="text-sm font-bold text-slate-700"
+              >
+                Pesquisa
+              </label>
+
+              <input
+                id="proposal-search"
+                name="busca"
+                type="search"
+                defaultValue={searchTerm}
+                maxLength={100}
+                placeholder="Ex.: João, Centro, casa ou telefone"
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="proposal-status"
+                className="text-sm font-bold text-slate-700"
+              >
+                Status
+              </label>
+
+              <select
+                id="proposal-status"
+                name="status"
+                defaultValue={selectedStatus}
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              >
+                <option value="all">
+                  Todos os status
+                </option>
+
+                <option value="new">
+                  Novas
+                </option>
+
+                <option value="contacted">
+                  Em contato
+                </option>
+
+                <option value="evaluating">
+                  Em avaliação
+                </option>
+
+                <option value="approved">
+                  Aprovadas
+                </option>
+
+                <option value="rejected">
+                  Recusadas
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="proposal-order"
+                className="text-sm font-bold text-slate-700"
+              >
+                Ordenação
+              </label>
+
+              <select
+                id="proposal-order"
+                name="ordem"
+                defaultValue={selectedSortOrder}
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              >
+                <option value="newest">
+                  Mais recentes
+                </option>
+
+                <option value="oldest">
+                  Mais antigas
+                </option>
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row lg:col-span-4 lg:justify-end">
+              {filtersAreActive && (
+                <Link
+                  href="/admin/propostas"
+                  style={{
+                    color: "#172554",
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center rounded-xl border border-blue-950 px-6 py-3 font-bold transition hover:bg-blue-50"
+                >
+                  Limpar filtros
+                </Link>
+              )}
+
+              <button
+                type="submit"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-blue-950 px-7 py-3 font-bold text-white shadow-sm transition hover:bg-blue-900"
+              >
+                Aplicar filtros
+              </button>
+            </div>
+          </form>
         </section>
 
         <section className="mt-8">
@@ -355,15 +774,33 @@ export default async function ProposalsPage() {
               </h2>
 
               <p className="mt-1 text-slate-600">
-                {proposals.length}{" "}
-                {proposals.length === 1
-                  ? "proposta encontrada"
-                  : "propostas encontradas"}
+                {filtersAreActive ? (
+                  <>
+                    {proposals.length}{" "}
+                    {proposals.length === 1
+                      ? "resultado"
+                      : "resultados"}{" "}
+                    de {allProposals.length}{" "}
+                    {allProposals.length === 1
+                      ? "proposta recebida"
+                      : "propostas recebidas"}
+                  </>
+                ) : (
+                  <>
+                    {allProposals.length}{" "}
+                    {allProposals.length === 1
+                      ? "proposta encontrada"
+                      : "propostas encontradas"}
+                  </>
+                )}
               </p>
             </div>
 
             <p className="text-sm text-slate-500">
-              Mais recentes primeiro
+              {selectedSortOrder ===
+              "oldest"
+                ? "Mais antigas primeiro"
+                : "Mais recentes primeiro"}
             </p>
           </div>
 
@@ -377,14 +814,28 @@ export default async function ProposalsPage() {
               </div>
 
               <h2 className="mt-5 text-2xl font-bold text-slate-900">
-                Nenhuma proposta recebida
+                {allProposals.length === 0
+                  ? "Nenhuma proposta recebida"
+                  : "Nenhuma proposta encontrada"}
               </h2>
 
               <p className="mx-auto mt-3 max-w-xl leading-7 text-slate-600">
-                Quando um proprietário preencher o
-                formulário “Anuncie conosco”, a
-                proposta aparecerá aqui.
+                {allProposals.length === 0
+                  ? "Quando um proprietário preencher o formulário “Anuncie conosco”, a proposta aparecerá aqui."
+                  : "Não encontramos propostas com os filtros informados. Limpe os filtros ou tente outra pesquisa."}
               </p>
+
+              {filtersAreActive && (
+                <Link
+                  href="/admin/propostas"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-blue-950 px-6 py-3 font-bold transition hover:bg-blue-900"
+                >
+                  Limpar filtros
+                </Link>
+              )}
             </div>
           ) : (
             <div className="grid gap-6 lg:grid-cols-2">
@@ -561,16 +1012,30 @@ type StatusSummaryProps = {
   label: string;
   value: number;
   className: string;
+  href: string;
+  active: boolean;
 };
 
 function StatusSummary({
   label,
   value,
   className,
+  href,
+  active,
 }: StatusSummaryProps) {
   return (
-    <article
-      className={`rounded-2xl border p-5 shadow-sm ${className}`}
+    <Link
+      href={href}
+      aria-current={
+        active
+          ? "page"
+          : undefined
+      }
+      className={`rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${className} ${
+        active
+          ? "ring-2 ring-blue-950 ring-offset-2"
+          : ""
+      }`}
     >
       <p className="text-sm font-bold uppercase tracking-wider">
         {label}
@@ -579,7 +1044,7 @@ function StatusSummary({
       <p className="mt-2 text-3xl font-black">
         {value}
       </p>
-    </article>
+    </Link>
   );
 }
 

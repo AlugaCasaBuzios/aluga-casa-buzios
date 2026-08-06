@@ -1,4 +1,6 @@
-import { properties } from "@/app/data/properties";
+import {
+  getActivePropertyById,
+} from "@/lib/propertyCatalog";
 
 import {
   getAirbnbBlockedPeriods,
@@ -23,6 +25,9 @@ import {
 import {
   getSpecialPricingRules,
 } from "@/lib/pricing/getSpecialPricingRules";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 interface QuoteRequestBody {
   propertyId?: unknown;
@@ -140,9 +145,10 @@ export async function POST(
         ? body.referenceDate
         : undefined;
 
-    const property = properties.find(
-      (item) => item.id === propertyId
-    );
+    const property =
+      await getActivePropertyById(
+        propertyId
+      );
 
     if (!property) {
       return Response.json(
@@ -156,24 +162,14 @@ export async function POST(
       );
     }
 
-    /*
-     * Busca preços e regras gerais do imóvel.
-     */
     const pricingConfig =
       await getPropertyPricingConfig(
         property
       );
 
-    /*
-     * Busca períodos especiais ativos.
-     */
     const specialPricingConfig =
       await getSpecialPricingRules();
 
-    /*
-     * Busca preços manuais e mínimos de noites
-     * cadastrados para datas específicas.
-     */
     const dateOverrides =
       await getDatePricingOverrides(
         property.id,
@@ -181,10 +177,6 @@ export async function POST(
         checkOut
       );
 
-    /*
-     * Busca bloqueios manuais cadastrados
-     * pelo administrador.
-     */
     const manualBlocks =
       await getManualAvailabilityBlocks(
         property.id,
@@ -192,9 +184,6 @@ export async function POST(
         checkOut
       );
 
-    /*
-     * Verifica primeiro os bloqueios manuais.
-     */
     const manualConflict =
       manualBlocks.periods.find(
         (period) =>
@@ -233,9 +222,6 @@ export async function POST(
       );
     }
 
-    /*
-     * Consulta o calendário do Airbnb.
-     */
     const airbnbBlockedPeriods =
       await getAirbnbBlockedPeriods(
         property.id
@@ -276,10 +262,6 @@ export async function POST(
       );
     }
 
-    /*
-     * Calcula o orçamento somente quando
-     * não existe conflito de disponibilidade.
-     */
     const quote =
       calculatePropertyStayPrice({
         property: {

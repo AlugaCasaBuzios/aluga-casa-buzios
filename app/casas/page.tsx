@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { properties } from "@/app/data/properties";
-
 import CasasContent from "@/components/casas/CasasContent";
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
+import {
+  getActiveProperties,
+} from "@/lib/propertyCatalog";
+
+export const dynamic = "force-dynamic";
 
 const siteUrl =
   "https://alugacasabuzios.com.br";
@@ -48,67 +51,92 @@ export const metadata: Metadata = {
   },
 };
 
-const collectionPageJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-
-  name: "Casas para temporada em Búzios",
-
-  description:
-    "Seleção de casas para temporada em Armação dos Búzios.",
-
-  url: pageUrl,
-
-  mainEntity: {
-    "@type": "ItemList",
-
-    numberOfItems: properties.length,
-
-    itemListElement: properties.map(
-      (property, index) => ({
-        "@type": "ListItem",
-        position: index + 1,
-        name: property.title,
-        url: `${siteUrl}/imoveis/${property.id}`,
-      })
-    ),
-  },
-};
-
 const regions = [
   {
     name: "Geribá e São José",
     description:
       "Opções próximas à região de Geribá, indicadas para famílias e grupos.",
     href: "/imoveis/casa-em-buzios",
+    propertyId: "casa-em-buzios",
   },
   {
     name: "Tucuns",
     description:
       "Região tranquila, com praia extensa e boas opções para grupos maiores.",
     href: "/imoveis/casa-doce-mar",
+    propertyId: "casa-doce-mar",
   },
   {
     name: "Centro de Búzios",
     description:
       "Hospedagem próxima ao comércio, restaurantes e à Rua das Pedras.",
     href: "/imoveis/centro-top",
+    propertyId: "centro-top",
   },
   {
     name: "Praia da Tartaruga",
     description:
       "Localização prática para aproveitar uma das praias mais conhecidas de Búzios.",
     href: "/imoveis/flat-tartaruga",
+    propertyId: "flat-tartaruga",
   },
   {
     name: "Condomínio Aretê",
     description:
       "Casas amplas em condomínio, com conforto para famílias e grupos.",
     href: "/imoveis/arete-top",
+    propertyId: "arete-top",
   },
 ];
 
-export default function CasasPage() {
+export default async function CasasPage() {
+  const properties =
+    await getActiveProperties();
+
+  const activePropertyIds =
+    new Set(
+      properties.map(
+        (property) => property.id
+      )
+    );
+
+  const visibleRegions =
+    regions.filter(
+      (region) =>
+        activePropertyIds.has(
+          region.propertyId
+        )
+    );
+
+  const collectionPageJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+
+    name: "Casas para temporada em Búzios",
+
+    description:
+      "Seleção de casas para temporada em Armação dos Búzios.",
+
+    url: pageUrl,
+
+    mainEntity: {
+      "@type": "ItemList",
+
+      numberOfItems:
+        properties.length,
+
+      itemListElement:
+        properties.map(
+          (property, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: property.title,
+            url: `${siteUrl}/imoveis/${property.id}`,
+          })
+        ),
+    },
+  };
+
   return (
     <>
       <Header />
@@ -119,11 +147,16 @@ export default function CasasPage() {
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
               collectionPageJsonLd
-            ).replace(/</g, "\\u003c"),
+            ).replace(
+              /</g,
+              "\\u003c"
+            ),
           }}
         />
 
-        <CasasContent />
+        <CasasContent
+          properties={properties}
+        />
 
         <section className="border-t border-zinc-200 bg-white px-6 py-20">
           <div className="mx-auto max-w-7xl">
@@ -207,52 +240,60 @@ export default function CasasPage() {
               </article>
             </div>
 
-            <div className="mt-20">
-              <div className="max-w-3xl">
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-sky-700">
-                  Regiões de Búzios
-                </p>
+            {visibleRegions.length > 0 && (
+              <div className="mt-20">
+                <div className="max-w-3xl">
+                  <p className="text-sm font-bold uppercase tracking-[0.25em] text-sky-700">
+                    Regiões de Búzios
+                  </p>
 
-                <h2 className="mt-3 text-3xl font-bold text-blue-950">
-                  Encontre uma localização adequada
-                  para sua viagem
-                </h2>
+                  <h2 className="mt-3 text-3xl font-bold text-blue-950">
+                    Encontre uma localização adequada
+                    para sua viagem
+                  </h2>
 
-                <p className="mt-4 leading-7 text-zinc-600">
-                  Conheça algumas das regiões onde
-                  estão localizadas nossas casas de
-                  temporada.
-                </p>
-              </div>
+                  <p className="mt-4 leading-7 text-zinc-600">
+                    Conheça algumas das regiões onde
+                    estão localizadas nossas casas de
+                    temporada.
+                  </p>
+                </div>
 
-              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {regions.map((region) => (
-                  <Link
-                    key={region.name}
-                    href={region.href}
-                    className="group rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg"
-                  >
-                    <h3 className="text-xl font-bold text-blue-950">
-                      {region.name}
-                    </h3>
-
-                    <p className="mt-3 leading-7 text-zinc-600">
-                      {region.description}
-                    </p>
-
-                    <span className="mt-5 inline-flex font-bold text-sky-700">
-                      Ver imóvel{" "}
-                      <span
-                        aria-hidden="true"
-                        className="ml-2 transition group-hover:translate-x-1"
+                <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibleRegions.map(
+                    (region) => (
+                      <Link
+                        key={
+                          region.propertyId
+                        }
+                        href={region.href}
+                        className="group rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg"
                       >
-                        →
-                      </span>
-                    </span>
-                  </Link>
-                ))}
+                        <h3 className="text-xl font-bold text-blue-950">
+                          {region.name}
+                        </h3>
+
+                        <p className="mt-3 leading-7 text-zinc-600">
+                          {
+                            region.description
+                          }
+                        </p>
+
+                        <span className="mt-5 inline-flex font-bold text-sky-700">
+                          Ver imóvel{" "}
+                          <span
+                            aria-hidden="true"
+                            className="ml-2 transition group-hover:translate-x-1"
+                          >
+                            →
+                          </span>
+                        </span>
+                      </Link>
+                    )
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="mt-20 rounded-[2rem] bg-blue-950 px-7 py-10 text-center text-white sm:px-12">
               <h2 className="text-3xl font-bold">

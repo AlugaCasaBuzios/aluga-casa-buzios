@@ -1,6 +1,5 @@
 "use client";
 
-import { properties } from "@/app/data/properties";
 import { usePropertySearch } from "@/hooks/usePropertySearch";
 import type { Property } from "@/types/Property";
 
@@ -8,7 +7,13 @@ import SearchBar from "@/components/home/SearchBar";
 import Filters from "@/components/home/Filters";
 import PropertyCard from "@/components/property/PropertyCard";
 
-export default function CasasContent() {
+type CasasContentProps = {
+  properties: Property[];
+};
+
+export default function CasasContent({
+  properties,
+}: CasasContentProps) {
   const {
     filteredProperties,
 
@@ -45,7 +50,6 @@ export default function CasasContent() {
 
   return (
     <>
-      {/* Apresentação */}
       <section className="bg-blue-950 px-6 pb-32 pt-20 text-center text-white">
         <div className="mx-auto max-w-4xl">
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-sky-300">
@@ -63,7 +67,6 @@ export default function CasasContent() {
         </div>
       </section>
 
-      {/* Pesquisa */}
       <section className="relative z-10 mx-auto -mt-20 max-w-5xl px-6">
         <SearchBar
           search={search}
@@ -71,7 +74,6 @@ export default function CasasContent() {
         />
       </section>
 
-      {/* Filtros */}
       <div className="mt-10">
         <Filters
           guests={guests}
@@ -85,7 +87,6 @@ export default function CasasContent() {
         />
       </div>
 
-      {/* Lista de imóveis */}
       <section
         id="imoveis"
         className="mx-auto max-w-7xl scroll-mt-28 px-6 py-20"
@@ -102,7 +103,10 @@ export default function CasasContent() {
 
             <p className="mt-3 text-zinc-600">
               Encontramos {filteredProperties.length}{" "}
-              {filteredProperties.length === 1 ? "imóvel" : "imóveis"}.
+              {filteredProperties.length === 1
+                ? "imóvel"
+                : "imóveis"}
+              .
             </p>
           </div>
 
@@ -130,7 +134,7 @@ export default function CasasContent() {
 
         {filteredProperties.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProperties.map((property: Property) => (
+            {filteredProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}
@@ -140,7 +144,7 @@ export default function CasasContent() {
         ) : (
           <div className="rounded-[2rem] border border-zinc-200 bg-white p-10 text-center shadow-sm sm:p-14">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-100 text-4xl">
-              🔍
+              🔎
             </div>
 
             <h2 className="mt-6 text-2xl font-bold text-blue-950">
@@ -163,7 +167,6 @@ export default function CasasContent() {
         )}
       </section>
 
-      {/* Ajuda */}
       <section className="bg-white px-6 py-20">
         <div className="mx-auto max-w-5xl rounded-[2rem] bg-sky-50 p-8 text-center sm:p-12">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-sky-700">

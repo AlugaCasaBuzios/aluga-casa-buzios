@@ -1,4 +1,6 @@
-import { properties } from "@/app/data/properties";
+import {
+  getActivePropertyById,
+} from "@/lib/propertyCatalog";
 
 import {
   getAirbnbBlockedPeriods,
@@ -22,17 +24,20 @@ export async function GET(
   context: AvailabilityRouteContext
 ): Promise<Response> {
   try {
-    const { propertyId } = await context.params;
+    const { propertyId } =
+      await context.params;
 
-    const property = properties.find(
-      (item) => item.id === propertyId
-    );
+    const property =
+      await getActivePropertyById(
+        propertyId
+      );
 
     if (!property) {
       return Response.json(
         {
           success: false,
-          error: "Imóvel não encontrado.",
+          error:
+            "Imóvel não encontrado.",
         },
         {
           status: 404,
@@ -41,7 +46,9 @@ export async function GET(
     }
 
     const calendarConfigured =
-      hasAirbnbCalendar(property.id);
+      hasAirbnbCalendar(
+        property.id
+      );
 
     if (!calendarConfigured) {
       return Response.json({
@@ -49,10 +56,12 @@ export async function GET(
 
         property: {
           id: property.id,
-          title: property.title,
+          title:
+            property.title,
         },
 
-        calendarConfigured: false,
+        calendarConfigured:
+          false,
         blockedPeriods: [],
       });
     }
@@ -67,12 +76,15 @@ export async function GET(
 
       property: {
         id: property.id,
-        title: property.title,
+        title:
+          property.title,
       },
 
-      calendarConfigured: true,
+      calendarConfigured:
+        true,
       blockedPeriods,
-      lastCheckedAt: new Date().toISOString(),
+      lastCheckedAt:
+        new Date().toISOString(),
     });
   } catch (error) {
     console.error(

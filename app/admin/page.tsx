@@ -10,6 +10,9 @@ import {
 } from "@/lib/supabaseServer";
 
 import { logout } from "./actions";
+import {
+  setPropertyActive,
+} from "./imoveis/catalog-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,7 @@ type AdminPageProps = {
   searchParams: Promise<{
     salvo?: string;
     erro?: string;
+    status?: string;
   }>;
 };
 
@@ -47,11 +51,29 @@ function formatCurrency(
   ).format(value);
 }
 
+function getErrorMessage(
+  error?: string
+): string | null {
+  switch (error) {
+    case "imovel":
+      return "Não foi possível identificar o imóvel.";
+
+    case "status":
+      return "Não foi possível alterar o status do imóvel.";
+
+    default:
+      return null;
+  }
+}
+
 export default async function AdminPage({
   searchParams,
 }: AdminPageProps) {
-  const { salvo } =
-    await searchParams;
+  const {
+    salvo,
+    erro,
+    status,
+  } = await searchParams;
 
   const supabase =
     await createSupabaseServerClient();
@@ -171,10 +193,7 @@ export default async function AdminPage({
 
           <Link
             href="/admin"
-            style={{
-              color: "#ffffff",
-            }}
-            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold transition hover:bg-blue-900"
+            className="mt-6 inline-flex rounded-xl bg-blue-950 px-5 py-3 font-bold text-white transition hover:bg-blue-900"
           >
             Tentar novamente
           </Link>
@@ -185,6 +204,9 @@ export default async function AdminPage({
 
   const properties =
     (data ?? []) as PropertyPricing[];
+
+  const errorMessage =
+    getErrorMessage(erro);
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -202,7 +224,7 @@ export default async function AdminPage({
 
               <p className="mt-2 text-blue-100">
                 Gerenciamento de preços, períodos,
-                disponibilidade e propostas de imóveis
+                disponibilidade, imóveis e propostas
               </p>
             </div>
 
@@ -220,19 +242,14 @@ export default async function AdminPage({
                     ? `Propostas de imóveis: ${newProposals} novas`
                     : "Propostas de imóveis"
                 }
-                className="relative inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-sky-300 px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-200"
+                className="relative inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-sky-300 px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-200"
               >
                 <span>
                   Propostas de imóveis
                 </span>
 
                 {newProposals > 0 && (
-                  <span
-                    style={{
-                      color: "#ffffff",
-                    }}
-                    className="inline-flex rounded-full bg-red-600 px-3 py-1 text-xs font-black shadow-sm"
-                  >
+                  <span className="inline-flex rounded-full bg-red-600 px-3 py-1 text-xs font-black text-white shadow-sm">
                     {newProposals}{" "}
                     {newProposals === 1
                       ? "nova"
@@ -251,7 +268,7 @@ export default async function AdminPage({
                     ? "1 proposta arquivada"
                     : `${archivedProposals} propostas arquivadas`
                 }
-                className="relative inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-amber-100 px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-200"
+                className="relative inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-amber-100 px-5 py-3 text-center font-bold text-amber-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-200"
               >
                 <span>
                   Propostas arquivadas
@@ -270,7 +287,7 @@ export default async function AdminPage({
                 style={{
                   color: "#172554",
                 }}
-                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
               >
                 Bloqueios manuais
               </Link>
@@ -280,7 +297,7 @@ export default async function AdminPage({
                 style={{
                   color: "#172554",
                 }}
-                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
               >
                 Preços por data
               </Link>
@@ -290,7 +307,7 @@ export default async function AdminPage({
                 style={{
                   color: "#172554",
                 }}
-                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+                className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
               >
                 Períodos especiais
               </Link>
@@ -318,18 +335,57 @@ export default async function AdminPage({
           </div>
         )}
 
-        <section className="overflow-hidden rounded-3xl bg-white shadow-lg">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-xl font-bold text-slate-900">
-              Imóveis cadastrados
-            </h2>
+        {status === "desativado" && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-900"
+          >
+            Imóvel desativado com sucesso.
+          </div>
+        )}
 
-            <p className="mt-1 text-sm text-slate-600">
-              {properties.length}{" "}
-              {properties.length === 1
-                ? "imóvel encontrado"
-                : "imóveis encontrados"}
-            </p>
+        {status === "reativado" && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-semibold text-green-800"
+          >
+            Imóvel reativado com sucesso.
+          </div>
+        )}
+
+        {errorMessage && (
+          <div
+            role="alert"
+            className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-800"
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        <section className="overflow-hidden rounded-3xl bg-white shadow-lg">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">
+                Imóveis cadastrados
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-600">
+                {properties.length}{" "}
+                {properties.length === 1
+                  ? "imóvel encontrado"
+                  : "imóveis encontrados"}
+              </p>
+            </div>
+
+            <Link
+              href="/admin/imoveis/novo"
+              style={{
+                color: "#ffffff",
+              }}
+              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-green-700 px-5 py-3 font-bold text-white transition hover:bg-green-800"
+            >
+              + Adicionar casa
+            </Link>
           </div>
 
           {properties.length === 0 ? (
@@ -345,7 +401,7 @@ export default async function AdminPage({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1100px] text-left">
+              <table className="w-full min-w-[1180px] text-left">
                 <thead className="bg-slate-50 text-sm text-slate-700">
                   <tr>
                     <th
@@ -473,15 +529,54 @@ export default async function AdminPage({
                         </td>
 
                         <td className="px-5 py-4">
-                          <Link
-                            href={`/admin/imoveis/${property.property_id}`}
-                            style={{
-                              color: "#ffffff",
-                            }}
-                            className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold transition hover:bg-blue-900"
-                          >
-                            Editar
-                          </Link>
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/admin/imoveis/${property.property_id}`}
+                              style={{
+                                color: "#ffffff",
+                              }}
+                              className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
+                            >
+                              Editar
+                            </Link>
+
+                            <form
+                              action={
+                                setPropertyActive
+                              }
+                            >
+                              <input
+                                type="hidden"
+                                name="propertyId"
+                                value={
+                                  property.property_id
+                                }
+                              />
+
+                              <input
+                                type="hidden"
+                                name="nextActive"
+                                value={
+                                  property.active
+                                    ? "false"
+                                    : "true"
+                                }
+                              />
+
+                              <button
+                                type="submit"
+                                className={`inline-flex items-center justify-center rounded-lg px-4 py-2 font-bold text-white transition ${
+                                  property.active
+                                    ? "bg-red-700 hover:bg-red-800"
+                                    : "bg-green-700 hover:bg-green-800"
+                                }`}
+                              >
+                                {property.active
+                                  ? "Desativar"
+                                  : "Reativar"}
+                              </button>
+                            </form>
+                          </div>
                         </td>
                       </tr>
                     )

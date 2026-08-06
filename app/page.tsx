@@ -1,9 +1,19 @@
+import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
 import HomeContent from "@/components/home/HomeContent";
-import Footer from "@/components/layout/Footer";
 
-export default function Home() {
-    const organizationSchema = {
+import {
+  getActiveProperties,
+} from "@/lib/propertyCatalog";
+
+export const dynamic =
+  "force-dynamic";
+
+export default async function Home() {
+  const properties =
+    await getActiveProperties();
+
+  const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Aluga Casa Búzios",
@@ -24,18 +34,28 @@ export default function Home() {
     sameAs: [
       "https://www.instagram.com/aluga.casa.buzios",
     ],
-  };return (
+  };
+
+  return (
     <>
-    <script
-  type="application/ld+json"
-  dangerouslySetInnerHTML={{
-    __html: JSON.stringify(organizationSchema),
-  }}
-/>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            organizationSchema
+          ).replace(
+            /</g,
+            "\\u003c"
+          ),
+        }}
+      />
+
       <Header />
 
       <main className="min-h-screen bg-zinc-50">
-        <HomeContent />
+        <HomeContent
+          properties={properties}
+        />
       </main>
 
       <Footer />

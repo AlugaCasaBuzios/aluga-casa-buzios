@@ -1,6 +1,5 @@
 "use client";
 
-import { properties } from "@/app/data/properties";
 import { usePropertySearch } from "@/hooks/usePropertySearch";
 import type { Property } from "@/types/Property";
 
@@ -11,7 +10,13 @@ import Testimonials from "@/components/home/Testimonials";
 import FAQ from "@/components/home/FAQ";
 import PropertyCard from "@/components/property/PropertyCard";
 
-export default function HomeContent() {
+type HomeContentProps = {
+  properties: Property[];
+};
+
+export default function HomeContent({
+  properties,
+}: HomeContentProps) {
   const {
     filteredProperties,
 
@@ -72,13 +77,16 @@ export default function HomeContent() {
 
           <p className="mt-4 text-lg text-zinc-600">
             Encontramos {filteredProperties.length}{" "}
-            {filteredProperties.length === 1 ? "imóvel" : "imóveis"}.
+            {filteredProperties.length === 1
+              ? "imóvel"
+              : "imóveis"}
+            .
           </p>
         </div>
 
         {filteredProperties.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProperties.map((property: Property) => (
+            {filteredProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}
@@ -88,7 +96,7 @@ export default function HomeContent() {
         ) : (
           <div className="rounded-3xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-100 text-4xl">
-              🔍
+              🔎
             </div>
 
             <h3 className="mt-6 text-2xl font-bold text-blue-950">
@@ -112,7 +120,9 @@ export default function HomeContent() {
 
       <WhyChooseUs />
 
-      <Testimonials />
+      <Testimonials
+        properties={properties}
+      />
 
       <FAQ />
     </>

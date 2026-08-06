@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { properties } from "@/app/data/properties";
+import {
+  getActiveProperties,
+  getActivePropertyById,
+} from "@/lib/propertyCatalog";
 
 import Footer from "@/components/layout/Footer";
 import Header from "@/components/layout/Header";
@@ -16,6 +19,9 @@ import PropertyShare from "@/components/property/PropertyShare";
 import PropertySummary from "@/components/property/PropertySummary";
 import RelatedProperties from "@/components/property/RelatedProperties";
 
+export const dynamic =
+  "force-dynamic";
+
 const siteUrl =
   "https://alugacasabuzios.com.br";
 
@@ -25,20 +31,13 @@ interface PropertyPageProps {
   }>;
 }
 
-export function generateStaticParams() {
-  return properties.map((property) => ({
-    id: property.id,
-  }));
-}
-
 export async function generateMetadata({
   params,
 }: PropertyPageProps): Promise<Metadata> {
   const { id } = await params;
 
-  const property = properties.find(
-    (item) => item.id === id
-  );
+  const property =
+    await getActivePropertyById(id);
 
   if (!property) {
     return {
@@ -126,9 +125,13 @@ export default async function PropertyPage({
 }: PropertyPageProps) {
   const { id } = await params;
 
-  const property = properties.find(
-    (item) => item.id === id
-  );
+  const [
+    property,
+    activeProperties,
+  ] = await Promise.all([
+    getActivePropertyById(id),
+    getActiveProperties(),
+  ]);
 
   if (!property) {
     notFound();
@@ -560,6 +563,9 @@ export default async function PropertyPage({
 
         <RelatedProperties
           property={property}
+          properties={
+            activeProperties
+          }
         />
       </main>
 

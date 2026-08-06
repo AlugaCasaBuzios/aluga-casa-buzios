@@ -1,11 +1,10 @@
-import { properties } from "@/app/data/properties";
-
 import PropertyCard from "@/components/property/PropertyCard";
 
 import type { Property } from "@/types/Property";
 
 interface RelatedPropertiesProps {
   property: Property;
+  properties: Property[];
 }
 
 function normalizeText(
@@ -102,6 +101,7 @@ function calculateSimilarity(
 
 export default function RelatedProperties({
   property,
+  properties,
 }: RelatedPropertiesProps) {
   const relatedProperties =
     properties

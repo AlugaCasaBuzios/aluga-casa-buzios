@@ -13,7 +13,7 @@ import {
 } from "@/lib/supabaseServer";
 
 import ProposalStatusForm from "./ProposalStatusForm";
-
+import ProposalDeleteForm from "./ProposalDeleteForm";
 export const dynamic = "force-dynamic";
 
 const STORAGE_BUCKET =
@@ -1107,6 +1107,16 @@ export default async function ProposalDetailPage({
                 />
               </div>
             </section>
+
+            <ProposalDeleteForm
+              proposalId={proposal.id}
+              propertyName={
+                proposal.property_name ||
+                proposal.property_type ||
+                proposal.owner_name ||
+                "esta proposta"
+              }
+            />
           </aside>
         </div>
       </div>

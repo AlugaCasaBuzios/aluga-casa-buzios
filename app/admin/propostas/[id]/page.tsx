@@ -27,6 +27,7 @@ type ProposalDetailPageProps = {
   searchParams: Promise<{
     salvo?: string;
     erro?: string;
+    interno?: string;
   }>;
 };
 
@@ -74,6 +75,9 @@ type ProposalRecord = {
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
+
+  internal_notes: string | null;
+  next_contact_at: string | null;
 };
 
 type ProposalPhotoRecord = {
@@ -110,6 +114,77 @@ function formatDateTime(
         "America/Sao_Paulo",
     }
   ).format(date);
+}
+
+function formatDateTimeInput(
+  value: string | null
+): string {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (
+    Number.isNaN(date.getTime())
+  ) {
+    return "";
+  }
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone:
+          "America/Sao_Paulo",
+      }
+    ).formatToParts(date);
+
+  const values =
+    Object.fromEntries(
+      parts.map((part) => [
+        part.type,
+        part.value,
+      ])
+    );
+
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+}
+
+function parseNextContactAt(
+  value: FormDataEntryValue | null
+): string | null {
+  if (
+    typeof value !== "string"
+  ) {
+    return null;
+  }
+
+  const normalized =
+    value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const date =
+    new Date(
+      `${normalized}:00-03:00`
+    );
+
+  if (
+    Number.isNaN(date.getTime())
+  ) {
+    return null;
+  }
+
+  return date.toISOString();
 }
 
 function formatFileSize(
@@ -361,6 +436,74 @@ function getFullAddress(
     .join(" — ");
 }
 
+async function saveInternalInformation(
+  proposalId: string,
+  formData: FormData
+): Promise<void> {
+  "use server";
+
+  const authenticationClient =
+    await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } =
+    await authenticationClient.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const notesValue =
+    formData.get(
+      "internal_notes"
+    );
+
+  const internalNotes =
+    typeof notesValue === "string"
+      ? notesValue
+          .trim()
+          .slice(0, 5000)
+      : "";
+
+  const nextContactAt =
+    parseNextContactAt(
+      formData.get(
+        "next_contact_at"
+      )
+    );
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const { error } = await supabase
+    .from(
+      "property_management_leads"
+    )
+    .update({
+      internal_notes:
+        internalNotes || null,
+      next_contact_at:
+        nextContactAt,
+    })
+    .eq("id", proposalId);
+
+  if (error) {
+    console.error(
+      "Erro ao salvar informações internas:",
+      error
+    );
+
+    redirect(
+      `/admin/propostas/${proposalId}?erro=interno`
+    );
+  }
+
+  redirect(
+    `/admin/propostas/${proposalId}?interno=1`
+  );
+}
+
 async function archiveProposal(
   proposalId: string,
   _formData: FormData
@@ -466,7 +609,7 @@ export default async function ProposalDetailPage({
 }: ProposalDetailPageProps) {
   const [
     { id },
-    { salvo, erro },
+    { salvo, erro, interno },
   ] = await Promise.all([
     params,
     searchParams,
@@ -529,7 +672,9 @@ export default async function ProposalDetailPage({
       source_page,
       utm_source,
       utm_medium,
-      utm_campaign
+      utm_campaign,
+      internal_notes,
+      next_contact_at
     `)
     .eq("id", id)
     .maybeSingle();
@@ -683,6 +828,12 @@ export default async function ProposalDetailPage({
       proposal.archived_at
     );
 
+  const saveInternalInformationAction =
+    saveInternalInformation.bind(
+      null,
+      proposal.id
+    );
+
   const archiveProposalAction =
     archiveProposal.bind(
       null,
@@ -783,6 +934,24 @@ export default async function ProposalDetailPage({
                   )
                 : "data não informada"}.
             </p>
+          </div>
+        )}
+
+        {interno === "1" && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800"
+          >
+            Observações internas e próximo contato salvos com sucesso.
+          </div>
+        )}
+
+        {erro === "interno" && (
+          <div
+            role="alert"
+            className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 font-semibold text-red-800"
+          >
+            Não foi possível salvar as informações internas. Tente novamente.
           </div>
         )}
 
@@ -1164,6 +1333,87 @@ export default async function ProposalDetailPage({
                 proposalId={proposal.id}
               />
             )}
+
+            <section className="rounded-3xl bg-white p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-slate-900">
+                Acompanhamento interno
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Estas informações aparecem somente no painel administrativo.
+              </p>
+
+              <form
+                action={saveInternalInformationAction}
+                className="mt-5 space-y-5"
+              >
+                <div>
+                  <label
+                    htmlFor="internal-notes"
+                    className="text-sm font-bold text-slate-700"
+                  >
+                    Observações internas
+                  </label>
+
+                  <textarea
+                    id="internal-notes"
+                    name="internal_notes"
+                    defaultValue={
+                      proposal.internal_notes ??
+                      ""
+                    }
+                    maxLength={5000}
+                    rows={7}
+                    placeholder="Ex.: proprietário pediu retorno, condições negociadas, documentos pendentes..."
+                    className="mt-2 w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="next-contact-at"
+                    className="text-sm font-bold text-slate-700"
+                  >
+                    Próximo contato
+                  </label>
+
+                  <input
+                    id="next-contact-at"
+                    name="next_contact_at"
+                    type="datetime-local"
+                    defaultValue={formatDateTimeInput(
+                      proposal.next_contact_at
+                    )}
+                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+                  />
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Deixe vazio para remover a data agendada.
+                  </p>
+                </div>
+
+                {proposal.next_contact_at && (
+                  <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-sky-800">
+                      Contato agendado
+                    </p>
+
+                    <p className="mt-1 font-semibold text-sky-950">
+                      {formatDateTime(
+                        proposal.next_contact_at
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-950 px-5 py-3 text-center font-bold text-white shadow-sm transition hover:bg-blue-900"
+                >
+                  Salvar acompanhamento
+                </button>
+              </form>
+            </section>
 
             <section className="rounded-3xl bg-white p-6 shadow-lg">
               <h2 className="text-xl font-bold text-slate-900">

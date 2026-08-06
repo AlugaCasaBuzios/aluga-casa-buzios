@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import PropertyPhotoManager from "@/components/admin/PropertyPhotoManager";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { updatePropertyPricing } from "./actions";
+import {
+  updatePropertyPhotos,
+  updatePropertyPricing,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +18,8 @@ type EditPropertyPageProps = {
 
   searchParams: Promise<{
     erro?: string;
+    fotos?: string;
+    aviso?: string;
   }>;
 };
 
@@ -25,6 +32,12 @@ type PropertyPricing = {
   minimum_price: number | null;
   maximum_price: number | null;
   active: boolean;
+};
+
+type PropertyCatalogPhotos = {
+  id: string;
+  image: string;
+  gallery: string[] | null;
 };
 
 function getErrorMessage(error?: string) {
@@ -50,6 +63,24 @@ function getErrorMessage(error?: string) {
     case "salvar":
       return "Não foi possível salvar as alterações.";
 
+    case "fotos-pendentes":
+      return "Aguarde o envio das fotos terminar antes de salvar.";
+
+    case "fotos-vazias":
+      return "O imóvel precisa permanecer com pelo menos uma foto.";
+
+    case "fotos-limite":
+      return "O imóvel pode ter no máximo 25 fotos.";
+
+    case "fotos-invalidas":
+      return "Uma ou mais fotos não pertencem a este imóvel.";
+
+    case "catalogo":
+      return "Não foi possível carregar o catálogo deste imóvel.";
+
+    case "salvar-fotos":
+      return "Não foi possível salvar as alterações das fotos.";
+
     default:
       return null;
   }
@@ -60,7 +91,11 @@ export default async function EditPropertyPage({
   searchParams,
 }: EditPropertyPageProps) {
   const { id } = await params;
-  const { erro } = await searchParams;
+  const {
+    erro,
+    fotos,
+    aviso,
+  } = await searchParams;
 
   const supabase =
     await createSupabaseServerClient();
@@ -73,34 +108,67 @@ export default async function EditPropertyPage({
     redirect("/admin/login");
   }
 
-  const { data, error } = await supabase
-    .from("property_pricing")
-    .select(`
-      property_id,
-      property_name,
-      base_price,
-      cleaning_fee,
-      minimum_nights,
-      minimum_price,
-      maximum_price,
-      active
-    `)
-    .eq("property_id", id)
-    .single();
+  const adminSupabase =
+    createSupabaseAdminClient();
 
-  if (error || !data) {
+  const [
+    pricingResult,
+    catalogResult,
+  ] = await Promise.all([
+    adminSupabase
+      .from("property_pricing")
+      .select(`
+        property_id,
+        property_name,
+        base_price,
+        cleaning_fee,
+        minimum_nights,
+        minimum_price,
+        maximum_price,
+        active
+      `)
+      .eq("property_id", id)
+      .maybeSingle(),
+
+    adminSupabase
+      .from("property_catalog")
+      .select("id, image, gallery")
+      .eq("id", id)
+      .maybeSingle(),
+  ]);
+
+  if (
+    pricingResult.error ||
+    !pricingResult.data ||
+    catalogResult.error ||
+    !catalogResult.data
+  ) {
     notFound();
   }
 
   const property =
-    data as PropertyPricing;
+    pricingResult.data as PropertyPricing;
+
+  const catalog =
+    catalogResult.data as PropertyCatalogPhotos;
+
+  const initialPhotos = Array.from(
+    new Set(
+      [
+        catalog.image,
+        ...(catalog.gallery ?? []),
+      ]
+        .map((photo) => photo.trim())
+        .filter(Boolean)
+    )
+  );
 
   const errorMessage =
     getErrorMessage(erro);
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl">
         <Link
           href="/admin"
           className="mb-6 inline-flex font-semibold text-blue-950 hover:underline"
@@ -132,6 +200,38 @@ export default async function EditPropertyPage({
               {errorMessage}
             </p>
           )}
+
+          {fotos === "salvas" && (
+            <p className="mb-6 rounded-xl bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">
+              Fotos atualizadas com sucesso.
+            </p>
+          )}
+
+          {aviso === "limpeza" && (
+            <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              A galeria foi salva, mas um arquivo antigo não pôde ser removido do armazenamento.
+            </p>
+          )}
+
+          <form
+            action={updatePropertyPhotos}
+            className="mb-10"
+          >
+            <PropertyPhotoManager
+              propertyId={property.property_id}
+              initialPhotos={initialPhotos}
+            />
+          </form>
+
+          <div className="mb-6 border-t border-slate-200 pt-8">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Preços e disponibilidade
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Ajuste os valores usados pelo cálculo automático de reservas.
+            </p>
+          </div>
 
           <form
             action={updatePropertyPricing}

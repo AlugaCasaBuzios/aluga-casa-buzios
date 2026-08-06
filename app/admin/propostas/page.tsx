@@ -17,6 +17,7 @@ type ProposalsPageProps = {
     status?: string;
     ordem?: string;
     excluido?: string;
+    arquivado?: string;
   }>;
 };
 
@@ -49,6 +50,7 @@ const sortOrders: SortOrder[] = [
 type ProposalRecord = {
   id: string;
   created_at: string;
+  archived_at: string | null;
 
   owner_name: string;
   owner_whatsapp: string;
@@ -294,6 +296,7 @@ export default async function ProposalsPage({
     status,
     ordem,
     excluido,
+    arquivado,
   } = await searchParams;
 
   const searchTerm =
@@ -332,6 +335,7 @@ export default async function ProposalsPage({
     .select(`
       id,
       created_at,
+      archived_at,
       owner_name,
       owner_whatsapp,
       owner_email,
@@ -346,6 +350,7 @@ export default async function ProposalsPage({
       photo_count,
       status
     `)
+    .is("archived_at", null)
     .order("created_at", {
       ascending: false,
     })
@@ -558,6 +563,15 @@ export default async function ProposalsPage({
             className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800"
           >
             Proposta e fotos excluídas com sucesso.
+          </div>
+        )}
+
+        {arquivado === "1" && (
+          <div
+            role="status"
+            className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800"
+          >
+            Proposta arquivada com sucesso.
           </div>
         )}
 

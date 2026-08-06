@@ -26,6 +26,7 @@ type ProposalDetailPageProps = {
 
   searchParams: Promise<{
     salvo?: string;
+    erro?: string;
   }>;
 };
 
@@ -359,13 +360,61 @@ function getFullAddress(
     .join(" — ");
 }
 
+async function archiveProposal(
+  proposalId: string,
+  _formData: FormData
+): Promise<void> {
+  "use server";
+
+  const authenticationClient =
+    await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } =
+    await authenticationClient.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const { error } = await supabase
+    .from(
+      "property_management_leads"
+    )
+    .update({
+      archived_at:
+        new Date().toISOString(),
+    })
+    .eq("id", proposalId)
+    .is("archived_at", null);
+
+  if (error) {
+    console.error(
+      "Erro ao arquivar proposta:",
+      error
+    );
+
+    redirect(
+      `/admin/propostas/${proposalId}?erro=arquivar`
+    );
+  }
+
+  redirect(
+    "/admin/propostas?arquivado=1"
+  );
+}
+
 export default async function ProposalDetailPage({
   params,
   searchParams,
 }: ProposalDetailPageProps) {
   const [
     { id },
-    { salvo },
+    { salvo, erro },
   ] = await Promise.all([
     params,
     searchParams,
@@ -430,6 +479,7 @@ export default async function ProposalDetailPage({
       utm_campaign
     `)
     .eq("id", id)
+    .is("archived_at", null)
     .maybeSingle();
 
   if (proposalError) {
@@ -576,6 +626,12 @@ export default async function ProposalDetailPage({
   const fullAddress =
     getFullAddress(proposal);
 
+  const archiveProposalAction =
+    archiveProposal.bind(
+      null,
+      proposal.id
+    );
+
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
       <div className="mx-auto max-w-7xl">
@@ -637,6 +693,15 @@ export default async function ProposalDetailPage({
             className="mt-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 font-semibold text-green-800"
           >
             Andamento da proposta salvo com sucesso.
+          </div>
+        )}
+
+        {erro === "arquivar" && (
+          <div
+            role="alert"
+            className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 font-semibold text-red-800"
+          >
+            Não foi possível arquivar a proposta. Tente novamente.
           </div>
         )}
 
@@ -1106,6 +1171,44 @@ export default async function ProposalDetailPage({
                   )}
                 />
               </div>
+            </section>
+
+            <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-lg">
+              <h2 className="text-xl font-bold text-amber-950">
+                Arquivar proposta
+              </h2>
+
+              <p className="mt-3 text-sm leading-6 text-amber-900">
+                A proposta deixará de aparecer na lista principal, mas seus
+                dados e fotos permanecerão salvos.
+              </p>
+
+              <details className="mt-5">
+                <summary
+                  className="inline-flex min-h-12 cursor-pointer list-none items-center justify-center rounded-xl border border-amber-700 bg-white px-5 py-3 text-center font-bold text-amber-900 transition hover:bg-amber-100"
+                >
+                  Arquivar proposta
+                </summary>
+
+                <div className="mt-4 rounded-2xl border border-amber-300 bg-white p-4">
+                  <p className="text-sm font-semibold leading-6 text-slate-700">
+                    Confirme somente quando esta proposta não precisar mais
+                    aparecer entre as propostas ativas.
+                  </p>
+
+                  <form
+                    action={archiveProposalAction}
+                    className="mt-4"
+                  >
+                    <button
+                      type="submit"
+                      className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-amber-700 px-5 py-3 text-center font-bold text-white shadow-sm transition hover:bg-amber-800"
+                    >
+                      Confirmar arquivamento
+                    </button>
+                  </form>
+                </div>
+              </details>
             </section>
 
             <ProposalDeleteForm

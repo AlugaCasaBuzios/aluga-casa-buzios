@@ -15,6 +15,7 @@ type ProposalsPageProps = {
   searchParams: Promise<{
     busca?: string;
     status?: string;
+    contato?: string;
     ordem?: string;
     excluido?: string;
     arquivado?: string;
@@ -29,6 +30,14 @@ type StatusFilter =
   | "approved"
   | "rejected";
 
+type ContactFilter =
+  | "all"
+  | "scheduled"
+  | "overdue"
+  | "today"
+  | "future"
+  | "none";
+
 type SortOrder =
   | "newest"
   | "oldest";
@@ -40,6 +49,15 @@ const statusFilters: StatusFilter[] = [
   "evaluating",
   "approved",
   "rejected",
+];
+
+const contactFilters: ContactFilter[] = [
+  "all",
+  "scheduled",
+  "overdue",
+  "today",
+  "future",
+  "none",
 ];
 
 const sortOrders: SortOrder[] = [
@@ -69,9 +87,15 @@ type ProposalRecord = {
 
   photo_count: number | null;
   status: string;
+  next_contact_at: string | null;
 };
 
 type StatusInformation = {
+  label: string;
+  className: string;
+};
+
+type ContactInformation = {
   label: string;
   className: string;
 };
@@ -96,6 +120,72 @@ function formatDateTime(
         "America/Sao_Paulo",
     }
   ).format(date);
+}
+
+function getDateKey(
+  value: Date
+): string {
+  return new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone:
+        "America/Sao_Paulo",
+    }
+  ).format(value);
+}
+
+function getContactInformation(
+  value: string | null,
+  now: Date
+): ContactInformation | null {
+  if (!value) {
+    return null;
+  }
+
+  const contactDate =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      contactDate.getTime()
+    )
+  ) {
+    return null;
+  }
+
+  const formattedDate =
+    formatDateTime(value);
+
+  if (
+    contactDate.getTime() <
+    now.getTime()
+  ) {
+    return {
+      label: `Contato atrasado: ${formattedDate}`,
+      className:
+        "border-red-200 bg-red-50 text-red-800",
+    };
+  }
+
+  if (
+    getDateKey(contactDate) ===
+    getDateKey(now)
+  ) {
+    return {
+      label: `Contato hoje: ${formattedDate}`,
+      className:
+        "border-amber-200 bg-amber-50 text-amber-900",
+    };
+  }
+
+  return {
+    label: `Próximo contato: ${formattedDate}`,
+    className:
+      "border-sky-200 bg-sky-50 text-sky-800",
+  };
 }
 
 function formatText(
@@ -237,6 +327,20 @@ function parseStatusFilter(
   return "all";
 }
 
+function parseContactFilter(
+  value: string | undefined
+): ContactFilter {
+  if (
+    contactFilters.includes(
+      value as ContactFilter
+    )
+  ) {
+    return value as ContactFilter;
+  }
+
+  return "all";
+}
+
 function parseSortOrder(
   value: string | undefined
 ): SortOrder {
@@ -254,6 +358,7 @@ function parseSortOrder(
 function buildStatusHref(
   status: StatusFilter,
   searchTerm: string,
+  contactFilter: ContactFilter,
   sortOrder: SortOrder
 ): string {
   const params =
@@ -270,6 +375,13 @@ function buildStatusHref(
     params.set(
       "status",
       status
+    );
+  }
+
+  if (contactFilter !== "all") {
+    params.set(
+      "contato",
+      contactFilter
     );
   }
 
@@ -294,6 +406,7 @@ export default async function ProposalsPage({
   const {
     busca,
     status,
+    contato,
     ordem,
     excluido,
     arquivado,
@@ -306,6 +419,9 @@ export default async function ProposalsPage({
 
   const selectedStatus =
     parseStatusFilter(status);
+
+  const selectedContactFilter =
+    parseContactFilter(contato);
 
   const selectedSortOrder =
     parseSortOrder(ordem);
@@ -348,7 +464,8 @@ export default async function ProposalsPage({
       bedrooms,
       bathrooms,
       photo_count,
-      status
+      status,
+      next_contact_at
     `)
     .is("archived_at", null)
     .order("created_at", {
@@ -426,6 +543,9 @@ export default async function ProposalsPage({
         "rejected"
     ).length;
 
+  const now =
+    new Date();
+
   const normalizedSearchTerm =
     normalizeSearchText(
       searchTerm
@@ -447,6 +567,67 @@ export default async function ProposalsPage({
             selectedStatus;
 
         if (!matchesStatus) {
+          return false;
+        }
+
+        const contactDate =
+          proposal.next_contact_at
+            ? new Date(
+                proposal.next_contact_at
+              )
+            : null;
+
+        const validContactDate =
+          contactDate &&
+          !Number.isNaN(
+            contactDate.getTime()
+          )
+            ? contactDate
+            : null;
+
+        const isContactOverdue =
+          validContactDate
+            ? validContactDate.getTime() <
+              now.getTime()
+            : false;
+
+        const isContactToday =
+          validContactDate
+            ? getDateKey(
+                validContactDate
+              ) ===
+              getDateKey(now)
+            : false;
+
+        const isContactFuture =
+          validContactDate
+            ? validContactDate.getTime() >
+                now.getTime() &&
+              !isContactToday
+            : false;
+
+        const matchesContact =
+          selectedContactFilter ===
+            "all" ||
+          (selectedContactFilter ===
+            "scheduled" &&
+            Boolean(
+              validContactDate
+            )) ||
+          (selectedContactFilter ===
+            "overdue" &&
+            isContactOverdue) ||
+          (selectedContactFilter ===
+            "today" &&
+            isContactToday) ||
+          (selectedContactFilter ===
+            "future" &&
+            isContactFuture) ||
+          (selectedContactFilter ===
+            "none" &&
+            !validContactDate);
+
+        if (!matchesContact) {
           return false;
         }
 
@@ -521,6 +702,8 @@ export default async function ProposalsPage({
   const filtersAreActive =
     Boolean(searchTerm) ||
     selectedStatus !== "all" ||
+    selectedContactFilter !==
+      "all" ||
     selectedSortOrder !==
       "newest";
 
@@ -583,6 +766,7 @@ export default async function ProposalsPage({
             href={buildStatusHref(
               "new",
               searchTerm,
+              selectedContactFilter,
               selectedSortOrder
             )}
             active={
@@ -599,6 +783,7 @@ export default async function ProposalsPage({
             href={buildStatusHref(
               "contacted",
               searchTerm,
+              selectedContactFilter,
               selectedSortOrder
             )}
             active={
@@ -616,6 +801,7 @@ export default async function ProposalsPage({
             href={buildStatusHref(
               "evaluating",
               searchTerm,
+              selectedContactFilter,
               selectedSortOrder
             )}
             active={
@@ -633,6 +819,7 @@ export default async function ProposalsPage({
             href={buildStatusHref(
               "approved",
               searchTerm,
+              selectedContactFilter,
               selectedSortOrder
             )}
             active={
@@ -648,6 +835,7 @@ export default async function ProposalsPage({
             href={buildStatusHref(
               "rejected",
               searchTerm,
+              selectedContactFilter,
               selectedSortOrder
             )}
             active={
@@ -672,7 +860,7 @@ export default async function ProposalsPage({
           <form
             action="/admin/propostas"
             method="get"
-            className="mt-6 grid gap-4 lg:grid-cols-4"
+            className="mt-6 grid gap-4 lg:grid-cols-5"
           >
             <div className="lg:col-span-2">
               <label
@@ -735,6 +923,46 @@ export default async function ProposalsPage({
 
             <div>
               <label
+                htmlFor="proposal-contact"
+                className="text-sm font-bold text-slate-700"
+              >
+                Próximo contato
+              </label>
+
+              <select
+                id="proposal-contact"
+                name="contato"
+                defaultValue={selectedContactFilter}
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-sky-600 focus:ring-4 focus:ring-sky-100"
+              >
+                <option value="all">
+                  Todos
+                </option>
+
+                <option value="scheduled">
+                  Com contato agendado
+                </option>
+
+                <option value="overdue">
+                  Contatos atrasados
+                </option>
+
+                <option value="today">
+                  Contatos de hoje
+                </option>
+
+                <option value="future">
+                  Contatos futuros
+                </option>
+
+                <option value="none">
+                  Sem contato agendado
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label
                 htmlFor="proposal-order"
                 className="text-sm font-bold text-slate-700"
               >
@@ -757,7 +985,7 @@ export default async function ProposalsPage({
               </select>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row lg:col-span-4 lg:justify-end">
+            <div className="flex flex-col gap-3 sm:flex-row lg:col-span-5 lg:justify-end">
               {filtersAreActive && (
                 <Link
                   href="/admin/propostas"
@@ -865,6 +1093,12 @@ export default async function ProposalsPage({
                       proposal.status
                     );
 
+                  const contactInformation =
+                    getContactInformation(
+                      proposal.next_contact_at,
+                      now
+                    );
+
                   return (
                     <article
                       key={proposal.id}
@@ -948,6 +1182,16 @@ export default async function ProposalsPage({
                               "Não informada"}
                           />
                         </div>
+
+                        {contactInformation && (
+                          <div
+                            className={`mt-6 rounded-2xl border px-4 py-3 text-sm font-bold ${contactInformation.className}`}
+                          >
+                            {
+                              contactInformation.label
+                            }
+                          </div>
+                        )}
 
                         <div className="mt-6 grid grid-cols-3 gap-3">
                           <SummaryItem

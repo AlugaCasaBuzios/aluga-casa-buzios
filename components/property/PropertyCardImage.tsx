@@ -8,6 +8,22 @@ interface PropertyCardImageProps {
   alt: string;
 }
 
+function shouldSkipImageOptimization(src: string) {
+  try {
+    const url = new URL(src);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname.endsWith(".supabase.co") &&
+      url.pathname.startsWith(
+        "/storage/v1/object/public/property-photos/"
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function PropertyCardImage({
   src,
   alt,
@@ -39,6 +55,7 @@ export default function PropertyCardImage({
       fill
       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
       className="object-cover transition duration-500 group-hover:scale-105"
+      unoptimized={shouldSkipImageOptimization(src)}
       onError={() => setImageError(true)}
     />
   );

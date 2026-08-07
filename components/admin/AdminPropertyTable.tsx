@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import {
+  duplicateProperty,
   movePropertyDisplayOrder,
   setPropertyActive,
 } from "@/app/admin/imoveis/catalog-actions";
@@ -89,6 +90,13 @@ export default function AdminPropertyTable({
     null
   );
 
+  const [
+    duplicatingPropertyId,
+    setDuplicatingPropertyId,
+  ] = useState<string | null>(
+    null
+  );
+
   const propertyPositionById =
     useMemo(
       () =>
@@ -154,6 +162,107 @@ export default function AdminPropertyTable({
       );
     } finally {
       setMovingPropertyId(
+        null
+      );
+    }
+  }
+
+  async function duplicatePropertyItem(
+    property: AdminPropertyListItem
+  ) {
+    if (duplicatingPropertyId) {
+      return;
+    }
+
+    const newTitle =
+      window.prompt(
+        "Título da nova casa:",
+        `${property.property_name} - Cópia`
+      );
+
+    if (
+      newTitle === null ||
+      !newTitle.trim()
+    ) {
+      return;
+    }
+
+    const newPropertyId =
+      window.prompt(
+        "Identificador da nova casa (sem espaços):",
+        `${property.property_id}-copia`
+      );
+
+    if (
+      newPropertyId === null ||
+      !newPropertyId.trim()
+    ) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "A cópia será criada INATIVA, com os dados e preços do imóvel original. Fotos, avaliações e links do Airbnb/Booking não serão copiados. Continuar?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDuplicatingPropertyId(
+      property.property_id
+    );
+
+    try {
+      const formData =
+        new FormData();
+
+      formData.set(
+        "sourcePropertyId",
+        property.property_id
+      );
+
+      formData.set(
+        "newTitle",
+        newTitle.trim()
+      );
+
+      formData.set(
+        "newPropertyId",
+        newPropertyId.trim()
+      );
+
+      const result =
+        await duplicateProperty(
+          formData
+        );
+
+      if (!result.ok) {
+        window.alert(
+          result.message
+        );
+
+        return;
+      }
+
+      router.push(
+        `/admin/imoveis/${encodeURIComponent(
+          result.propertyId
+        )}`
+      );
+
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Erro ao duplicar o imóvel:",
+        error
+      );
+
+      window.alert(
+        "Não foi possível duplicar o imóvel."
+      );
+    } finally {
+      setDuplicatingPropertyId(
         null
       );
     }
@@ -702,6 +811,24 @@ export default function AdminPropertyTable({
                             Prévia
                           </Link>
 
+                          <button
+                            type="button"
+                            onClick={() =>
+                              duplicatePropertyItem(
+                                property
+                              )
+                            }
+                            disabled={Boolean(
+                              duplicatingPropertyId
+                            )}
+                            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-center text-sm font-bold text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {duplicatingPropertyId ===
+                            property.property_id
+                              ? "Duplicando..."
+                              : "Duplicar"}
+                          </button>
+
                           <form
                             action={
                               setPropertyActive
@@ -1030,6 +1157,24 @@ export default function AdminPropertyTable({
                         >
                           Prévia
                         </Link>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            duplicatePropertyItem(
+                              property
+                            )
+                          }
+                          disabled={Boolean(
+                            duplicatingPropertyId
+                          )}
+                          className="inline-flex items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 font-bold text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {duplicatingPropertyId ===
+                          property.property_id
+                            ? "Duplicando..."
+                            : "Duplicar"}
+                        </button>
 
                         <form
                           action={

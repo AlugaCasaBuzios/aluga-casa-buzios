@@ -9,6 +9,22 @@ interface PropertyGalleryProps {
   property: Property;
 }
 
+function shouldSkipImageOptimization(src: string) {
+  try {
+    const url = new URL(src);
+
+    return (
+      url.protocol === "https:" &&
+      url.hostname.endsWith(".supabase.co") &&
+      url.pathname.startsWith(
+        "/storage/v1/object/public/property-photos/"
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 export default function PropertyGallery({
   property,
 }: PropertyGalleryProps) {
@@ -102,6 +118,7 @@ export default function PropertyGallery({
               priority
               sizes="(max-width: 1280px) 100vw, 1280px"
               className="object-cover transition duration-500 group-hover:scale-[1.02]"
+              unoptimized={shouldSkipImageOptimization(selectedImage)}
             />
 
             <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
@@ -170,6 +187,7 @@ export default function PropertyGallery({
                     fill
                     sizes="128px"
                     className="object-cover"
+                    unoptimized={shouldSkipImageOptimization(image)}
                   />
                 </button>
               );
@@ -217,6 +235,7 @@ export default function PropertyGallery({
               sizes="100vw"
               className="object-contain p-4 sm:p-8"
               priority
+              unoptimized={shouldSkipImageOptimization(selectedImage)}
             />
 
             {images.length > 1 && (
@@ -269,6 +288,7 @@ export default function PropertyGallery({
                         fill
                         sizes="96px"
                         className="object-cover"
+                        unoptimized={shouldSkipImageOptimization(image)}
                       />
                     </button>
                   );

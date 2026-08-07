@@ -529,6 +529,476 @@ export async function movePropertyDisplayOrder(
 }
 
 
+type DuplicatePropertyResult =
+  | {
+      ok: true;
+      propertyId: string;
+      message: string;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
+type PropertyCatalogDuplicateRow = {
+  id: string;
+  title: string;
+  neighborhood: string;
+  address: string | null;
+  guests: number;
+  bedrooms: number;
+  bathrooms: number | string;
+  beds: number;
+  suites: number;
+  area: number | string;
+  garage: number;
+  pet_friendly: boolean;
+  pool: boolean;
+  barbecue: boolean;
+  wifi: boolean;
+  air_conditioning: boolean;
+  kitchen: boolean;
+  washing_machine: boolean;
+  beach_distance: string;
+  checkin: string;
+  checkout: string;
+  image: string;
+  gallery: string[] | null;
+  description: string;
+  amenities: string[] | null;
+  rules: string[] | null;
+  airbnb: string;
+  booking: string | null;
+  whatsapp: string;
+  rating: number | string;
+  reviews: number;
+  latitude: number | null;
+  longitude: number | null;
+  keywords: string[] | null;
+  active: boolean;
+  featured: boolean;
+  display_order: number;
+};
+
+function normalizeDuplicatedPropertyId(
+  value: string
+): string {
+  return value
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .toLowerCase()
+    .trim()
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      ""
+    );
+}
+
+export async function duplicateProperty(
+  formData: FormData
+): Promise<DuplicatePropertyResult> {
+  const sourcePropertyId = String(
+    formData.get("sourcePropertyId") ?? ""
+  ).trim();
+
+  const newTitle = String(
+    formData.get("newTitle") ?? ""
+  ).trim();
+
+  const newPropertyId =
+    normalizeDuplicatedPropertyId(
+      String(
+        formData.get("newPropertyId") ?? ""
+      )
+    );
+
+  if (!sourcePropertyId) {
+    return {
+      ok: false,
+      message:
+        "Não foi possível identificar o imóvel que será duplicado.",
+    };
+  }
+
+  if (!newTitle) {
+    return {
+      ok: false,
+      message:
+        "Informe o título da nova casa.",
+    };
+  }
+
+  if (
+    !newPropertyId ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(
+      newPropertyId
+    )
+  ) {
+    return {
+      ok: false,
+      message:
+        "Informe um identificador válido para a nova casa.",
+    };
+  }
+
+  if (
+    newPropertyId === sourcePropertyId
+  ) {
+    return {
+      ok: false,
+      message:
+        "A nova casa precisa ter um identificador diferente do imóvel original.",
+    };
+  }
+
+  const supabase =
+    await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const adminSupabase =
+    createSupabaseAdminClient();
+
+  const [
+    sourceCatalogResult,
+    sourcePricingResult,
+    existingResult,
+    lastOrderResult,
+  ] = await Promise.all([
+    adminSupabase
+      .from("property_catalog")
+      .select(`
+        id,
+        title,
+        neighborhood,
+        address,
+        guests,
+        bedrooms,
+        bathrooms,
+        beds,
+        suites,
+        area,
+        garage,
+        pet_friendly,
+        pool,
+        barbecue,
+        wifi,
+        air_conditioning,
+        kitchen,
+        washing_machine,
+        beach_distance,
+        checkin,
+        checkout,
+        image,
+        gallery,
+        description,
+        amenities,
+        rules,
+        airbnb,
+        booking,
+        whatsapp,
+        rating,
+        reviews,
+        latitude,
+        longitude,
+        keywords,
+        active,
+        featured,
+        display_order
+      `)
+      .eq(
+        "id",
+        sourcePropertyId
+      )
+      .maybeSingle(),
+
+    adminSupabase
+      .from("property_pricing")
+      .select(`
+        property_id,
+        property_name,
+        base_price,
+        cleaning_fee,
+        minimum_nights,
+        minimum_price,
+        maximum_price,
+        active
+      `)
+      .eq(
+        "property_id",
+        sourcePropertyId
+      )
+      .maybeSingle(),
+
+    adminSupabase
+      .from("property_catalog")
+      .select("id")
+      .eq(
+        "id",
+        newPropertyId
+      )
+      .maybeSingle(),
+
+    adminSupabase
+      .from("property_catalog")
+      .select("display_order")
+      .order(
+        "display_order",
+        {
+          ascending: false,
+        }
+      )
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (
+    sourceCatalogResult.error ||
+    sourcePricingResult.error
+  ) {
+    console.error(
+      "Erro ao carregar o imóvel para duplicação:",
+      sourceCatalogResult.error ??
+        sourcePricingResult.error
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível carregar os dados do imóvel original.",
+    };
+  }
+
+  if (
+    !sourceCatalogResult.data ||
+    !sourcePricingResult.data
+  ) {
+    return {
+      ok: false,
+      message:
+        "O imóvel original não foi encontrado.",
+    };
+  }
+
+  if (existingResult.error) {
+    console.error(
+      "Erro ao verificar o identificador da cópia:",
+      existingResult.error
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível verificar o identificador escolhido.",
+    };
+  }
+
+  if (existingResult.data) {
+    return {
+      ok: false,
+      message:
+        "Já existe um imóvel com esse identificador. Escolha outro.",
+    };
+  }
+
+  if (lastOrderResult.error) {
+    console.error(
+      "Erro ao verificar a última posição dos imóveis:",
+      lastOrderResult.error
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível calcular a posição da nova casa.",
+    };
+  }
+
+  const sourceCatalog =
+    sourceCatalogResult.data as
+      PropertyCatalogDuplicateRow;
+
+  const sourcePricing =
+    sourcePricingResult.data as
+      PropertyPricingBackup;
+
+  const currentLastOrder =
+    Number(
+      lastOrderResult.data
+        ?.display_order ?? 0
+    );
+
+  const newDisplayOrder =
+    Number.isFinite(
+      currentLastOrder
+    )
+      ? currentLastOrder + 10
+      : 10;
+
+  const {
+    error: catalogInsertError,
+  } = await adminSupabase
+    .from("property_catalog")
+    .insert({
+      id: newPropertyId,
+      title: newTitle,
+      neighborhood:
+        sourceCatalog.neighborhood,
+      address:
+        sourceCatalog.address,
+      guests:
+        sourceCatalog.guests,
+      bedrooms:
+        sourceCatalog.bedrooms,
+      bathrooms:
+        sourceCatalog.bathrooms,
+      beds:
+        sourceCatalog.beds,
+      suites:
+        sourceCatalog.suites,
+      area:
+        sourceCatalog.area,
+      garage:
+        sourceCatalog.garage,
+      pet_friendly:
+        sourceCatalog.pet_friendly,
+      pool:
+        sourceCatalog.pool,
+      barbecue:
+        sourceCatalog.barbecue,
+      wifi:
+        sourceCatalog.wifi,
+      air_conditioning:
+        sourceCatalog.air_conditioning,
+      kitchen:
+        sourceCatalog.kitchen,
+      washing_machine:
+        sourceCatalog.washing_machine,
+      beach_distance:
+        sourceCatalog.beach_distance,
+      checkin:
+        sourceCatalog.checkin,
+      checkout:
+        sourceCatalog.checkout,
+
+      // Fotos e links de plataformas não são compartilhados
+      // entre imóveis para evitar referências ao anúncio original.
+      image: "",
+      gallery: [],
+      airbnb: "",
+      booking: null,
+
+      description:
+        sourceCatalog.description,
+      amenities:
+        sourceCatalog.amenities ?? [],
+      rules:
+        sourceCatalog.rules ?? [],
+      whatsapp:
+        sourceCatalog.whatsapp,
+
+      // A nova casa começa sem avaliações.
+      rating: 0,
+      reviews: 0,
+
+      latitude:
+        sourceCatalog.latitude,
+      longitude:
+        sourceCatalog.longitude,
+      keywords:
+        sourceCatalog.keywords ?? [],
+
+      // Toda cópia nasce inativa e não destacada.
+      active: false,
+      featured: false,
+      display_order:
+        newDisplayOrder,
+    });
+
+  if (catalogInsertError) {
+    console.error(
+      "Erro ao criar a cópia do imóvel:",
+      catalogInsertError
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível criar a cópia do imóvel.",
+    };
+  }
+
+  const {
+    error: pricingInsertError,
+  } = await adminSupabase
+    .from("property_pricing")
+    .insert({
+      property_id:
+        newPropertyId,
+      property_name:
+        newTitle,
+      base_price:
+        sourcePricing.base_price,
+      cleaning_fee:
+        sourcePricing.cleaning_fee,
+      minimum_nights:
+        sourcePricing.minimum_nights,
+      minimum_price:
+        sourcePricing.minimum_price,
+      maximum_price:
+        sourcePricing.maximum_price,
+      active: false,
+    });
+
+  if (pricingInsertError) {
+    console.error(
+      "Erro ao copiar os preços do imóvel:",
+      pricingInsertError
+    );
+
+    await adminSupabase
+      .from("property_catalog")
+      .delete()
+      .eq(
+        "id",
+        newPropertyId
+      );
+
+    return {
+      ok: false,
+      message:
+        "A cópia não foi concluída porque os preços não puderam ser criados.",
+    };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/casas");
+  revalidatePath("/");
+  revalidatePath("/sitemap.xml");
+
+  return {
+    ok: true,
+    propertyId:
+      newPropertyId,
+    message:
+      "Imóvel duplicado com sucesso.",
+  };
+}
+
+
 const PROPERTY_PHOTO_BUCKET =
   "property-photos";
 

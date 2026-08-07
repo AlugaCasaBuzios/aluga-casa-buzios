@@ -384,7 +384,42 @@ export default async function EditPropertyPage({
             </p>
           )}
 
-          <div className="mb-6">
+          <nav
+            aria-label="Atalhos da edição do imóvel"
+            className="sticky top-4 z-20 mb-8 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur"
+          >
+            <p className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">
+              Ir direto para
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <a
+                href="#dados-imovel"
+                className="rounded-xl bg-green-700 px-4 py-3 text-center font-bold !text-white transition hover:bg-green-800"
+              >
+                Dados do imóvel
+              </a>
+
+              <a
+                href="#fotos-imovel"
+                className="rounded-xl bg-blue-950 px-4 py-3 text-center font-bold !text-white transition hover:bg-blue-900"
+              >
+                Fotos
+              </a>
+
+              <a
+                href="#precos-imovel"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-center font-bold !text-blue-950 transition hover:bg-slate-100"
+              >
+                Preços
+              </a>
+            </div>
+          </nav>
+
+          <div
+            id="dados-imovel"
+            className="mb-6 scroll-mt-28"
+          >
             <h2 className="text-2xl font-bold text-slate-900">
               Dados públicos do imóvel
             </h2>
@@ -993,7 +1028,10 @@ export default async function EditPropertyPage({
             </div>
           </form>
 
-          <div className="mb-6 mt-12 border-t border-slate-200 pt-8">
+          <div
+            id="fotos-imovel"
+            className="mb-6 mt-12 scroll-mt-28 border-t border-slate-200 pt-8"
+          >
             <h2 className="text-2xl font-bold text-slate-900">
               Fotos do imóvel
             </h2>
@@ -1013,7 +1051,10 @@ export default async function EditPropertyPage({
             />
           </form>
 
-          <div className="mb-6 border-t border-slate-200 pt-8">
+          <div
+            id="precos-imovel"
+            className="mb-6 scroll-mt-28 border-t border-slate-200 pt-8"
+          >
             <h2 className="text-2xl font-bold text-slate-900">
               Preços e disponibilidade
             </h2>

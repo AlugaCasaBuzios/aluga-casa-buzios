@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import PropertyPhotoManager from "@/components/admin/PropertyPhotoManager";
+import PropertyPublicationChecklist from "@/components/admin/PropertyPublicationChecklist";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { getPropertyPublicationChecklist } from "@/lib/propertyPublicationChecklist";
 import {
   updatePropertyDetails,
   updatePropertyPhotos,
@@ -157,6 +159,9 @@ function getErrorMessage(
     case "fotos-invalidas":
       return "Uma ou mais fotos não pertencem a este imóvel.";
 
+    case "publicacao-incompleta":
+      return "Este imóvel ainda possui pendências no checklist de publicação. Complete os itens abaixo antes de ativá-lo.";
+
     case "catalogo":
       return "Não foi possível carregar o catálogo deste imóvel.";
 
@@ -283,6 +288,34 @@ export default async function EditPropertyPage({
     )
   );
 
+  const publicationChecklist =
+    getPropertyPublicationChecklist({
+      title: catalog.title,
+      neighborhood:
+        catalog.neighborhood,
+      description:
+        catalog.description,
+      image: catalog.image,
+      gallery: catalog.gallery,
+      guests: catalog.guests,
+      bedrooms: catalog.bedrooms,
+      bathrooms:
+        catalog.bathrooms,
+      beds: catalog.beds,
+      amenities:
+        catalog.amenities,
+      whatsapp:
+        catalog.whatsapp,
+      latitude:
+        catalog.latitude,
+      longitude:
+        catalog.longitude,
+      basePrice:
+        pricing.base_price,
+      minimumNights:
+        pricing.minimum_nights,
+    });
+
   const errorMessage =
     getErrorMessage(erro);
 
@@ -383,6 +416,12 @@ export default async function EditPropertyPage({
               A galeria foi salva, mas um arquivo antigo não pôde ser removido do armazenamento.
             </p>
           )}
+
+          <PropertyPublicationChecklist
+            checklist={
+              publicationChecklist
+            }
+          />
 
           <nav
             aria-label="Atalhos da edição do imóvel"

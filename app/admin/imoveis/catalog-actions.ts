@@ -16,6 +16,10 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
+import {
+  getPropertyPublicationChecklist,
+} from "@/lib/propertyPublicationChecklist";
+
 export async function setPropertyActive(
   formData: FormData
 ) {
@@ -47,6 +51,121 @@ export async function setPropertyActive(
 
   const adminSupabase =
     createSupabaseAdminClient();
+
+  if (nextActive) {
+    const [
+      catalogChecklistResult,
+      pricingChecklistResult,
+    ] = await Promise.all([
+      adminSupabase
+        .from("property_catalog")
+        .select(`
+          title,
+          neighborhood,
+          description,
+          image,
+          gallery,
+          guests,
+          bedrooms,
+          bathrooms,
+          beds,
+          amenities,
+          whatsapp,
+          latitude,
+          longitude
+        `)
+        .eq("id", propertyId)
+        .maybeSingle(),
+
+      adminSupabase
+        .from("property_pricing")
+        .select(`
+          base_price,
+          minimum_nights
+        `)
+        .eq(
+          "property_id",
+          propertyId
+        )
+        .maybeSingle(),
+    ]);
+
+    if (
+      catalogChecklistResult.error ||
+      pricingChecklistResult.error ||
+      !catalogChecklistResult.data ||
+      !pricingChecklistResult.data
+    ) {
+      console.error(
+        "Erro ao verificar o checklist de publicação:",
+        catalogChecklistResult.error ??
+          pricingChecklistResult.error
+      );
+
+      redirect(
+        "/admin?erro=status"
+      );
+    }
+
+    const publicationChecklist =
+      getPropertyPublicationChecklist({
+        title:
+          catalogChecklistResult.data
+            .title,
+        neighborhood:
+          catalogChecklistResult.data
+            .neighborhood,
+        description:
+          catalogChecklistResult.data
+            .description,
+        image:
+          catalogChecklistResult.data
+            .image,
+        gallery:
+          catalogChecklistResult.data
+            .gallery,
+        guests:
+          catalogChecklistResult.data
+            .guests,
+        bedrooms:
+          catalogChecklistResult.data
+            .bedrooms,
+        bathrooms:
+          catalogChecklistResult.data
+            .bathrooms,
+        beds:
+          catalogChecklistResult.data
+            .beds,
+        amenities:
+          catalogChecklistResult.data
+            .amenities,
+        whatsapp:
+          catalogChecklistResult.data
+            .whatsapp,
+        latitude:
+          catalogChecklistResult.data
+            .latitude,
+        longitude:
+          catalogChecklistResult.data
+            .longitude,
+        basePrice:
+          pricingChecklistResult.data
+            .base_price,
+        minimumNights:
+          pricingChecklistResult.data
+            .minimum_nights,
+      });
+
+    if (
+      !publicationChecklist.ready
+    ) {
+      redirect(
+        `/admin/imoveis/${encodeURIComponent(
+          propertyId
+        )}?erro=publicacao-incompleta#checklist-publicacao`
+      );
+    }
+  }
 
   const {
     data: pricingData,

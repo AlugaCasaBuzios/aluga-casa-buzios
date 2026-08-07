@@ -33,6 +33,21 @@ function parseNumber(
   return numberValue;
 }
 
+function parseInteger(
+  value: FormDataEntryValue | null
+): number | null {
+  const numberValue = parseNumber(value);
+
+  if (
+    numberValue === null ||
+    !Number.isInteger(numberValue)
+  ) {
+    return null;
+  }
+
+  return numberValue;
+}
+
 function parseLines(
   value: FormDataEntryValue | null
 ): string[] {
@@ -48,6 +63,12 @@ function parseLines(
         .filter(Boolean)
     )
   );
+}
+
+function buildEditPage(
+  propertyId: string
+): string {
+  return `/admin/imoveis/${encodeURIComponent(propertyId)}`;
 }
 
 function getPropertyStoragePath(
@@ -125,6 +146,300 @@ async function requireAuthenticatedUser() {
   return supabase;
 }
 
+export async function updatePropertyDetails(
+  formData: FormData
+) {
+  const propertyId = String(
+    formData.get("propertyId") ?? ""
+  ).trim();
+
+  if (!propertyId) {
+    redirect("/admin?erro=imovel");
+  }
+
+  const editPage = buildEditPage(propertyId);
+
+  await requireAuthenticatedUser();
+
+  const title = String(
+    formData.get("title") ?? ""
+  ).trim();
+
+  const neighborhood = String(
+    formData.get("neighborhood") ?? ""
+  ).trim();
+
+  const address = String(
+    formData.get("address") ?? ""
+  ).trim();
+
+  const description = String(
+    formData.get("description") ?? ""
+  ).trim();
+
+  const beachDistance = String(
+    formData.get("beachDistance") ?? ""
+  ).trim();
+
+  const checkin = String(
+    formData.get("checkin") ?? ""
+  ).trim();
+
+  const checkout = String(
+    formData.get("checkout") ?? ""
+  ).trim();
+
+  const airbnb = String(
+    formData.get("airbnb") ?? ""
+  ).trim();
+
+  const booking = String(
+    formData.get("booking") ?? ""
+  ).trim();
+
+  const whatsapp = String(
+    formData.get("whatsapp") ?? ""
+  ).trim();
+
+  const guests = parseInteger(
+    formData.get("guests")
+  );
+
+  const bedrooms = parseInteger(
+    formData.get("bedrooms")
+  );
+
+  const bathrooms = parseNumber(
+    formData.get("bathrooms")
+  );
+
+  const beds = parseInteger(
+    formData.get("beds")
+  );
+
+  const suites = parseInteger(
+    formData.get("suites")
+  );
+
+  const area = parseNumber(
+    formData.get("area")
+  );
+
+  const garage = parseInteger(
+    formData.get("garage")
+  );
+
+  const rating = parseNumber(
+    formData.get("rating")
+  );
+
+  const reviews = parseInteger(
+    formData.get("reviews")
+  );
+
+  const latitude = parseNumber(
+    formData.get("latitude")
+  );
+
+  const longitude = parseNumber(
+    formData.get("longitude")
+  );
+
+  const displayOrder = parseInteger(
+    formData.get("displayOrder")
+  );
+
+  if (!title) {
+    redirect(`${editPage}?erro=dados-titulo`);
+  }
+
+  if (!neighborhood) {
+    redirect(`${editPage}?erro=dados-bairro`);
+  }
+
+  if (
+    guests === null ||
+    guests < 1
+  ) {
+    redirect(`${editPage}?erro=dados-hospedes`);
+  }
+
+  const nonNegativeValues = [
+    bedrooms,
+    bathrooms,
+    beds,
+    suites,
+    area,
+    garage,
+    reviews,
+    displayOrder,
+  ];
+
+  if (
+    nonNegativeValues.some(
+      (value) =>
+        value === null ||
+        value < 0
+    )
+  ) {
+    redirect(`${editPage}?erro=dados-numeros`);
+  }
+
+  if (
+    rating === null ||
+    rating < 0 ||
+    rating > 5
+  ) {
+    redirect(`${editPage}?erro=dados-avaliacao`);
+  }
+
+  if (
+    latitude !== null &&
+    (
+      latitude < -90 ||
+      latitude > 90
+    )
+  ) {
+    redirect(`${editPage}?erro=dados-latitude`);
+  }
+
+  if (
+    longitude !== null &&
+    (
+      longitude < -180 ||
+      longitude > 180
+    )
+  ) {
+    redirect(`${editPage}?erro=dados-longitude`);
+  }
+
+  if (
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(checkin) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(checkout)
+  ) {
+    redirect(`${editPage}?erro=dados-horarios`);
+  }
+
+  const amenities = parseLines(
+    formData.get("amenities")
+  );
+
+  const rules = parseLines(
+    formData.get("rules")
+  );
+
+  const keywords = parseLines(
+    formData.get("keywords")
+  );
+
+  const adminSupabase =
+    createSupabaseAdminClient();
+
+  const {
+    data: existingProperty,
+    error: existingPropertyError,
+  } = await adminSupabase
+    .from("property_catalog")
+    .select("id")
+    .eq("id", propertyId)
+    .maybeSingle();
+
+  if (
+    existingPropertyError ||
+    !existingProperty
+  ) {
+    console.error(
+      "Erro ao verificar o imóvel antes da atualização:",
+      existingPropertyError
+    );
+
+    redirect(`${editPage}?erro=catalogo`);
+  }
+
+  const {
+    error: catalogError,
+  } = await adminSupabase
+    .from("property_catalog")
+    .update({
+      title,
+      neighborhood,
+      address: address || null,
+      guests,
+      bedrooms,
+      bathrooms,
+      beds,
+      suites,
+      area,
+      garage,
+      pet_friendly:
+        formData.get("petFriendly") === "on",
+      pool:
+        formData.get("pool") === "on",
+      barbecue:
+        formData.get("barbecue") === "on",
+      wifi:
+        formData.get("wifi") === "on",
+      air_conditioning:
+        formData.get("airConditioning") === "on",
+      kitchen:
+        formData.get("kitchen") === "on",
+      washing_machine:
+        formData.get("washingMachine") === "on",
+      beach_distance: beachDistance,
+      checkin,
+      checkout,
+      description,
+      amenities,
+      rules,
+      airbnb,
+      booking: booking || null,
+      whatsapp,
+      rating,
+      reviews,
+      latitude,
+      longitude,
+      keywords,
+      featured:
+        formData.get("featured") === "on",
+      display_order: displayOrder,
+    })
+    .eq("id", propertyId);
+
+  if (catalogError) {
+    console.error(
+      "Erro ao atualizar os dados do imóvel:",
+      catalogError
+    );
+
+    redirect(`${editPage}?erro=salvar-dados`);
+  }
+
+  const {
+    error: pricingNameError,
+  } = await adminSupabase
+    .from("property_pricing")
+    .update({
+      property_name: title,
+    })
+    .eq("property_id", propertyId);
+
+  if (pricingNameError) {
+    console.error(
+      "Os dados foram atualizados, mas o nome da tabela de preços não foi sincronizado:",
+      pricingNameError
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/casas");
+  revalidatePath("/admin");
+  revalidatePath(editPage);
+  revalidatePath(`/imoveis/${propertyId}`);
+  revalidatePath("/sitemap.xml");
+
+  redirect(`${editPage}?dados=salvos`);
+}
+
 export async function updatePropertyPhotos(
   formData: FormData
 ) {
@@ -136,8 +451,7 @@ export async function updatePropertyPhotos(
     redirect("/admin?erro=imovel");
   }
 
-  const editPage =
-    `/admin/imoveis/${encodeURIComponent(propertyId)}`;
+  const editPage = buildEditPage(propertyId);
 
   const photoUploadStatus = String(
     formData.get("photoUploadStatus") ?? ""
@@ -350,8 +664,7 @@ export async function updatePropertyPricing(
   const active =
     formData.get("active") === "on";
 
-  const editPage =
-    `/admin/imoveis/${encodeURIComponent(propertyId)}`;
+  const editPage = buildEditPage(propertyId);
 
   if (
     basePrice === null ||

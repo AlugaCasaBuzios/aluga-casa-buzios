@@ -14,6 +14,8 @@ import {
   setPropertyActive,
 } from "./imoveis/catalog-actions";
 
+import PropertyDeleteButton from "@/components/admin/PropertyDeleteButton";
+
 export const dynamic = "force-dynamic";
 
 type AdminPageProps = {
@@ -60,6 +62,18 @@ function getErrorMessage(
 
     case "status":
       return "Não foi possível alterar o status do imóvel.";
+
+    case "exclusao-confirmacao":
+      return "A confirmação da exclusão não foi preenchida corretamente.";
+
+    case "exclusao-ativo":
+      return "Desative o imóvel antes de realizar a exclusão definitiva.";
+
+    case "exclusao-nao-encontrado":
+      return "O imóvel não foi encontrado ou já foi excluído.";
+
+    case "exclusao":
+      return "Não foi possível excluir o imóvel. Nenhuma nova tentativa deve ser feita até verificar os dados no Supabase.";
 
     default:
       return null;
@@ -353,6 +367,24 @@ export default async function AdminPage({
           </div>
         )}
 
+        {status === "excluido" && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-semibold text-green-800"
+          >
+            Imóvel, preços e fotos excluídos definitivamente.
+          </div>
+        )}
+
+        {status === "excluido-limpeza" && (
+          <div
+            role="status"
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-900"
+          >
+            O imóvel e os preços foram excluídos, mas algumas fotos podem ter permanecido no armazenamento. Verifique a pasta do imóvel no Storage do Supabase.
+          </div>
+        )}
+
         {errorMessage && (
           <div
             role="alert"
@@ -576,6 +608,18 @@ export default async function AdminPage({
                                   : "Reativar"}
                               </button>
                             </form>
+
+                            <PropertyDeleteButton
+                              propertyId={
+                                property.property_id
+                              }
+                              propertyName={
+                                property.property_name
+                              }
+                              active={
+                                property.active
+                              }
+                            />
                           </div>
                         </td>
                       </tr>

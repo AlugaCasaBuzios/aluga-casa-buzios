@@ -56,6 +56,7 @@ type PropertyCatalogRow = {
   whatsapp: string;
   latitude: number | null;
   longitude: number | null;
+  display_order: number;
 };
 
 function formatCurrency(
@@ -162,7 +163,8 @@ export default async function AdminPage({
         amenities,
         whatsapp,
         latitude,
-        longitude
+        longitude,
+        display_order
       `),
 
     adminSupabase
@@ -332,9 +334,27 @@ export default async function AdminPage({
                 ) * 100
               )
             : 0,
+        displayOrder:
+          catalog?.display_order ??
+          Number.MAX_SAFE_INTEGER,
       };
     }
-  );
+  ).sort((a, b) => {
+    if (
+      a.displayOrder !==
+      b.displayOrder
+    ) {
+      return (
+        a.displayOrder -
+        b.displayOrder
+      );
+    }
+
+    return a.property_name.localeCompare(
+      b.property_name,
+      "pt-BR"
+    );
+  });
 
   const errorMessage =
     getErrorMessage(erro);

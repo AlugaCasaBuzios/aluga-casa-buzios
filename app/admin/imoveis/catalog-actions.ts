@@ -250,6 +250,284 @@ export async function setPropertyActive(
   );
 }
 
+type PropertyOrderDirection =
+  | "up"
+  | "down";
+
+type PropertyOrderRow = {
+  id: string;
+  title: string;
+  display_order: number;
+};
+
+export async function movePropertyDisplayOrder(
+  formData: FormData
+): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  const propertyId = String(
+    formData.get("propertyId") ?? ""
+  ).trim();
+
+  const direction = String(
+    formData.get("direction") ?? ""
+  ).trim() as PropertyOrderDirection;
+
+  if (
+    !propertyId ||
+    (
+      direction !== "up" &&
+      direction !== "down"
+    )
+  ) {
+    return {
+      ok: false,
+      message:
+        "Não foi possível identificar o imóvel ou a direção da movimentação.",
+    };
+  }
+
+  const supabase =
+    await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const adminSupabase =
+    createSupabaseAdminClient();
+
+  const {
+    data,
+    error,
+  } = await adminSupabase
+    .from("property_catalog")
+    .select(`
+      id,
+      title,
+      display_order
+    `);
+
+  if (error) {
+    console.error(
+      "Erro ao carregar a ordem dos imóveis:",
+      error
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível carregar a ordem atual dos imóveis.",
+    };
+  }
+
+  const rows =
+    (
+      (data ?? []) as PropertyOrderRow[]
+    )
+      .map((row) => ({
+        ...row,
+        display_order:
+          Number.isFinite(
+            Number(
+              row.display_order
+            )
+          )
+            ? Number(
+                row.display_order
+              )
+            : 0,
+      }))
+      .sort((a, b) => {
+        if (
+          a.display_order !==
+          b.display_order
+        ) {
+          return (
+            a.display_order -
+            b.display_order
+          );
+        }
+
+        return a.title.localeCompare(
+          b.title,
+          "pt-BR"
+        );
+      });
+
+  const currentIndex =
+    rows.findIndex(
+      (row) =>
+        row.id === propertyId
+    );
+
+  if (currentIndex < 0) {
+    return {
+      ok: false,
+      message:
+        "O imóvel não foi encontrado no catálogo.",
+    };
+  }
+
+  const targetIndex =
+    direction === "up"
+      ? currentIndex - 1
+      : currentIndex + 1;
+
+  if (
+    targetIndex < 0 ||
+    targetIndex >= rows.length
+  ) {
+    return {
+      ok: true,
+      message:
+        "O imóvel já está no limite da ordem.",
+    };
+  }
+
+  const reorderedRows = [
+    ...rows,
+  ];
+
+  [
+    reorderedRows[
+      currentIndex
+    ],
+    reorderedRows[
+      targetIndex
+    ],
+  ] = [
+    reorderedRows[
+      targetIndex
+    ],
+    reorderedRows[
+      currentIndex
+    ],
+  ];
+
+  const originalOrder =
+    new Map(
+      rows.map((row) => [
+        row.id,
+        row.display_order,
+      ])
+    );
+
+  const updates =
+    reorderedRows.map(
+      (row, index) => ({
+        id: row.id,
+        displayOrder:
+          (index + 1) * 10,
+      })
+    );
+
+  const updatedIds: string[] =
+    [];
+
+  for (
+    const update of updates
+  ) {
+    const originalValue =
+      originalOrder.get(
+        update.id
+      );
+
+    if (
+      originalValue ===
+      update.displayOrder
+    ) {
+      continue;
+    }
+
+    const {
+      error: updateError,
+    } = await adminSupabase
+      .from(
+        "property_catalog"
+      )
+      .update({
+        display_order:
+          update.displayOrder,
+      })
+      .eq(
+        "id",
+        update.id
+      );
+
+    if (updateError) {
+      console.error(
+        "Erro ao atualizar a ordem dos imóveis:",
+        updateError
+      );
+
+      for (
+        const updatedId of updatedIds
+      ) {
+        const rollbackValue =
+          originalOrder.get(
+            updatedId
+          );
+
+        if (
+          rollbackValue ===
+          undefined
+        ) {
+          continue;
+        }
+
+        const {
+          error: rollbackError,
+        } = await adminSupabase
+          .from(
+            "property_catalog"
+          )
+          .update({
+            display_order:
+              rollbackValue,
+          })
+          .eq(
+            "id",
+            updatedId
+          );
+
+        if (rollbackError) {
+          console.error(
+            "Erro ao restaurar a ordem do imóvel:",
+            updatedId,
+            rollbackError
+          );
+        }
+      }
+
+      return {
+        ok: false,
+        message:
+          "Não foi possível alterar a ordem. A posição anterior foi preservada sempre que possível.",
+      };
+    }
+
+    updatedIds.push(
+      update.id
+    );
+  }
+
+  revalidatePath("/");
+  revalidatePath("/casas");
+  revalidatePath("/admin");
+
+  return {
+    ok: true,
+    message:
+      "Ordem atualizada com sucesso.",
+  };
+}
+
 
 const PROPERTY_PHOTO_BUCKET =
   "property-photos";

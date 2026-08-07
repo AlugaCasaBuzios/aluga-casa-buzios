@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import {
+  useRouter,
+} from "next/navigation";
+import {
   useMemo,
   useState,
 } from "react";
 
 import {
+  movePropertyDisplayOrder,
   setPropertyActive,
 } from "@/app/admin/imoveis/catalog-actions";
 
@@ -24,6 +28,7 @@ export type AdminPropertyListItem = {
   active: boolean;
   publicationReady: boolean;
   publicationProgress: number;
+  displayOrder: number;
 };
 
 type AdminPropertyTableProps = {
@@ -69,11 +74,90 @@ function normalizeSearch(
 export default function AdminPropertyTable({
   properties,
 }: AdminPropertyTableProps) {
+  const router = useRouter();
+
   const [query, setQuery] =
     useState("");
 
   const [filter, setFilter] =
     useState<PropertyFilter>("all");
+
+  const [
+    movingPropertyId,
+    setMovingPropertyId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const propertyPositionById =
+    useMemo(
+      () =>
+        new Map(
+          properties.map(
+            (property, index) => [
+              property.property_id,
+              index,
+            ]
+          )
+        ),
+      [properties]
+    );
+
+  async function moveProperty(
+    propertyId: string,
+    direction: "up" | "down"
+  ) {
+    if (movingPropertyId) {
+      return;
+    }
+
+    setMovingPropertyId(
+      propertyId
+    );
+
+    try {
+      const formData =
+        new FormData();
+
+      formData.set(
+        "propertyId",
+        propertyId
+      );
+
+      formData.set(
+        "direction",
+        direction
+      );
+
+      const result =
+        await movePropertyDisplayOrder(
+          formData
+        );
+
+      if (!result.ok) {
+        window.alert(
+          result.message
+        );
+
+        return;
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Erro ao alterar a ordem do imóvel:",
+        error
+      );
+
+      window.alert(
+        "Não foi possível alterar a ordem do imóvel."
+      );
+    } finally {
+      setMovingPropertyId(
+        null
+      );
+    }
+  }
 
   const normalizedQuery =
     normalizeSearch(query);
@@ -340,11 +424,15 @@ export default function AdminPropertyTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1320px] text-left">
+          <table className="w-full min-w-[1540px] text-left">
             <thead className="bg-slate-50 text-sm text-slate-700">
               <tr>
                 <th scope="col" className="px-5 py-4">
                   Imóvel
+                </th>
+
+                <th scope="col" className="px-5 py-4">
+                  Ordem
                 </th>
 
                 <th scope="col" className="px-5 py-4">
@@ -410,6 +498,88 @@ export default function AdminPropertyTable({
                           property.property_id
                         }
                       </p>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      {(() => {
+                        const position =
+                          propertyPositionById.get(
+                            property.property_id
+                          ) ?? -1;
+
+                        const isMoving =
+                          movingPropertyId ===
+                          property.property_id;
+
+                        const canMoveUp =
+                          position > 0;
+
+                        const canMoveDown =
+                          position >= 0 &&
+                          position <
+                            properties.length -
+                              1;
+
+                        return (
+                          <div className="min-w-40">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                              Posição{" "}
+                              {position + 1}
+                            </p>
+
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  moveProperty(
+                                    property.property_id,
+                                    "up"
+                                  )
+                                }
+                                disabled={
+                                  !canMoveUp ||
+                                  Boolean(
+                                    movingPropertyId
+                                  )
+                                }
+                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`Subir ${property.property_name} na ordem`}
+                              >
+                                ↑ Subir
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  moveProperty(
+                                    property.property_id,
+                                    "down"
+                                  )
+                                }
+                                disabled={
+                                  !canMoveDown ||
+                                  Boolean(
+                                    movingPropertyId
+                                  )
+                                }
+                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`Descer ${property.property_name} na ordem`}
+                              >
+                                ↓ Descer
+                              </button>
+                            </div>
+
+                            {isMoving && (
+                              <p
+                                aria-live="polite"
+                                className="mt-2 text-xs font-semibold text-blue-800"
+                              >
+                                Atualizando ordem...
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     <td className="px-5 py-4">

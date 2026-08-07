@@ -272,6 +272,25 @@ export default function AdminPropertyTable({
 
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-lg">
+      <style>{`
+        .admin-property-mobile {
+          display: none;
+        }
+
+        .admin-property-desktop {
+          display: block;
+        }
+
+        @media (max-width: 767px) {
+          .admin-property-mobile {
+            display: block;
+          }
+
+          .admin-property-desktop {
+            display: none;
+          }
+        }
+      `}</style>
       <div className="border-b border-slate-200 px-6 py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -423,8 +442,328 @@ export default function AdminPropertyTable({
           </button>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1540px] text-left">
+        <>
+          <div className="admin-property-mobile space-y-4 p-4">
+            {filteredProperties.map(
+              (property) => {
+                const position =
+                  propertyPositionById.get(
+                    property.property_id
+                  ) ?? -1;
+
+                const isMoving =
+                  movingPropertyId ===
+                  property.property_id;
+
+                const canMoveUp =
+                  position > 0;
+
+                const canMoveDown =
+                  position >= 0 &&
+                  position <
+                    properties.length - 1;
+
+                return (
+                  <article
+                    key={
+                      property.property_id
+                    }
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                  >
+                    <div className="border-b border-slate-200 bg-slate-50 px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-base font-bold leading-snug text-slate-950">
+                            {
+                              property.property_name
+                            }
+                          </h3>
+
+                          {property.neighborhood && (
+                            <p className="mt-1 text-sm font-semibold text-slate-600">
+                              {
+                                property.neighborhood
+                              }
+                            </p>
+                          )}
+
+                          <p className="mt-1 break-all text-xs text-slate-500">
+                            {
+                              property.property_id
+                            }
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+                            property.active
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {property.active
+                            ? "Ativo"
+                            : "Inativo"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-5 p-4">
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                              property.publicationReady
+                                ? "bg-green-100 text-green-800"
+                                : "bg-amber-100 text-amber-900"
+                            }`}
+                          >
+                            {property.publicationReady
+                              ? "Pronto para publicar"
+                              : "Com pendências"}
+                          </span>
+
+                          <span className="text-sm font-bold text-slate-700">
+                            {
+                              property.publicationProgress
+                            }
+                            %
+                          </span>
+                        </div>
+
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className={
+                              property.publicationReady
+                                ? "h-full bg-green-600"
+                                : "h-full bg-amber-500"
+                            }
+                            style={{
+                              width: `${Math.max(
+                                0,
+                                Math.min(
+                                  100,
+                                  property.publicationProgress
+                                )
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Preço-base
+                          </p>
+
+                          <p className="mt-1 font-bold text-slate-950">
+                            {formatCurrency(
+                              property.base_price
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Mínimo
+                          </p>
+
+                          <p className="mt-1 font-bold text-slate-950">
+                            {property.minimum_nights ??
+                              "Não definido"}{" "}
+                            {property.minimum_nights
+                              ? property.minimum_nights ===
+                                1
+                                ? "noite"
+                                : "noites"
+                              : ""}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Limpeza
+                          </p>
+
+                          <p className="mt-1 font-semibold text-slate-800">
+                            {formatCurrency(
+                              property.cleaning_fee
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl bg-slate-50 p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Faixa de preço
+                          </p>
+
+                          <p className="mt-1 text-xs font-semibold leading-5 text-slate-800">
+                            {formatCurrency(
+                              property.minimum_price
+                            )}
+                            {" — "}
+                            {formatCurrency(
+                              property.maximum_price
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                              Ordem no site
+                            </p>
+
+                            <p className="mt-1 font-bold text-slate-950">
+                              Posição{" "}
+                              {position + 1}
+                            </p>
+                          </div>
+
+                          {isMoving && (
+                            <p
+                              aria-live="polite"
+                              className="text-xs font-semibold text-blue-800"
+                            >
+                              Atualizando...
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              moveProperty(
+                                property.property_id,
+                                "up"
+                              )
+                            }
+                            disabled={
+                              !canMoveUp ||
+                              Boolean(
+                                movingPropertyId
+                              )
+                            }
+                            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label={`Subir ${property.property_name} na ordem`}
+                          >
+                            ↑ Subir
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              moveProperty(
+                                property.property_id,
+                                "down"
+                              )
+                            }
+                            disabled={
+                              !canMoveDown ||
+                              Boolean(
+                                movingPropertyId
+                              )
+                            }
+                            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 transition hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label={`Descer ${property.property_name} na ordem`}
+                          >
+                            ↓ Descer
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Ações
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Link
+                            href={`/admin/imoveis/${property.property_id}`}
+                            style={{
+                              color:
+                                "#ffffff",
+                            }}
+                            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-950 px-3 py-2 text-center text-sm font-bold text-white transition hover:bg-blue-900"
+                          >
+                            Editar
+                          </Link>
+
+                          <Link
+                            href={`/admin/imoveis/${property.property_id}/preview`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-blue-950 bg-white px-3 py-2 text-center text-sm font-bold text-blue-950 transition hover:bg-blue-50"
+                          >
+                            Prévia
+                          </Link>
+
+                          <form
+                            action={
+                              setPropertyActive
+                            }
+                            className="contents"
+                          >
+                            <input
+                              type="hidden"
+                              name="propertyId"
+                              value={
+                                property.property_id
+                              }
+                            />
+
+                            <input
+                              type="hidden"
+                              name="nextActive"
+                              value={
+                                property.active
+                                  ? "false"
+                                  : "true"
+                              }
+                            />
+
+                            <button
+                              type="submit"
+                              className={`inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-center text-sm font-bold !text-white transition ${
+                                property.active
+                                  ? "bg-red-700 hover:bg-red-800"
+                                  : "bg-green-700 hover:bg-green-800"
+                              }`}
+                            >
+                              {property.active
+                                ? "Desativar"
+                                : "Reativar"}
+                            </button>
+                          </form>
+
+                          <div className="min-h-11">
+                            <PropertyDeleteButton
+                              propertyId={
+                                property.property_id
+                              }
+                              propertyName={
+                                property.property_name
+                              }
+                              active={
+                                property.active
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              }
+            )}
+          </div>
+
+          <div className="admin-property-desktop overflow-x-auto">
+            <table className="w-full min-w-[1540px] text-left">
             <thead className="bg-slate-50 text-sm text-slate-700">
               <tr>
                 <th scope="col" className="px-5 py-4">
@@ -746,8 +1085,9 @@ export default function AdminPropertyTable({
                 )
               )}
             </tbody>
-          </table>
-        </div>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );

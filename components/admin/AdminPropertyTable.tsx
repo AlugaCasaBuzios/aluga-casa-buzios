@@ -463,7 +463,10 @@ export default function AdminPropertyTable({
                   Status
                 </th>
 
-                <th scope="col" className="px-5 py-4">
+                <th
+                  scope="col"
+                  className="sticky right-0 z-30 min-w-[280px] border-l border-slate-200 bg-slate-50 px-5 py-4 shadow-[-8px_0_16px_-14px_rgba(15,23,42,0.45)]"
+                >
                   Ações
                 </th>
               </tr>
@@ -476,7 +479,7 @@ export default function AdminPropertyTable({
                     key={
                       property.property_id
                     }
-                    className="text-sm text-slate-700 transition hover:bg-slate-50"
+                    className="group text-sm text-slate-700 transition hover:bg-slate-50"
                   >
                     <td className="px-5 py-4">
                       <p className="font-semibold text-slate-900">
@@ -667,8 +670,8 @@ export default function AdminPropertyTable({
                       </span>
                     </td>
 
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="sticky right-0 z-20 min-w-[280px] border-l border-slate-200 bg-white px-5 py-4 shadow-[-8px_0_16px_-14px_rgba(15,23,42,0.45)] transition-colors group-hover:bg-slate-50">
+                      <div className="flex min-w-[240px] flex-wrap gap-2">
                         <Link
                           href={`/admin/imoveis/${property.property_id}`}
                           style={{

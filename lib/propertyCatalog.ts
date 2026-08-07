@@ -422,6 +422,62 @@ export async function getActivePropertyById(
   );
 }
 
+export async function getAdminPropertyById(
+  id: string
+): Promise<AdminProperty | null> {
+  const normalizedId =
+    id.trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "property_catalog"
+    )
+    .select(
+      PROPERTY_SELECT
+    )
+    .eq(
+      "id",
+      normalizedId
+    )
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Erro ao carregar imóvel para pré-visualização:",
+      error
+    );
+
+    return null;
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const row =
+    data as PropertyCatalogRow;
+
+  const pricingMap =
+    await getPricingMap([
+      row.id,
+    ]);
+
+  return mapProperty(
+    row,
+    pricingMap.get(row.id)
+  );
+}
+
 export async function getAdminProperties(): Promise<
   AdminProperty[]
 > {

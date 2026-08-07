@@ -1019,12 +1019,24 @@ export default async function EditPropertyPage({
               </button>
 
               <Link
-                href={`/imoveis/${catalog.id}`}
+                href={`/admin/imoveis/${catalog.id}/preview`}
                 target="_blank"
+                rel="noreferrer"
                 className="rounded-xl border border-blue-950 px-6 py-3 text-center font-bold text-blue-950 transition hover:bg-blue-50"
               >
-                Abrir página pública
+                Abrir prévia privada
               </Link>
+
+              {pricing.active && (
+                <Link
+                  href={`/imoveis/${catalog.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border border-green-700 px-6 py-3 text-center font-bold text-green-800 transition hover:bg-green-50"
+                >
+                  Abrir página pública
+                </Link>
+              )}
             </div>
           </form>
 

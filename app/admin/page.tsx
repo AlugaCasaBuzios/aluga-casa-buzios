@@ -14,7 +14,11 @@ import {
   setPropertyActive,
 } from "./imoveis/catalog-actions";
 
-import PropertyDeleteButton from "@/components/admin/PropertyDeleteButton";
+import AdminPropertyTable from "@/components/admin/AdminPropertyTable";
+
+import {
+  getPropertyPublicationChecklist,
+} from "@/lib/propertyPublicationChecklist";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +39,23 @@ type PropertyPricing = {
   minimum_price: number | null;
   maximum_price: number | null;
   active: boolean;
+};
+
+type PropertyCatalogRow = {
+  id: string;
+  title: string;
+  neighborhood: string;
+  description: string;
+  image: string;
+  gallery: string[] | null;
+  guests: number;
+  bedrooms: number;
+  bathrooms: number;
+  beds: number;
+  amenities: string[] | null;
+  whatsapp: string;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 function formatCurrency(
@@ -105,6 +126,7 @@ export default async function AdminPage({
 
   const [
     pricingResult,
+    catalogResult,
     newProposalsResult,
     archivedProposalsResult,
   ] = await Promise.all([
@@ -123,6 +145,25 @@ export default async function AdminPage({
       .order("property_name", {
         ascending: true,
       }),
+
+    adminSupabase
+      .from("property_catalog")
+      .select(`
+        id,
+        title,
+        neighborhood,
+        description,
+        image,
+        gallery,
+        guests,
+        bedrooms,
+        bathrooms,
+        beds,
+        amenities,
+        whatsapp,
+        latitude,
+        longitude
+      `),
 
     adminSupabase
       .from(
@@ -156,6 +197,11 @@ export default async function AdminPage({
   } = pricingResult;
 
   const {
+    data: catalogData,
+    error: catalogError,
+  } = catalogResult;
+
+  const {
     count: newProposalsCount,
     error: proposalsCountError,
   } = newProposalsResult;
@@ -164,6 +210,13 @@ export default async function AdminPage({
     count: archivedProposalsCount,
     error: archivedProposalsCountError,
   } = archivedProposalsResult;
+
+  if (catalogError) {
+    console.error(
+      "Erro ao carregar o catálogo dos imóveis:",
+      catalogError
+    );
+  }
 
   if (proposalsCountError) {
     console.error(
@@ -218,6 +271,70 @@ export default async function AdminPage({
 
   const properties =
     (data ?? []) as PropertyPricing[];
+
+  const catalogById = new Map(
+    (
+      (catalogData ?? []) as PropertyCatalogRow[]
+    ).map((property) => [
+      property.id,
+      property,
+    ])
+  );
+
+  const propertyRows = properties.map(
+    (property) => {
+      const catalog =
+        catalogById.get(
+          property.property_id
+        );
+
+      const checklist = catalog
+        ? getPropertyPublicationChecklist({
+            title: catalog.title,
+            neighborhood:
+              catalog.neighborhood,
+            description:
+              catalog.description,
+            image: catalog.image,
+            gallery: catalog.gallery,
+            guests: catalog.guests,
+            bedrooms: catalog.bedrooms,
+            bathrooms:
+              catalog.bathrooms,
+            beds: catalog.beds,
+            amenities:
+              catalog.amenities,
+            whatsapp:
+              catalog.whatsapp,
+            latitude:
+              catalog.latitude,
+            longitude:
+              catalog.longitude,
+            basePrice:
+              property.base_price,
+            minimumNights:
+              property.minimum_nights,
+          })
+        : null;
+
+      return {
+        ...property,
+        neighborhood:
+          catalog?.neighborhood ?? "",
+        publicationReady:
+          checklist?.ready ?? false,
+        publicationProgress:
+          checklist
+            ? Math.round(
+                (
+                  checklist.completeCount /
+                  checklist.totalCount
+                ) * 100
+              )
+            : 0,
+      };
+    }
+  );
 
   const errorMessage =
     getErrorMessage(erro);
@@ -394,251 +511,9 @@ export default async function AdminPage({
           </div>
         )}
 
-        <section className="overflow-hidden rounded-3xl bg-white shadow-lg">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Imóveis cadastrados
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-600">
-                {properties.length}{" "}
-                {properties.length === 1
-                  ? "imóvel encontrado"
-                  : "imóveis encontrados"}
-              </p>
-            </div>
-
-            <Link
-              href="/admin/imoveis/novo"
-              style={{
-                color: "#ffffff",
-              }}
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-green-700 px-5 py-3 font-bold text-white transition hover:bg-green-800"
-            >
-              + Adicionar casa
-            </Link>
-          </div>
-
-          {properties.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <h3 className="text-lg font-bold text-slate-900">
-                Nenhum imóvel encontrado
-              </h3>
-
-              <p className="mt-2 text-slate-600">
-                Não existem imóveis cadastrados na
-                tabela property_pricing.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1180px] text-left">
-                <thead className="bg-slate-50 text-sm text-slate-700">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Imóvel
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Preço-base
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Limpeza
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Mínimo de noites
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Preço mínimo
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Preço máximo
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Status
-                    </th>
-
-                    <th
-                      scope="col"
-                      className="px-5 py-4"
-                    >
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-200">
-                  {properties.map(
-                    (property) => (
-                      <tr
-                        key={
-                          property.property_id
-                        }
-                        className="text-sm text-slate-700 transition hover:bg-slate-50"
-                      >
-                        <td className="px-5 py-4">
-                          <p className="font-semibold text-slate-900">
-                            {
-                              property.property_name
-                            }
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-500">
-                            {
-                              property.property_id
-                            }
-                          </p>
-                        </td>
-
-                        <td className="px-5 py-4 font-semibold">
-                          {formatCurrency(
-                            property.base_price
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {formatCurrency(
-                            property.cleaning_fee
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {property.minimum_nights ??
-                            "Não definido"}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {formatCurrency(
-                            property.minimum_price
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          {formatCurrency(
-                            property.maximum_price
-                          )}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                              property.active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {property.active
-                              ? "Ativo"
-                              : "Inativo"}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={`/admin/imoveis/${property.property_id}`}
-                              style={{
-                                color: "#ffffff",
-                              }}
-                              className="inline-flex items-center justify-center rounded-lg bg-blue-950 px-4 py-2 font-bold text-white transition hover:bg-blue-900"
-                            >
-                              Editar
-                            </Link>
-
-                            <Link
-                              href={`/admin/imoveis/${property.property_id}/preview`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center justify-center rounded-lg border border-blue-950 bg-white px-4 py-2 font-bold text-blue-950 transition hover:bg-blue-50"
-                            >
-                              Prévia
-                            </Link>
-
-                            <form
-                              action={
-                                setPropertyActive
-                              }
-                            >
-                              <input
-                                type="hidden"
-                                name="propertyId"
-                                value={
-                                  property.property_id
-                                }
-                              />
-
-                              <input
-                                type="hidden"
-                                name="nextActive"
-                                value={
-                                  property.active
-                                    ? "false"
-                                    : "true"
-                                }
-                              />
-
-                              <button
-                                type="submit"
-                                className={`inline-flex items-center justify-center rounded-lg px-4 py-2 font-bold text-white transition ${
-                                  property.active
-                                    ? "bg-red-700 hover:bg-red-800"
-                                    : "bg-green-700 hover:bg-green-800"
-                                }`}
-                              >
-                                {property.active
-                                  ? "Desativar"
-                                  : "Reativar"}
-                              </button>
-                            </form>
-
-                            <PropertyDeleteButton
-                              propertyId={
-                                property.property_id
-                              }
-                              propertyName={
-                                property.property_name
-                              }
-                              active={
-                                property.active
-                              }
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <AdminPropertyTable
+          properties={propertyRows}
+        />
       </div>
     </main>
   );

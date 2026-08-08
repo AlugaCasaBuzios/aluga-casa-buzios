@@ -4,6 +4,10 @@ interface FiltersProps {
   guests: number;
   setGuests: (value: number) => void;
 
+  neighborhood: string;
+  setNeighborhood: (value: string) => void;
+  neighborhoods: string[];
+
   pool: boolean;
   setPool: (value: boolean) => void;
 
@@ -17,6 +21,9 @@ interface FiltersProps {
 export default function Filters({
   guests,
   setGuests,
+  neighborhood,
+  setNeighborhood,
+  neighborhoods,
   pool,
   setPool,
   petFriendly,
@@ -50,6 +57,29 @@ export default function Filters({
   <option value={10}>10 hóspedes</option>
   <option value={12}>12 hóspedes</option>
 </select>
+
+          <label htmlFor="neighborhood-filter" className="sr-only">
+            Filtrar imóveis por bairro
+          </label>
+
+          <select
+            id="neighborhood-filter"
+            aria-label="Filtrar imóveis por bairro"
+            value={neighborhood}
+            onChange={(e) => setNeighborhood(e.target.value)}
+            className="rounded-xl border px-4 py-3"
+          >
+            <option value="">Todos os bairros</option>
+
+            {neighborhoods.map((item) => (
+              <option
+                key={item}
+                value={item}
+              >
+                {item}
+              </option>
+            ))}
+          </select>
 
           <label className="flex items-center gap-2 cursor-pointer">
 

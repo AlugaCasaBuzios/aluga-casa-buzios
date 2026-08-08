@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 import { usePropertySearch } from "@/hooks/usePropertySearch";
 import type { Property } from "@/types/Property";
 
@@ -38,15 +40,61 @@ export default function HomeContent({
     setBarbecue,
   } = usePropertySearch(properties);
 
+  const [
+    neighborhood,
+    setNeighborhood,
+  ] = useState("");
+
+  const neighborhoods = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          properties
+            .map((property) =>
+              property.neighborhood?.trim()
+            )
+            .filter(
+              (
+                item
+              ): item is string =>
+                Boolean(item)
+            )
+        )
+      ).sort((a, b) =>
+        a.localeCompare(
+          b,
+          "pt-BR"
+        )
+      ),
+    [properties]
+  );
+
+  const neighborhoodFilteredProperties =
+    useMemo(
+      () =>
+        neighborhood
+          ? filteredProperties.filter(
+              (property) =>
+                property.neighborhood?.trim() ===
+                neighborhood
+            )
+          : filteredProperties,
+      [
+        filteredProperties,
+        neighborhood,
+      ]
+    );
+
   const hasActiveFilters =
     search.trim().length > 0 ||
     guests > 0 ||
+    neighborhood !== "" ||
     pool ||
     petFriendly ||
     barbecue;
 
   const featuredProperties =
-    filteredProperties
+    neighborhoodFilteredProperties
       .filter(
         (property) =>
           property.featured === true
@@ -58,14 +106,15 @@ export default function HomeContent({
 
   const displayedProperties =
     hasActiveFilters
-      ? filteredProperties
+      ? neighborhoodFilteredProperties
       : featuredProperties.length > 0
         ? featuredProperties
-        : filteredProperties.slice(0, 3);
+        : neighborhoodFilteredProperties.slice(0, 3);
 
   function clearFilters() {
     setSearch("");
     setGuests(0);
+    setNeighborhood("");
     setPool(false);
     setPetFriendly(false);
     setBarbecue(false);
@@ -81,6 +130,9 @@ export default function HomeContent({
       <Filters
         guests={guests}
         setGuests={setGuests}
+        neighborhood={neighborhood}
+        setNeighborhood={setNeighborhood}
+        neighborhoods={neighborhoods}
         pool={pool}
         setPool={setPool}
         petFriendly={petFriendly}

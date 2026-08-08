@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 import { usePropertySearch } from "@/hooks/usePropertySearch";
 import type { Property } from "@/types/Property";
 
@@ -33,9 +35,55 @@ export default function CasasContent({
     setBarbecue,
   } = usePropertySearch(properties);
 
+  const [
+    neighborhood,
+    setNeighborhood,
+  ] = useState("");
+
+  const neighborhoods = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          properties
+            .map((property) =>
+              property.neighborhood?.trim()
+            )
+            .filter(
+              (
+                item
+              ): item is string =>
+                Boolean(item)
+            )
+        )
+      ).sort((a, b) =>
+        a.localeCompare(
+          b,
+          "pt-BR"
+        )
+      ),
+    [properties]
+  );
+
+  const neighborhoodFilteredProperties =
+    useMemo(
+      () =>
+        neighborhood
+          ? filteredProperties.filter(
+              (property) =>
+                property.neighborhood?.trim() ===
+                neighborhood
+            )
+          : filteredProperties,
+      [
+        filteredProperties,
+        neighborhood,
+      ]
+    );
+
   function clearFilters() {
     setSearch("");
     setGuests(0);
+    setNeighborhood("");
     setPool(false);
     setPetFriendly(false);
     setBarbecue(false);
@@ -44,6 +92,7 @@ export default function CasasContent({
   const hasActiveFilters =
     search.trim() !== "" ||
     guests > 0 ||
+    neighborhood !== "" ||
     pool ||
     petFriendly ||
     barbecue;
@@ -78,6 +127,9 @@ export default function CasasContent({
         <Filters
           guests={guests}
           setGuests={setGuests}
+          neighborhood={neighborhood}
+          setNeighborhood={setNeighborhood}
+          neighborhoods={neighborhoods}
           pool={pool}
           setPool={setPool}
           petFriendly={petFriendly}
@@ -102,8 +154,8 @@ export default function CasasContent({
             </h2>
 
             <p className="mt-3 text-zinc-600">
-              Encontramos {filteredProperties.length}{" "}
-              {filteredProperties.length === 1
+              Encontramos {neighborhoodFilteredProperties.length}{" "}
+              {neighborhoodFilteredProperties.length === 1
                 ? "imóvel"
                 : "imóveis"}
               .
@@ -132,9 +184,9 @@ export default function CasasContent({
           </div>
         </div>
 
-        {filteredProperties.length > 0 ? (
+        {neighborhoodFilteredProperties.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProperties.map((property) => (
+            {neighborhoodFilteredProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}

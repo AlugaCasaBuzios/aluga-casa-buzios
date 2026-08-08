@@ -106,6 +106,52 @@ export default function AdminPropertyTable({
     null
   );
 
+  const [
+    copiedPropertyId,
+    setCopiedPropertyId,
+  ] = useState<string | null>(
+    null
+  );
+
+  async function copyPublicPropertyLink(
+    propertyId: string
+  ) {
+    const propertyUrl =
+      `https://alugacasabuzios.com.br/imoveis/${encodeURIComponent(
+        propertyId
+      )}`;
+
+    try {
+      await navigator.clipboard.writeText(
+        propertyUrl
+      );
+
+      setCopiedPropertyId(
+        propertyId
+      );
+
+      window.setTimeout(() => {
+        setCopiedPropertyId(
+          (currentPropertyId) =>
+            currentPropertyId ===
+            propertyId
+              ? null
+              : currentPropertyId
+        );
+      }, 2000);
+    } catch (error) {
+      console.error(
+        "Erro ao copiar o link público do imóvel:",
+        error
+      );
+
+      window.prompt(
+        "Copie o link público do imóvel:",
+        propertyUrl
+      );
+    }
+  }
+
   const propertyPositionById =
     useMemo(
       () =>
@@ -964,6 +1010,23 @@ export default function AdminPropertyTable({
                             Prévia
                           </Link>
 
+                          {property.active && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                copyPublicPropertyLink(
+                                  property.property_id
+                                )
+                              }
+                              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-center text-sm font-bold text-emerald-900 transition hover:bg-emerald-100"
+                            >
+                              {copiedPropertyId ===
+                              property.property_id
+                                ? "Link copiado"
+                                : "Copiar link"}
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() =>
@@ -1352,6 +1415,23 @@ export default function AdminPropertyTable({
                         >
                           Prévia
                         </Link>
+
+                        {property.active && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              copyPublicPropertyLink(
+                                property.property_id
+                              )
+                            }
+                            className="inline-flex items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 font-bold text-emerald-900 transition hover:bg-emerald-100"
+                          >
+                            {copiedPropertyId ===
+                            property.property_id
+                              ? "Link copiado"
+                              : "Copiar link"}
+                          </button>
+                        )}
 
                         <button
                           type="button"

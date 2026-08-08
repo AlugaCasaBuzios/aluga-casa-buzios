@@ -42,6 +42,7 @@ type PropertyFilter =
   | "all"
   | "active"
   | "inactive"
+  | "featured"
   | "ready"
   | "pending";
 
@@ -394,6 +395,10 @@ export default function AdminPropertyTable({
         (property) =>
           !property.active
       ).length,
+      featured: properties.filter(
+        (property) =>
+          property.featured
+      ).length,
       ready: properties.filter(
         (property) =>
           property.publicationReady
@@ -432,6 +437,9 @@ export default function AdminPropertyTable({
 
             case "inactive":
               return !property.active;
+
+            case "featured":
+              return property.featured;
 
             case "ready":
               return property.publicationReady;
@@ -480,6 +488,11 @@ export default function AdminPropertyTable({
       count: counts.inactive,
     },
     {
+      id: "featured",
+      label: "Destaques",
+      count: counts.featured,
+    },
+    {
       id: "ready",
       label: "Prontos para publicar",
       count: counts.ready,
@@ -517,6 +530,13 @@ export default function AdminPropertyTable({
       count: counts.inactive,
       className:
         "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100",
+    },
+    {
+      id: "featured",
+      label: "Destaques",
+      count: counts.featured,
+      className:
+        "border-violet-200 bg-violet-50 text-violet-950 hover:bg-violet-100",
     },
     {
       id: "ready",
@@ -583,7 +603,7 @@ export default function AdminPropertyTable({
 
         <div
           aria-label="Resumo dos imóveis"
-          className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"
+          className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
         >
           {summaryCards.map((card) => {
             const selected =

@@ -1,11 +1,5 @@
 import type { Property } from "@/types/Property";
 
-const featuredPropertyIds = [
-  "casa-em-buzios",
-  "casa-da-margarida",
-  "conforto",
-];
-
 type TestimonialsProps = {
   properties: Property[];
 };
@@ -15,11 +9,6 @@ export default function Testimonials({
 }: TestimonialsProps) {
   const reviewedProperties =
     properties
-      .filter((property) =>
-        featuredPropertyIds.includes(
-          property.id
-        )
-      )
       .filter(
         (property) =>
           property.rating > 0 &&
@@ -30,14 +19,34 @@ export default function Testimonials({
         (
           firstProperty,
           secondProperty
-        ) =>
-          featuredPropertyIds.indexOf(
-            firstProperty.id
-          ) -
-          featuredPropertyIds.indexOf(
-            secondProperty.id
-          )
-      );
+        ) => {
+          if (
+            secondProperty.rating !==
+            firstProperty.rating
+          ) {
+            return (
+              secondProperty.rating -
+              firstProperty.rating
+            );
+          }
+
+          if (
+            secondProperty.reviews !==
+            firstProperty.reviews
+          ) {
+            return (
+              secondProperty.reviews -
+              firstProperty.reviews
+            );
+          }
+
+          return firstProperty.title.localeCompare(
+            secondProperty.title,
+            "pt-BR"
+          );
+        }
+      )
+      .slice(0, 3);
 
   if (
     reviewedProperties.length === 0

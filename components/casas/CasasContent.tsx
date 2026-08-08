@@ -13,6 +13,13 @@ type CasasContentProps = {
   properties: Property[];
 };
 
+type PropertySort =
+  | "recommended"
+  | "price-asc"
+  | "price-desc"
+  | "guests-desc"
+  | "rating-desc";
+
 export default function CasasContent({
   properties,
 }: CasasContentProps) {
@@ -39,6 +46,13 @@ export default function CasasContent({
     neighborhood,
     setNeighborhood,
   ] = useState("");
+
+  const [
+    sort,
+    setSort,
+  ] = useState<PropertySort>(
+    "recommended"
+  );
 
   const neighborhoods = useMemo(
     () =>
@@ -79,6 +93,75 @@ export default function CasasContent({
         neighborhood,
       ]
     );
+
+  const sortedProperties =
+    useMemo(() => {
+      const result = [
+        ...neighborhoodFilteredProperties,
+      ];
+
+      switch (sort) {
+        case "price-asc":
+          return result.sort(
+            (a, b) => {
+              const aPrice =
+                a.price > 0
+                  ? a.price
+                  : Number.POSITIVE_INFINITY;
+
+              const bPrice =
+                b.price > 0
+                  ? b.price
+                  : Number.POSITIVE_INFINITY;
+
+              return aPrice - bPrice;
+            }
+          );
+
+        case "price-desc":
+          return result.sort(
+            (a, b) => {
+              if (
+                a.price <= 0 &&
+                b.price <= 0
+              ) {
+                return 0;
+              }
+
+              if (a.price <= 0) {
+                return 1;
+              }
+
+              if (b.price <= 0) {
+                return -1;
+              }
+
+              return b.price - a.price;
+            }
+          );
+
+        case "guests-desc":
+          return result.sort(
+            (a, b) =>
+              b.guests - a.guests ||
+              b.rating - a.rating
+          );
+
+        case "rating-desc":
+          return result.sort(
+            (a, b) =>
+              b.rating - a.rating ||
+              b.reviews - a.reviews
+          );
+
+        case "recommended":
+        default:
+          return result;
+      }
+    }, [
+      neighborhoodFilteredProperties,
+      sort,
+    ]);
 
   function clearFilters() {
     setSearch("");
@@ -163,6 +246,47 @@ export default function CasasContent({
           </div>
 
           <div className="flex flex-col gap-3 sm:items-end">
+            <div className="w-full sm:w-auto">
+              <label
+                htmlFor="property-sort"
+                className="mb-2 block text-sm font-bold text-blue-950 sm:text-right"
+              >
+                Ordenar por
+              </label>
+
+              <select
+                id="property-sort"
+                value={sort}
+                onChange={(event) =>
+                  setSort(
+                    event.target
+                      .value as PropertySort
+                  )
+                }
+                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-800 shadow-sm outline-none transition focus:border-sky-600 focus:ring-2 focus:ring-sky-100 sm:w-64"
+              >
+                <option value="recommended">
+                  Recomendados
+                </option>
+
+                <option value="price-asc">
+                  Menor diária
+                </option>
+
+                <option value="price-desc">
+                  Maior diária
+                </option>
+
+                <option value="guests-desc">
+                  Maior capacidade
+                </option>
+
+                <option value="rating-desc">
+                  Melhor avaliação
+                </option>
+              </select>
+            </div>
+
             {hasActiveFilters && (
               <button
                 type="button"
@@ -186,7 +310,7 @@ export default function CasasContent({
 
         {neighborhoodFilteredProperties.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {neighborhoodFilteredProperties.map((property) => (
+            {sortedProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}

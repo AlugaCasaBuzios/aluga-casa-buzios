@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import type { Property } from "@/types/Property";
@@ -7,9 +10,133 @@ interface PropertyCardProps {
   property: Property;
 }
 
+const FAVORITES_STORAGE_KEY =
+  "aluga-casa-buzios:favorite-properties";
+
+const FAVORITES_CHANGED_EVENT =
+  "aluga-casa-buzios:favorites-changed";
+
+function readFavoritePropertyIds(): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const stored =
+      window.localStorage.getItem(
+        FAVORITES_STORAGE_KEY
+      );
+
+    if (!stored) {
+      return [];
+    }
+
+    const parsed: unknown =
+      JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(
+      (item): item is string =>
+        typeof item === "string" &&
+        item.trim().length > 0
+    );
+  } catch (error) {
+    console.error(
+      "Erro ao carregar imóveis favoritos:",
+      error
+    );
+
+    return [];
+  }
+}
+
 export default function PropertyCard({
   property,
 }: PropertyCardProps) {
+  const [
+    isFavorite,
+    setIsFavorite,
+  ] = useState(false);
+
+  useEffect(() => {
+    function syncFavoriteState() {
+      setIsFavorite(
+        readFavoritePropertyIds().includes(
+          property.id
+        )
+      );
+    }
+
+    syncFavoriteState();
+
+    window.addEventListener(
+      "storage",
+      syncFavoriteState
+    );
+
+    window.addEventListener(
+      FAVORITES_CHANGED_EVENT,
+      syncFavoriteState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        syncFavoriteState
+      );
+
+      window.removeEventListener(
+        FAVORITES_CHANGED_EVENT,
+        syncFavoriteState
+      );
+    };
+  }, [property.id]);
+
+  function toggleFavorite() {
+    try {
+      const current =
+        readFavoritePropertyIds();
+
+      const next = current.includes(
+        property.id
+      )
+        ? current.filter(
+            (id) =>
+              id !== property.id
+          )
+        : [
+            ...current,
+            property.id,
+          ];
+
+      window.localStorage.setItem(
+        FAVORITES_STORAGE_KEY,
+        JSON.stringify(next)
+      );
+
+      setIsFavorite(
+        next.includes(property.id)
+      );
+
+      window.dispatchEvent(
+        new CustomEvent(
+          FAVORITES_CHANGED_EVENT,
+          {
+            detail: next,
+          }
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao salvar imóvel favorito:",
+        error
+      );
+    }
+  }
+
   const formattedPrice =
     property.price > 0
       ? new Intl.NumberFormat("pt-BR", {
@@ -34,7 +161,34 @@ export default function PropertyCard({
     property.garage > 0;
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition duration-300 hover:-translate-y-2 hover:shadow-xl">
+    <article className="group relative overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition duration-300 hover:-translate-y-2 hover:shadow-xl">
+      <button
+        type="button"
+        onClick={toggleFavorite}
+        aria-pressed={isFavorite}
+        aria-label={
+          isFavorite
+            ? `Remover ${property.title} dos favoritos`
+            : `Adicionar ${property.title} aos favoritos`
+        }
+        title={
+          isFavorite
+            ? "Remover dos favoritos"
+            : "Adicionar aos favoritos"
+        }
+        className={`absolute right-4 top-[4.75rem] z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border text-2xl shadow-md backdrop-blur transition ${
+          isFavorite
+            ? "border-red-200 bg-red-50/95 text-red-600 hover:bg-red-100"
+            : "border-white/80 bg-white/95 text-zinc-700 hover:bg-white hover:text-red-500"
+        }`}
+      >
+        <span aria-hidden="true">
+          {isFavorite
+            ? "♥"
+            : "♡"}
+        </span>
+      </button>
+
       <Link
         href={`/imoveis/${property.id}`}
         className="block"

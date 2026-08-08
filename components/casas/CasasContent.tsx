@@ -32,6 +32,49 @@ function isPropertySort(
   );
 }
 
+const FAVORITES_STORAGE_KEY =
+  "aluga-casa-buzios:favorite-properties";
+
+const FAVORITES_CHANGED_EVENT =
+  "aluga-casa-buzios:favorites-changed";
+
+function readFavoritePropertyIds(): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const stored =
+      window.localStorage.getItem(
+        FAVORITES_STORAGE_KEY
+      );
+
+    if (!stored) {
+      return [];
+    }
+
+    const parsed: unknown =
+      JSON.parse(stored);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(
+      (item): item is string =>
+        typeof item === "string" &&
+        item.trim().length > 0
+    );
+  } catch (error) {
+    console.error(
+      "Erro ao carregar imóveis favoritos:",
+      error
+    );
+
+    return [];
+  }
+}
+
 export default function CasasContent({
   properties,
 }: CasasContentProps) {
@@ -75,6 +118,48 @@ export default function CasasContent({
     shareFeedback,
     setShareFeedback,
   ] = useState("");
+
+  const [
+    favoritePropertyIds,
+    setFavoritePropertyIds,
+  ] = useState<string[]>([]);
+
+  const [
+    favoriteOnly,
+    setFavoriteOnly,
+  ] = useState(false);
+
+  useEffect(() => {
+    function syncFavorites() {
+      setFavoritePropertyIds(
+        readFavoritePropertyIds()
+      );
+    }
+
+    syncFavorites();
+
+    window.addEventListener(
+      "storage",
+      syncFavorites
+    );
+
+    window.addEventListener(
+      FAVORITES_CHANGED_EVENT,
+      syncFavorites
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        syncFavorites
+      );
+
+      window.removeEventListener(
+        FAVORITES_CHANGED_EVENT,
+        syncFavorites
+      );
+    };
+  }, []);
 
   useEffect(() => {
     function applyUrlState() {
@@ -301,10 +386,52 @@ export default function CasasContent({
       ]
     );
 
+  const favoritePropertyIdSet =
+    useMemo(
+      () =>
+        new Set(
+          favoritePropertyIds
+        ),
+      [favoritePropertyIds]
+    );
+
+  const favoriteCount =
+    useMemo(
+      () =>
+        properties.filter(
+          (property) =>
+            favoritePropertyIdSet.has(
+              property.id
+            )
+        ).length,
+      [
+        favoritePropertyIdSet,
+        properties,
+      ]
+    );
+
+  const favoriteFilteredProperties =
+    useMemo(
+      () =>
+        favoriteOnly
+          ? neighborhoodFilteredProperties.filter(
+              (property) =>
+                favoritePropertyIdSet.has(
+                  property.id
+                )
+            )
+          : neighborhoodFilteredProperties,
+      [
+        favoriteOnly,
+        favoritePropertyIdSet,
+        neighborhoodFilteredProperties,
+      ]
+    );
+
   const sortedProperties =
     useMemo(() => {
       const result = [
-        ...neighborhoodFilteredProperties,
+        ...favoriteFilteredProperties,
       ];
 
       switch (sort) {
@@ -366,7 +493,7 @@ export default function CasasContent({
           return result;
       }
     }, [
-      neighborhoodFilteredProperties,
+      favoriteFilteredProperties,
       sort,
     ]);
 
@@ -378,6 +505,7 @@ export default function CasasContent({
     setPetFriendly(false);
     setBarbecue(false);
     setSort("recommended");
+    setFavoriteOnly(false);
   }
 
   async function shareCurrentSearch() {
@@ -465,7 +593,8 @@ export default function CasasContent({
     neighborhood !== "" ||
     pool ||
     petFriendly ||
-    barbecue;
+    barbecue ||
+    favoriteOnly;
 
   const sortLabels: Record<
     PropertySort,
@@ -549,6 +678,15 @@ export default function CasasContent({
         `Ordenação: ${sortLabels[sort]}`,
       onRemove: () =>
         setSort("recommended"),
+    });
+  }
+
+  if (favoriteOnly) {
+    activeFilterTags.push({
+      key: "favorites",
+      label: "Somente favoritos",
+      onRemove: () =>
+        setFavoriteOnly(false),
     });
   }
 
@@ -660,8 +798,8 @@ export default function CasasContent({
             </h2>
 
             <p className="mt-3 text-zinc-600">
-              Encontramos {neighborhoodFilteredProperties.length}{" "}
-              {neighborhoodFilteredProperties.length === 1
+              Encontramos {favoriteFilteredProperties.length}{" "}
+              {favoriteFilteredProperties.length === 1
                 ? "imóvel"
                 : "imóveis"}
               .
@@ -669,6 +807,39 @@ export default function CasasContent({
           </div>
 
           <div className="flex flex-col gap-3 sm:items-end">
+            <button
+              type="button"
+              onClick={() =>
+                setFavoriteOnly(
+                  (current) =>
+                    !current
+                )
+              }
+              aria-pressed={favoriteOnly}
+              className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-5 py-3 font-bold transition sm:w-auto ${
+                favoriteOnly
+                  ? "border-red-200 bg-red-50 text-red-700 shadow-sm"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className="text-xl leading-none"
+              >
+                {favoriteOnly
+                  ? "♥"
+                  : "♡"}
+              </span>
+
+              Somente favoritos
+
+              {favoriteCount > 0 && (
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-black">
+                  {favoriteCount}
+                </span>
+              )}
+            </button>
+
             <div className="w-full sm:w-auto">
               <label
                 htmlFor="property-sort"
@@ -746,7 +917,7 @@ export default function CasasContent({
           </div>
         </div>
 
-        {neighborhoodFilteredProperties.length > 0 ? (
+        {favoriteFilteredProperties.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             {sortedProperties.map((property) => (
               <PropertyCard
@@ -766,8 +937,10 @@ export default function CasasContent({
             </h2>
 
             <p className="mx-auto mt-3 max-w-xl leading-7 text-zinc-600">
-              Não encontramos imóveis com essas características. Altere a
-              pesquisa ou remova algum filtro.
+              {favoriteOnly &&
+              favoriteCount === 0
+                ? "Você ainda não marcou nenhum imóvel como favorito. Clique no coração dos cards para montar sua seleção."
+                : "Não encontramos imóveis com essas características. Altere a pesquisa ou remova algum filtro."}
             </p>
 
             <button

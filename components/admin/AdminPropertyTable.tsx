@@ -13,6 +13,7 @@ import {
   duplicateProperty,
   movePropertyDisplayOrder,
   setPropertyActive,
+  setPropertyFeatured,
 } from "@/app/admin/imoveis/catalog-actions";
 
 import PropertyDeleteButton from "@/components/admin/PropertyDeleteButton";
@@ -27,6 +28,7 @@ export type AdminPropertyListItem = {
   minimum_price: number | null;
   maximum_price: number | null;
   active: boolean;
+  featured: boolean;
   publicationReady: boolean;
   publicationProgress: number;
   displayOrder: number;
@@ -97,6 +99,13 @@ export default function AdminPropertyTable({
     null
   );
 
+  const [
+    updatingFeaturedPropertyId,
+    setUpdatingFeaturedPropertyId,
+  ] = useState<string | null>(
+    null
+  );
+
   const propertyPositionById =
     useMemo(
       () =>
@@ -162,6 +171,63 @@ export default function AdminPropertyTable({
       );
     } finally {
       setMovingPropertyId(
+        null
+      );
+    }
+  }
+
+  async function togglePropertyFeatured(
+    property: AdminPropertyListItem
+  ) {
+    if (updatingFeaturedPropertyId) {
+      return;
+    }
+
+    setUpdatingFeaturedPropertyId(
+      property.property_id
+    );
+
+    try {
+      const formData =
+        new FormData();
+
+      formData.set(
+        "propertyId",
+        property.property_id
+      );
+
+      formData.set(
+        "nextFeatured",
+        property.featured
+          ? "false"
+          : "true"
+      );
+
+      const result =
+        await setPropertyFeatured(
+          formData
+        );
+
+      if (!result.ok) {
+        window.alert(
+          result.message
+        );
+
+        return;
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Erro ao alterar o destaque do imóvel:",
+        error
+      );
+
+      window.alert(
+        "Não foi possível alterar o destaque do imóvel."
+      );
+    } finally {
+      setUpdatingFeaturedPropertyId(
         null
       );
     }
@@ -682,17 +748,25 @@ export default function AdminPropertyTable({
                           </p>
                         </div>
 
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                            property.active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {property.active
-                            ? "Ativo"
-                            : "Inativo"}
-                        </span>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              property.active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {property.active
+                              ? "Ativo"
+                              : "Inativo"}
+                          </span>
+
+                          {property.featured && (
+                            <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-bold text-yellow-900">
+                              ★ Destaque
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -893,6 +967,30 @@ export default function AdminPropertyTable({
                           <button
                             type="button"
                             onClick={() =>
+                              togglePropertyFeatured(
+                                property
+                              )
+                            }
+                            disabled={Boolean(
+                              updatingFeaturedPropertyId
+                            )}
+                            className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-center text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              property.featured
+                                ? "border-yellow-400 bg-yellow-100 text-yellow-950 hover:bg-yellow-200"
+                                : "border-slate-300 bg-white text-slate-800 hover:border-yellow-300 hover:bg-yellow-50"
+                            }`}
+                          >
+                            {updatingFeaturedPropertyId ===
+                            property.property_id
+                              ? "Atualizando..."
+                              : property.featured
+                                ? "Remover destaque"
+                                : "Destacar"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
                               duplicatePropertyItem(
                                 property
                               )
@@ -1002,6 +1100,10 @@ export default function AdminPropertyTable({
 
                 <th scope="col" className="px-5 py-4">
                   Preço máximo
+                </th>
+
+                <th scope="col" className="px-5 py-4">
+                  Destaque
                 </th>
 
                 <th scope="col" className="px-5 py-4">
@@ -1204,6 +1306,20 @@ export default function AdminPropertyTable({
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                          property.featured
+                            ? "bg-yellow-100 text-yellow-900"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {property.featured
+                          ? "★ Destaque"
+                          : "Normal"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
                           property.active
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
@@ -1236,6 +1352,30 @@ export default function AdminPropertyTable({
                         >
                           Prévia
                         </Link>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            togglePropertyFeatured(
+                              property
+                            )
+                          }
+                          disabled={Boolean(
+                            updatingFeaturedPropertyId
+                          )}
+                          className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            property.featured
+                              ? "border-yellow-400 bg-yellow-100 text-yellow-950 hover:bg-yellow-200"
+                              : "border-slate-300 bg-white text-slate-800 hover:border-yellow-300 hover:bg-yellow-50"
+                          }`}
+                        >
+                          {updatingFeaturedPropertyId ===
+                          property.property_id
+                            ? "Atualizando..."
+                            : property.featured
+                              ? "Remover destaque"
+                              : "Destacar"}
+                        </button>
 
                         <button
                           type="button"

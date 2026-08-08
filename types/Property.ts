@@ -70,4 +70,6 @@ export interface Property {
   longitude?: number;
 
   keywords: string[];
+
+  featured?: boolean;
 }

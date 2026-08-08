@@ -36,6 +36,21 @@ export default function HomeContent({
     setBarbecue,
   } = usePropertySearch(properties);
 
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    guests > 0 ||
+    pool ||
+    petFriendly ||
+    barbecue;
+
+  const displayedProperties =
+    hasActiveFilters
+      ? filteredProperties
+      : filteredProperties.filter(
+          (property) =>
+            property.featured === true
+        );
+
   function clearFilters() {
     setSearch("");
     setGuests(0);
@@ -72,21 +87,23 @@ export default function HomeContent({
           </p>
 
           <h2 className="mt-3 text-4xl font-bold text-blue-950">
-            Casas em Destaque
+            {hasActiveFilters
+              ? "Casas encontradas"
+              : "Casas em Destaque"}
           </h2>
 
           <p className="mt-4 text-lg text-zinc-600">
-            Encontramos {filteredProperties.length}{" "}
-            {filteredProperties.length === 1
+            Encontramos {displayedProperties.length}{" "}
+            {displayedProperties.length === 1
               ? "imóvel"
               : "imóveis"}
             .
           </p>
         </div>
 
-        {filteredProperties.length > 0 ? (
+        {displayedProperties.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProperties.map((property) => (
+            {displayedProperties.map((property) => (
               <PropertyCard
                 key={property.id}
                 property={property}
@@ -100,20 +117,26 @@ export default function HomeContent({
             </div>
 
             <h3 className="mt-6 text-2xl font-bold text-blue-950">
-              Nenhum imóvel encontrado
+              {hasActiveFilters
+                ? "Nenhum imóvel encontrado"
+                : "Nenhuma casa em destaque no momento"}
             </h3>
 
             <p className="mt-3 text-zinc-600">
-              Tente alterar a pesquisa ou remover algum filtro.
+              {hasActiveFilters
+                ? "Tente alterar a pesquisa ou remover algum filtro."
+                : "Os imóveis marcados como destaque no painel aparecerão aqui."}
             </p>
 
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="mt-6 rounded-full bg-blue-950 px-7 py-3 font-bold text-white transition hover:bg-blue-900"
-            >
-              Limpar pesquisa
-            </button>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="mt-6 rounded-full bg-blue-950 px-7 py-3 font-bold text-white transition hover:bg-blue-900"
+              >
+                Limpar pesquisa
+              </button>
+            )}
           </div>
         )}
       </section>

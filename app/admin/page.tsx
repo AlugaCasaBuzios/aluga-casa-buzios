@@ -56,6 +56,7 @@ type PropertyCatalogRow = {
   whatsapp: string;
   latitude: number | null;
   longitude: number | null;
+  featured: boolean;
   display_order: number;
 };
 
@@ -164,6 +165,7 @@ export default async function AdminPage({
         whatsapp,
         latitude,
         longitude,
+        featured,
         display_order
       `),
 
@@ -334,6 +336,8 @@ export default async function AdminPage({
                 ) * 100
               )
             : 0,
+        featured:
+          catalog?.featured ?? false,
         displayOrder:
           catalog?.display_order ??
           Number.MAX_SAFE_INTEGER,

@@ -250,6 +250,87 @@ export async function setPropertyActive(
   );
 }
 
+export async function setPropertyFeatured(
+  formData: FormData
+): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  const propertyId = String(
+    formData.get("propertyId") ?? ""
+  ).trim();
+
+  const nextFeatured =
+    String(
+      formData.get("nextFeatured") ?? ""
+    ) === "true";
+
+  if (!propertyId) {
+    return {
+      ok: false,
+      message:
+        "Não foi possível identificar o imóvel.",
+    };
+  }
+
+  const supabase =
+    await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const adminSupabase =
+    createSupabaseAdminClient();
+
+  const {
+    data,
+    error,
+  } = await adminSupabase
+    .from("property_catalog")
+    .update({
+      featured: nextFeatured,
+    })
+    .eq(
+      "id",
+      propertyId
+    )
+    .select("id")
+    .maybeSingle();
+
+  if (
+    error ||
+    !data
+  ) {
+    console.error(
+      "Erro ao alterar destaque do imóvel:",
+      error
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível alterar o destaque do imóvel.",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+
+  return {
+    ok: true,
+    message:
+      nextFeatured
+        ? "Imóvel adicionado aos destaques."
+        : "Imóvel removido dos destaques.",
+  };
+}
+
+
 type PropertyOrderDirection =
   | "up"
   | "down";

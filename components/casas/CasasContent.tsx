@@ -377,6 +377,7 @@ export default function CasasContent({
     setPool(false);
     setPetFriendly(false);
     setBarbecue(false);
+    setSort("recommended");
   }
 
   async function shareCurrentSearch() {
@@ -466,6 +467,94 @@ export default function CasasContent({
     petFriendly ||
     barbecue;
 
+  const sortLabels: Record<
+    PropertySort,
+    string
+  > = {
+    recommended: "Recomendados",
+    "price-asc": "Menor diária",
+    "price-desc": "Maior diária",
+    "guests-desc": "Maior capacidade",
+    "rating-desc": "Melhor avaliação",
+  };
+
+  const activeFilterTags: {
+    key: string;
+    label: string;
+    onRemove: () => void;
+  }[] = [];
+
+  if (search.trim()) {
+    activeFilterTags.push({
+      key: "search",
+      label: `Pesquisa: ${search.trim()}`,
+      onRemove: () =>
+        setSearch(""),
+    });
+  }
+
+  if (neighborhood) {
+    activeFilterTags.push({
+      key: "neighborhood",
+      label: `Bairro: ${neighborhood}`,
+      onRemove: () =>
+        setNeighborhood(""),
+    });
+  }
+
+  if (guests > 0) {
+    activeFilterTags.push({
+      key: "guests",
+      label: `${guests}+ ${
+        guests === 1
+          ? "hóspede"
+          : "hóspedes"
+      }`,
+      onRemove: () =>
+        setGuests(0),
+    });
+  }
+
+  if (pool) {
+    activeFilterTags.push({
+      key: "pool",
+      label: "Piscina",
+      onRemove: () =>
+        setPool(false),
+    });
+  }
+
+  if (petFriendly) {
+    activeFilterTags.push({
+      key: "pets",
+      label: "Pet Friendly",
+      onRemove: () =>
+        setPetFriendly(false),
+    });
+  }
+
+  if (barbecue) {
+    activeFilterTags.push({
+      key: "barbecue",
+      label: "Churrasqueira",
+      onRemove: () =>
+        setBarbecue(false),
+    });
+  }
+
+  if (sort !== "recommended") {
+    activeFilterTags.push({
+      key: "sort",
+      label:
+        `Ordenação: ${sortLabels[sort]}`,
+      onRemove: () =>
+        setSort("recommended"),
+    });
+  }
+
+  const hasActiveSelections =
+    activeFilterTags.length > 0;
+
   return (
     <>
       <section className="bg-blue-950 px-6 pb-32 pt-20 text-center text-white">
@@ -507,6 +596,54 @@ export default function CasasContent({
           setBarbecue={setBarbecue}
         />
       </div>
+
+      {hasActiveSelections && (
+        <div className="mx-auto mt-8 max-w-7xl px-6">
+          <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-black text-blue-950">
+                  Filtros aplicados
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {activeFilterTags.map(
+                    (tag) => (
+                      <button
+                        key={tag.key}
+                        type="button"
+                        onClick={tag.onRemove}
+                        title={`Remover ${tag.label}`}
+                        aria-label={`Remover filtro ${tag.label}`}
+                        className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-bold text-sky-900 shadow-sm transition hover:border-sky-300 hover:bg-sky-100"
+                      >
+                        <span className="truncate">
+                          {tag.label}
+                        </span>
+
+                        <span
+                          aria-hidden="true"
+                          className="text-base leading-none text-sky-600"
+                        >
+                          ×
+                        </span>
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="shrink-0 self-start text-sm font-bold text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-950 lg:self-center"
+              >
+                Limpar tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section
         id="imoveis"
@@ -573,7 +710,7 @@ export default function CasasContent({
               </select>
             </div>
 
-            {hasActiveFilters && (
+            {hasActiveSelections && (
               <button
                 type="button"
                 onClick={clearFilters}

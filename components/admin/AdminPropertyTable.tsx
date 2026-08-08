@@ -104,6 +104,28 @@ export default function AdminPropertyTable({
   );
 
   const [
+    duplicateSourceProperty,
+    setDuplicateSourceProperty,
+  ] = useState<AdminPropertyListItem | null>(
+    null
+  );
+
+  const [
+    duplicateTitle,
+    setDuplicateTitle,
+  ] = useState("");
+
+  const [
+    duplicatePropertyId,
+    setDuplicatePropertyId,
+  ] = useState("");
+
+  const [
+    duplicateError,
+    setDuplicateError,
+  ] = useState("");
+
+  const [
     updatingFeaturedPropertyId,
     setUpdatingFeaturedPropertyId,
   ] = useState<string | null>(
@@ -304,48 +326,106 @@ export default function AdminPropertyTable({
     }
   }
 
-  async function duplicatePropertyItem(
+  function normalizeDuplicatePropertyId(
+    value: string
+  ): string {
+    return value
+      .normalize("NFD")
+      .replace(
+        /[\u0300-\u036f]/g,
+        ""
+      )
+      .toLowerCase()
+      .trim()
+      .replace(
+        /[^a-z0-9]+/g,
+        "-"
+      )
+      .replace(
+        /^-+|-+$/g,
+        ""
+      );
+  }
+
+  function openDuplicateModal(
     property: AdminPropertyListItem
   ) {
     if (duplicatingPropertyId) {
       return;
     }
 
-    const newTitle =
-      window.prompt(
-        "Título da nova casa:",
-        `${property.property_name} - Cópia`
-      );
+    setDuplicateSourceProperty(
+      property
+    );
+    setDuplicateTitle(
+      `${property.property_name} - Cópia`
+    );
+    setDuplicatePropertyId(
+      `${property.property_id}-copia`
+    );
+    setDuplicateError("");
+  }
+
+  function closeDuplicateModal() {
+    if (duplicatingPropertyId) {
+      return;
+    }
+
+    setDuplicateSourceProperty(
+      null
+    );
+    setDuplicateTitle("");
+    setDuplicatePropertyId("");
+    setDuplicateError("");
+  }
+
+  async function submitDuplicateProperty() {
+    const property =
+      duplicateSourceProperty;
 
     if (
-      newTitle === null ||
-      !newTitle.trim()
+      !property ||
+      duplicatingPropertyId
     ) {
       return;
     }
+
+    const newTitle =
+      duplicateTitle.trim();
 
     const newPropertyId =
-      window.prompt(
-        "Identificador da nova casa (sem espaços):",
-        `${property.property_id}-copia`
+      normalizeDuplicatePropertyId(
+        duplicatePropertyId
       );
+
+    if (!newTitle) {
+      setDuplicateError(
+        "Informe o título da nova casa."
+      );
+      return;
+    }
+
+    if (!newPropertyId) {
+      setDuplicateError(
+        "Informe um identificador válido para a nova casa."
+      );
+      return;
+    }
 
     if (
-      newPropertyId === null ||
-      !newPropertyId.trim()
+      newPropertyId ===
+      property.property_id
     ) {
-      return;
-    }
-
-    const confirmed =
-      window.confirm(
-        "A cópia será criada INATIVA, com os dados e preços do imóvel original. Fotos, avaliações e links do Airbnb/Booking não serão copiados. Continuar?"
+      setDuplicateError(
+        "A nova casa precisa ter um identificador diferente do imóvel original."
       );
-
-    if (!confirmed) {
       return;
     }
 
+    setDuplicateError("");
+    setDuplicatePropertyId(
+      newPropertyId
+    );
     setDuplicatingPropertyId(
       property.property_id
     );
@@ -361,12 +441,12 @@ export default function AdminPropertyTable({
 
       formData.set(
         "newTitle",
-        newTitle.trim()
+        newTitle
       );
 
       formData.set(
         "newPropertyId",
-        newPropertyId.trim()
+        newPropertyId
       );
 
       const result =
@@ -375,12 +455,15 @@ export default function AdminPropertyTable({
         );
 
       if (!result.ok) {
-        window.alert(
+        setDuplicateError(
           result.message
         );
-
         return;
       }
+
+      setDuplicateSourceProperty(
+        null
+      );
 
       router.push(
         `/admin/imoveis/${encodeURIComponent(
@@ -395,7 +478,7 @@ export default function AdminPropertyTable({
         error
       );
 
-      window.alert(
+      setDuplicateError(
         "Não foi possível duplicar o imóvel."
       );
     } finally {
@@ -1168,7 +1251,7 @@ export default function AdminPropertyTable({
                           <button
                             type="button"
                             onClick={() =>
-                              duplicatePropertyItem(
+                              openDuplicateModal(
                                 property
                               )
                             }
@@ -1608,7 +1691,7 @@ export default function AdminPropertyTable({
                         <button
                           type="button"
                           onClick={() =>
-                            duplicatePropertyItem(
+                            openDuplicateModal(
                               property
                             )
                           }
@@ -1680,6 +1763,176 @@ export default function AdminPropertyTable({
             </table>
           </div>
         </>
+      )}
+
+      {duplicateSourceProperty && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="duplicate-property-title"
+        >
+          <div className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+                  Duplicar imóvel
+                </p>
+
+                <h3
+                  id="duplicate-property-title"
+                  className="mt-1 text-xl font-black text-slate-950"
+                >
+                  Criar uma nova casa a partir de{" "}
+                  {duplicateSourceProperty.property_name}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeDuplicateModal}
+                disabled={Boolean(
+                  duplicatingPropertyId
+                )}
+                aria-label="Fechar"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xl font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitDuplicateProperty();
+              }}
+              className="space-y-5 p-5 sm:p-6"
+            >
+              <div>
+                <label
+                  htmlFor="duplicate-property-name"
+                  className="mb-2 block text-sm font-bold text-slate-800"
+                >
+                  Nome da nova casa
+                </label>
+
+                <input
+                  id="duplicate-property-name"
+                  type="text"
+                  value={duplicateTitle}
+                  onChange={(event) => {
+                    setDuplicateTitle(
+                      event.target.value
+                    );
+                    setDuplicateError("");
+                  }}
+                  autoFocus
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none transition focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="duplicate-property-id"
+                    className="block text-sm font-bold text-slate-800"
+                  >
+                    Identificador / URL
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDuplicatePropertyId(
+                        normalizeDuplicatePropertyId(
+                          duplicateTitle
+                        )
+                      );
+                      setDuplicateError("");
+                    }}
+                    className="text-xs font-bold text-blue-800 underline underline-offset-2"
+                  >
+                    Gerar pelo nome
+                  </button>
+                </div>
+
+                <input
+                  id="duplicate-property-id"
+                  type="text"
+                  value={duplicatePropertyId}
+                  onChange={(event) => {
+                    setDuplicatePropertyId(
+                      normalizeDuplicatePropertyId(
+                        event.target.value
+                      )
+                    );
+                    setDuplicateError("");
+                  }}
+                  spellCheck={false}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm text-slate-950 outline-none transition focus:border-blue-800 focus:ring-2 focus:ring-blue-100"
+                />
+
+                <p className="mt-2 text-xs text-slate-500">
+                  A página será criada em /imoveis/
+                  {duplicatePropertyId ||
+                    "identificador-da-casa"}.
+                  Use um identificador único.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="font-black">
+                  O que será copiado
+                </p>
+
+                <p className="mt-1 leading-6">
+                  Dados do imóvel, comodidades, regras,
+                  localização, WhatsApp e preços.
+                  A nova casa será criada inativa.
+                </p>
+
+                <p className="mt-2 font-semibold leading-6">
+                  Fotos, avaliações, destaque e links do
+                  Airbnb/Booking não serão copiados.
+                </p>
+              </div>
+
+              {duplicateError && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800"
+                >
+                  {duplicateError}
+                </div>
+              )}
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeDuplicateModal}
+                  disabled={Boolean(
+                    duplicatingPropertyId
+                  )}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 font-bold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={Boolean(
+                    duplicatingPropertyId
+                  )}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-600 px-5 py-3 font-black !text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {duplicatingPropertyId
+                    ? "Criando cópia..."
+                    : "Criar cópia"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </section>
   );

@@ -43,13 +43,18 @@ export default function HomeContent({
     petFriendly ||
     barbecue;
 
+  const featuredProperties =
+    filteredProperties.filter(
+      (property) =>
+        property.featured === true
+    );
+
   const displayedProperties =
     hasActiveFilters
       ? filteredProperties
-      : filteredProperties.filter(
-          (property) =>
-            property.featured === true
-        );
+      : featuredProperties.length > 0
+        ? featuredProperties
+        : filteredProperties.slice(0, 3);
 
   function clearFilters() {
     setSearch("");
@@ -119,13 +124,13 @@ export default function HomeContent({
             <h3 className="mt-6 text-2xl font-bold text-blue-950">
               {hasActiveFilters
                 ? "Nenhum imóvel encontrado"
-                : "Nenhuma casa em destaque no momento"}
+                : "Nenhum imóvel disponível no momento"}
             </h3>
 
             <p className="mt-3 text-zinc-600">
               {hasActiveFilters
                 ? "Tente alterar a pesquisa ou remover algum filtro."
-                : "Os imóveis marcados como destaque no painel aparecerão aqui."}
+                : "Assim que houver imóveis ativos, eles aparecerão aqui."}
             </p>
 
             {hasActiveFilters && (

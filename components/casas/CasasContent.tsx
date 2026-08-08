@@ -71,6 +71,11 @@ export default function CasasContent({
     setUrlStateReady,
   ] = useState(false);
 
+  const [
+    shareFeedback,
+    setShareFeedback,
+  ] = useState("");
+
   useEffect(() => {
     function applyUrlState() {
       const params =
@@ -374,6 +379,85 @@ export default function CasasContent({
     setBarbecue(false);
   }
 
+  async function shareCurrentSearch() {
+    const shareData = {
+      title:
+        "Casas para temporada em Búzios",
+      text:
+        "Confira esta seleção de casas para temporada em Búzios.",
+      url: window.location.href,
+    };
+
+    try {
+      if (
+        typeof navigator.share ===
+        "function"
+      ) {
+        await navigator.share(
+          shareData
+        );
+
+        setShareFeedback(
+          "Busca compartilhada"
+        );
+      } else {
+        await navigator.clipboard.writeText(
+          window.location.href
+        );
+
+        setShareFeedback(
+          "Link copiado"
+        );
+      }
+
+      window.setTimeout(
+        () =>
+          setShareFeedback(""),
+        2500
+      );
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === "AbortError"
+      ) {
+        return;
+      }
+
+      console.error(
+        "Erro ao compartilhar busca:",
+        error
+      );
+
+      try {
+        await navigator.clipboard.writeText(
+          window.location.href
+        );
+
+        setShareFeedback(
+          "Link copiado"
+        );
+
+        window.setTimeout(
+          () =>
+            setShareFeedback(""),
+          2500
+        );
+      } catch (
+        clipboardError
+      ) {
+        console.error(
+          "Erro ao copiar link da busca:",
+          clipboardError
+        );
+
+        window.prompt(
+          "Copie o link desta busca:",
+          window.location.href
+        );
+      }
+    }
+  }
+
   const hasActiveFilters =
     search.trim() !== "" ||
     guests > 0 ||
@@ -498,6 +582,21 @@ export default function CasasContent({
                 Limpar pesquisa e filtros
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => {
+                void shareCurrentSearch();
+              }}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-6 py-3 font-bold text-sky-800 transition hover:border-sky-300 hover:bg-sky-100"
+            >
+              <span aria-hidden="true">
+                ↗
+              </span>
+
+              {shareFeedback ||
+                "Compartilhar busca"}
+            </button>
 
             <a
               href="https://wa.me/5524998288846?text=Olá! Gostaria de consultar as casas disponíveis para temporada em Búzios."

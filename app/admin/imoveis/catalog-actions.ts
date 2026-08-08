@@ -203,6 +203,7 @@ export async function setPropertyActive(
     .from("property_catalog")
     .update({
       active: nextActive,
+      featured: false,
     })
     .eq(
       "id",
@@ -256,6 +257,8 @@ export async function setPropertyFeatured(
   ok: boolean;
   message: string;
 }> {
+  const MAX_HOME_FEATURED = 3;
+
   const propertyId = String(
     formData.get("propertyId") ?? ""
   ).trim();
@@ -286,6 +289,101 @@ export async function setPropertyFeatured(
 
   const adminSupabase =
     createSupabaseAdminClient();
+
+  const {
+    data: propertyData,
+    error: propertyError,
+  } = await adminSupabase
+    .from("property_catalog")
+    .select(`
+      id,
+      active,
+      featured
+    `)
+    .eq(
+      "id",
+      propertyId
+    )
+    .maybeSingle();
+
+  if (
+    propertyError ||
+    !propertyData
+  ) {
+    console.error(
+      "Erro ao carregar imóvel antes de alterar destaque:",
+      propertyError
+    );
+
+    return {
+      ok: false,
+      message:
+        "Não foi possível localizar o imóvel no catálogo.",
+    };
+  }
+
+  if (nextFeatured) {
+    if (!propertyData.active) {
+      return {
+        ok: false,
+        message:
+          "Ative o imóvel antes de adicioná-lo aos destaques da Home.",
+      };
+    }
+
+    if (propertyData.featured) {
+      return {
+        ok: true,
+        message:
+          "O imóvel já está nos destaques da Home.",
+      };
+    }
+
+    const {
+      count,
+      error: countError,
+    } = await adminSupabase
+      .from("property_catalog")
+      .select(
+        "id",
+        {
+          count: "exact",
+          head: true,
+        }
+      )
+      .eq(
+        "active",
+        true
+      )
+      .eq(
+        "featured",
+        true
+      );
+
+    if (countError) {
+      console.error(
+        "Erro ao contar os destaques da Home:",
+        countError
+      );
+
+      return {
+        ok: false,
+        message:
+          "Não foi possível verificar o limite de destaques.",
+      };
+    }
+
+    if (
+      (count ?? 0) >=
+      MAX_HOME_FEATURED
+    ) {
+      return {
+        ok: false,
+        message:
+          `A Home permite no máximo ${MAX_HOME_FEATURED} imóveis em destaque. Remova um destaque antes de escolher outro.`,
+      };
+    }
+  }
 
   const {
     data,
@@ -329,7 +427,6 @@ export async function setPropertyFeatured(
         : "Imóvel removido dos destaques.",
   };
 }
-
 
 type PropertyOrderDirection =
   | "up"

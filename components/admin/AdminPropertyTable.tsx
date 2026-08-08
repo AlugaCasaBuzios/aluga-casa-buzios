@@ -39,6 +39,8 @@ type AdminPropertyTableProps = {
   properties: AdminPropertyListItem[];
 };
 
+const MAX_HOME_FEATURED = 3;
+
 type PropertyFilter =
   | "all"
   | "active"
@@ -231,6 +233,27 @@ export default function AdminPropertyTable({
       return;
     }
 
+    if (
+      !property.featured &&
+      !property.active
+    ) {
+      window.alert(
+        "Ative o imóvel antes de adicioná-lo aos destaques da Home."
+      );
+      return;
+    }
+
+    if (
+      !property.featured &&
+      counts.featured >=
+        MAX_HOME_FEATURED
+    ) {
+      window.alert(
+        `A Home permite no máximo ${MAX_HOME_FEATURED} imóveis em destaque. Remova um destaque antes de escolher outro.`
+      );
+      return;
+    }
+
     setUpdatingFeaturedPropertyId(
       property.property_id
     );
@@ -398,6 +421,7 @@ export default function AdminPropertyTable({
       ).length,
       featured: properties.filter(
         (property) =>
+          property.active &&
           property.featured
       ).length,
       ready: properties.filter(
@@ -440,7 +464,10 @@ export default function AdminPropertyTable({
               return !property.active;
 
             case "featured":
-              return property.featured;
+              return (
+                property.active &&
+                property.featured
+              );
 
             case "ready":
               return property.publicationReady;
@@ -636,6 +663,40 @@ export default function AdminPropertyTable({
               </button>
             );
           })}
+        </div>
+
+        <div
+          className={`mt-4 rounded-2xl border p-4 ${
+            counts.featured > MAX_HOME_FEATURED
+              ? "border-red-200 bg-red-50 text-red-900"
+              : counts.featured === MAX_HOME_FEATURED
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-violet-200 bg-violet-50 text-violet-950"
+          }`}
+        >
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <p className="font-bold">
+              Destaques da Home: {counts.featured} de{" "}
+              {MAX_HOME_FEATURED}
+            </p>
+
+            <p className="text-sm font-semibold">
+              {counts.featured > MAX_HOME_FEATURED
+                ? "Existem destaques antigos acima do limite. Remova os excedentes."
+                : counts.featured === MAX_HOME_FEATURED
+                  ? "Limite atingido. Remova um destaque para escolher outro."
+                  : `Você ainda pode destacar ${
+                      MAX_HOME_FEATURED -
+                      counts.featured
+                    } ${
+                      MAX_HOME_FEATURED -
+                        counts.featured ===
+                      1
+                        ? "imóvel"
+                        : "imóveis"
+                    }.`}
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -1072,9 +1133,19 @@ export default function AdminPropertyTable({
                                 property
                               )
                             }
-                            disabled={Boolean(
-                              updatingFeaturedPropertyId
-                            )}
+                            disabled={
+                              Boolean(
+                                updatingFeaturedPropertyId
+                              ) ||
+                              (
+                                !property.featured &&
+                                (
+                                  !property.active ||
+                                  counts.featured >=
+                                    MAX_HOME_FEATURED
+                                )
+                              )
+                            }
                             className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-center text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                               property.featured
                                 ? "border-yellow-400 bg-yellow-100 text-yellow-950 hover:bg-yellow-200"
@@ -1086,7 +1157,12 @@ export default function AdminPropertyTable({
                               ? "Atualizando..."
                               : property.featured
                                 ? "Remover destaque"
-                                : "Destacar"}
+                                : !property.active
+                                  ? "Ative para destacar"
+                                  : counts.featured >=
+                                      MAX_HOME_FEATURED
+                                    ? "Limite de 3 atingido"
+                                    : "Destacar"}
                           </button>
 
                           <button
@@ -1497,9 +1573,19 @@ export default function AdminPropertyTable({
                               property
                             )
                           }
-                          disabled={Boolean(
-                            updatingFeaturedPropertyId
-                          )}
+                          disabled={
+                            Boolean(
+                              updatingFeaturedPropertyId
+                            ) ||
+                            (
+                              !property.featured &&
+                              (
+                                !property.active ||
+                                counts.featured >=
+                                  MAX_HOME_FEATURED
+                              )
+                            )
+                          }
                           className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                             property.featured
                               ? "border-yellow-400 bg-yellow-100 text-yellow-950 hover:bg-yellow-200"
@@ -1511,7 +1597,12 @@ export default function AdminPropertyTable({
                             ? "Atualizando..."
                             : property.featured
                               ? "Remover destaque"
-                              : "Destacar"}
+                              : !property.active
+                                ? "Ative para destacar"
+                                : counts.featured >=
+                                    MAX_HOME_FEATURED
+                                  ? "Limite de 3 atingido"
+                                  : "Destacar"}
                         </button>
 
                         <button

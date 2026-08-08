@@ -14,6 +14,8 @@ type HomeContentProps = {
   properties: Property[];
 };
 
+const MAX_HOME_FEATURED = 3;
+
 export default function HomeContent({
   properties,
 }: HomeContentProps) {
@@ -44,10 +46,15 @@ export default function HomeContent({
     barbecue;
 
   const featuredProperties =
-    filteredProperties.filter(
-      (property) =>
-        property.featured === true
-    );
+    filteredProperties
+      .filter(
+        (property) =>
+          property.featured === true
+      )
+      .slice(
+        0,
+        MAX_HOME_FEATURED
+      );
 
   const displayedProperties =
     hasActiveFilters

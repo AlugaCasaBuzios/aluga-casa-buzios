@@ -128,6 +128,27 @@ const organizationJsonLd = {
     "https://instagram.com/aluga.casa.buzios",
     "https://www.airbnb.com.br/p/alugacasabuzios",
   ],
+
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+
+  "@id": `${siteUrl}/#website`,
+
+  url: siteUrl,
+
+  name: "Aluga Casa Búzios",
+
+  alternateName:
+    "Aluga Casa Búzios — Casas de Temporada",
+
+  inLanguage: "pt-BR",
+
+  publisher: {
+    "@id": `${siteUrl}/#organization`,
+  },
 };
 
 export default function RootLayout({
@@ -143,6 +164,15 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
               organizationJsonLd
+            ).replace(/</g, "\\u003c"),
+          }}
+        />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(
+              websiteJsonLd
             ).replace(/</g, "\\u003c"),
           }}
         />

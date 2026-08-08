@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { usePropertySearch } from "@/hooks/usePropertySearch";
 import type { Property } from "@/types/Property";
@@ -19,6 +19,18 @@ type PropertySort =
   | "price-desc"
   | "guests-desc"
   | "rating-desc";
+
+function isPropertySort(
+  value: string | null
+): value is PropertySort {
+  return (
+    value === "recommended" ||
+    value === "price-asc" ||
+    value === "price-desc" ||
+    value === "guests-desc" ||
+    value === "rating-desc"
+  );
+}
 
 export default function CasasContent({
   properties,
@@ -53,6 +65,196 @@ export default function CasasContent({
   ] = useState<PropertySort>(
     "recommended"
   );
+
+  const [
+    urlStateReady,
+    setUrlStateReady,
+  ] = useState(false);
+
+  useEffect(() => {
+    function applyUrlState() {
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      const urlSearch =
+        params.get("q") ?? "";
+
+      const urlGuests =
+        Number.parseInt(
+          params.get("hospedes") ?? "0",
+          10
+        );
+
+      const urlNeighborhood =
+        params.get("bairro") ?? "";
+
+      const urlSort =
+        params.get("ordem");
+
+      setSearch(urlSearch);
+
+      setGuests(
+        Number.isFinite(urlGuests) &&
+          urlGuests > 0
+          ? urlGuests
+          : 0
+      );
+
+      setNeighborhood(
+        urlNeighborhood
+      );
+
+      setPool(
+        params.get("piscina") === "1"
+      );
+
+      setPetFriendly(
+        params.get("pets") === "1"
+      );
+
+      setBarbecue(
+        params.get(
+          "churrasqueira"
+        ) === "1"
+      );
+
+      setSort(
+        isPropertySort(urlSort)
+          ? urlSort
+          : "recommended"
+      );
+
+      setUrlStateReady(true);
+    }
+
+    applyUrlState();
+
+    window.addEventListener(
+      "popstate",
+      applyUrlState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "popstate",
+        applyUrlState
+      );
+    };
+  }, [
+    setBarbecue,
+    setGuests,
+    setPetFriendly,
+    setPool,
+    setSearch,
+  ]);
+
+  useEffect(() => {
+    if (!urlStateReady) {
+      return;
+    }
+
+    const url =
+      new URL(
+        window.location.href
+      );
+
+    const params =
+      url.searchParams;
+
+    const normalizedSearch =
+      search.trim();
+
+    if (normalizedSearch) {
+      params.set(
+        "q",
+        normalizedSearch
+      );
+    } else {
+      params.delete("q");
+    }
+
+    if (guests > 0) {
+      params.set(
+        "hospedes",
+        String(guests)
+      );
+    } else {
+      params.delete("hospedes");
+    }
+
+    if (neighborhood) {
+      params.set(
+        "bairro",
+        neighborhood
+      );
+    } else {
+      params.delete("bairro");
+    }
+
+    if (pool) {
+      params.set(
+        "piscina",
+        "1"
+      );
+    } else {
+      params.delete("piscina");
+    }
+
+    if (petFriendly) {
+      params.set(
+        "pets",
+        "1"
+      );
+    } else {
+      params.delete("pets");
+    }
+
+    if (barbecue) {
+      params.set(
+        "churrasqueira",
+        "1"
+      );
+    } else {
+      params.delete(
+        "churrasqueira"
+      );
+    }
+
+    if (
+      sort !== "recommended"
+    ) {
+      params.set(
+        "ordem",
+        sort
+      );
+    } else {
+      params.delete("ordem");
+    }
+
+    const nextUrl =
+      `${url.pathname}${
+        params.toString()
+          ? `?${params.toString()}`
+          : ""
+      }${url.hash}`;
+
+    window.history.replaceState(
+      window.history.state,
+      "",
+      nextUrl
+    );
+  }, [
+    barbecue,
+    guests,
+    neighborhood,
+    petFriendly,
+    pool,
+    search,
+    sort,
+    urlStateReady,
+  ]);
 
   const neighborhoods = useMemo(
     () =>

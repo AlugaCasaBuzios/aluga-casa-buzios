@@ -325,6 +325,8 @@ export default async function AdminPage({
         ...property,
         neighborhood:
           catalog?.neighborhood ?? "",
+        image:
+          catalog?.image ?? "",
         publicationReady:
           checklist?.ready ?? false,
         publicationProgress:

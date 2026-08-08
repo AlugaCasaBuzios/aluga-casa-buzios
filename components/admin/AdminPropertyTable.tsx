@@ -22,6 +22,7 @@ export type AdminPropertyListItem = {
   property_id: string;
   property_name: string;
   neighborhood: string;
+  image: string;
   base_price: number;
   cleaning_fee: number | null;
   minimum_nights: number | null;
@@ -792,26 +793,43 @@ export default function AdminPropertyTable({
                   >
                     <div className="border-b border-slate-200 bg-slate-50 px-4 py-4">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="text-base font-bold leading-snug text-slate-950">
-                            {
-                              property.property_name
-                            }
-                          </h3>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="h-20 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            {property.image ? (
+                              <img
+                                src={property.image}
+                                alt={`Foto principal de ${property.property_name}`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs font-bold text-slate-400">
+                                Sem foto
+                              </div>
+                            )}
+                          </div>
 
-                          {property.neighborhood && (
-                            <p className="mt-1 text-sm font-semibold text-slate-600">
+                          <div className="min-w-0">
+                            <h3 className="text-base font-bold leading-snug text-slate-950">
                               {
-                                property.neighborhood
+                                property.property_name
+                              }
+                            </h3>
+
+                            {property.neighborhood && (
+                              <p className="mt-1 text-sm font-semibold text-slate-600">
+                                {
+                                  property.neighborhood
+                                }
+                              </p>
+                            )}
+
+                            <p className="mt-1 break-all text-xs text-slate-500">
+                              {
+                                property.property_id
                               }
                             </p>
-                          )}
-
-                          <p className="mt-1 break-all text-xs text-slate-500">
-                            {
-                              property.property_id
-                            }
-                          </p>
+                          </div>
                         </div>
 
                         <div className="flex shrink-0 flex-col items-end gap-2">
@@ -1212,25 +1230,44 @@ export default function AdminPropertyTable({
                     className="group text-sm text-slate-700 transition hover:bg-slate-50"
                   >
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-slate-900">
-                        {
-                          property.property_name
-                        }
-                      </p>
+                      <div className="flex min-w-64 items-center gap-3">
+                        <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                          {property.image ? (
+                            <img
+                              src={property.image}
+                              alt={`Foto principal de ${property.property_name}`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center px-2 text-center text-[11px] font-bold text-slate-400">
+                              Sem foto
+                            </div>
+                          )}
+                        </div>
 
-                      {property.neighborhood && (
-                        <p className="mt-1 text-xs font-medium text-slate-600">
-                          {
-                            property.neighborhood
-                          }
-                        </p>
-                      )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900">
+                            {
+                              property.property_name
+                            }
+                          </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
-                        {
-                          property.property_id
-                        }
-                      </p>
+                          {property.neighborhood && (
+                            <p className="mt-1 text-xs font-medium text-slate-600">
+                              {
+                                property.neighborhood
+                              }
+                            </p>
+                          )}
+
+                          <p className="mt-1 break-all text-xs text-slate-500">
+                            {
+                              property.property_id
+                            }
+                          </p>
+                        </div>
+                      </div>
                     </td>
 
                     <td className="px-5 py-4">

@@ -379,6 +379,49 @@ export default function AdminPropertyTable({
     },
   ];
 
+  const summaryCards: {
+    id: PropertyFilter;
+    label: string;
+    count: number;
+    className: string;
+  }[] = [
+    {
+      id: "all",
+      label: "Total de imóveis",
+      count: counts.all,
+      className:
+        "border-slate-200 bg-slate-50 text-slate-900 hover:bg-slate-100",
+    },
+    {
+      id: "active",
+      label: "Ativos",
+      count: counts.active,
+      className:
+        "border-green-200 bg-green-50 text-green-900 hover:bg-green-100",
+    },
+    {
+      id: "inactive",
+      label: "Inativos",
+      count: counts.inactive,
+      className:
+        "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100",
+    },
+    {
+      id: "ready",
+      label: "Prontos para publicar",
+      count: counts.ready,
+      className:
+        "border-sky-200 bg-sky-50 text-sky-950 hover:bg-sky-100",
+    },
+    {
+      id: "pending",
+      label: "Com pendências",
+      count: counts.pending,
+      className:
+        "border-red-200 bg-red-50 text-red-900 hover:bg-red-100",
+    },
+  ];
+
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-lg">
       <style>{`
@@ -424,6 +467,42 @@ export default function AdminPropertyTable({
           >
             + Adicionar casa
           </Link>
+        </div>
+
+        <div
+          aria-label="Resumo dos imóveis"
+          className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"
+        >
+          {summaryCards.map((card) => {
+            const selected =
+              filter === card.id &&
+              normalizedQuery.length === 0;
+
+            return (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setFilter(card.id);
+                }}
+                aria-pressed={selected}
+                className={`min-h-28 rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.className} ${
+                  selected
+                    ? "ring-2 ring-blue-950 ring-offset-2"
+                    : ""
+                }`}
+              >
+                <span className="block text-3xl font-black leading-none">
+                  {card.count}
+                </span>
+
+                <span className="mt-3 block text-sm font-bold">
+                  {card.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">

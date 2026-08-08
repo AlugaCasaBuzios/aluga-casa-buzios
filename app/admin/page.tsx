@@ -387,7 +387,7 @@ export default async function AdminPage({
 
             <nav
               aria-label="Opções do painel administrativo"
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
             >
               <Link
                 href="/admin/propostas"
@@ -467,6 +467,17 @@ export default async function AdminPage({
                 className="inline-flex min-h-16 items-center justify-center rounded-xl bg-white px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
               >
                 Períodos especiais
+              </Link>
+
+              <Link
+                href="/admin/manutencao"
+                style={{
+                  color: "#14532d",
+                }}
+                className="inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-emerald-100 px-5 py-3 text-center font-bold text-green-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-200"
+              >
+                <span>Manutenção</span>
+                <span className="text-xs font-semibold text-green-700">Equipe e chamados</span>
               </Link>
             </nav>
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { syncMaintenanceFinancialEntry } from "@/lib/maintenanceFinancial";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 const PRIORITIES = ["Baixa", "Média", "Alta", "Urgente"] as const;
@@ -150,6 +151,7 @@ function revalidateTicket(ticketId: string) {
   revalidatePath(`/admin/manutencao/${ticketId}`);
   revalidatePath("/equipe/manutencao");
   revalidatePath(`/equipe/manutencao/${ticketId}`);
+  revalidatePath("/admin/relatorios");
 }
 
 export async function updateAdminMaintenanceDetails(
@@ -331,6 +333,21 @@ export async function updateAdminMaintenanceDetails(
     }
   }
 
+  try {
+    await syncMaintenanceFinancialEntry({
+      ticketId,
+      actorUserId: user.id,
+    });
+  } catch (financialError) {
+    console.error(
+      "Erro ao sincronizar manutenção com o financeiro:",
+      financialError
+    );
+
+    revalidateTicket(ticketId);
+    redirect(`/admin/manutencao/${ticketId}?erro=financeiro`);
+  }
+
   revalidateTicket(ticketId);
   redirect(
     `/admin/manutencao/${ticketId}?dados=1`
@@ -464,6 +481,21 @@ export async function addAdminMaintenanceUpdate(
     redirect(
       `/admin/manutencao/${ticketId}?erro=historico`
     );
+  }
+
+  try {
+    await syncMaintenanceFinancialEntry({
+      ticketId,
+      actorUserId: user.id,
+    });
+  } catch (financialError) {
+    console.error(
+      "Atualização salva, mas houve erro na integração financeira:",
+      financialError
+    );
+
+    revalidateTicket(ticketId);
+    redirect(`/admin/manutencao/${ticketId}?erro=financeiro`);
   }
 
   revalidateTicket(ticketId);

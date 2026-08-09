@@ -178,7 +178,7 @@ function getFeedbackMessage(salvo?: string): string | null {
     case "movimentacao-excluida":
       return "Movimentação financeira excluída.";
     case "manutencao-lancada":
-      return "Manutenção lançada nas despesas do proprietário.";
+      return "Manutenção sincronizada com as despesas do proprietário.";
     case "rascunho":
       return "Rascunho do relatório salvo no histórico.";
     case "relatorio":
@@ -206,7 +206,7 @@ function getErrorMessage(erro?: string): string | null {
     case "manutencao-sem-custo":
       return "Informe o custo final no chamado antes de lançá-lo nas despesas.";
     case "manutencao-lancar":
-      return "Não foi possível lançar essa manutenção nas despesas.";
+      return "Não foi possível sincronizar essa manutenção com as despesas.";
     case "relatorio-periodo":
       return "Revise o período do relatório.";
     case "relatorio-proprietario":
@@ -550,9 +550,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </div>
 
               <div className="rounded-3xl bg-amber-50 p-5 shadow-sm ring-1 ring-amber-200">
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Manutenção pendente</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Integração pendente</p>
                 <p className="mt-2 text-2xl font-black text-amber-900">{formatCurrency(pendingMaintenanceTotal)}</p>
-                <p className="mt-1 text-xs text-amber-700">Ainda não lançada no financeiro</p>
+                <p className="mt-1 text-xs text-amber-700">Chamados que precisam de sincronização</p>
               </div>
 
               <div className="rounded-3xl bg-slate-800 p-5 text-white shadow-sm">
@@ -638,7 +638,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 <div className="mb-5">
                   <h2 className="text-xl font-bold text-slate-900">Nova movimentação financeira</h2>
                   <p className="mt-1 text-sm text-slate-600">
-                    Registre reservas, receitas e despesas que compõem a prestação de contas.
+                    Registre reservas, receitas e despesas manuais. Manutenções concluídas e cobradas do proprietário entram automaticamente.
                   </p>
                 </div>
 
@@ -738,9 +738,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm sm:p-6">
                 <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-amber-950">Manutenções aguardando lançamento</h2>
+                    <h2 className="text-xl font-bold text-amber-950">Manutenções aguardando sincronização</h2>
                     <p className="mt-1 text-sm text-amber-800">
-                      Chamados concluídos marcados para desconto do proprietário, mas ainda fora do financeiro.
+                      A integração é automática. Esta lista funciona como conferência e recuperação caso algum chamado ainda esteja fora do financeiro.
                     </p>
                   </div>
                   <p className="font-black text-amber-950">{formatCurrency(pendingMaintenanceTotal)}</p>
@@ -781,7 +781,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                               type="submit"
                               className="min-h-11 rounded-xl bg-amber-700 px-4 py-2 font-bold text-white transition hover:bg-amber-800"
                             >
-                              Lançar nas despesas
+                              Sincronizar agora
                             </button>
                           </form>
                         ) : (

@@ -139,6 +139,8 @@ function errorMessage(error: string | undefined): string | null {
       return "Preencha o status e descreva o andamento.";
     case "historico":
       return "O chamado foi alterado, mas houve erro ao registrar o histórico.";
+    case "financeiro":
+      return "A atualização foi salva, mas a integração administrativa precisa ser revisada pela gestão.";
     case "chamado":
       return "Chamado não encontrado.";
     default:

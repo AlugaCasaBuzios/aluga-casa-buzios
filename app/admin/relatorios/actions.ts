@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { syncMaintenanceFinancialEntry } from "@/lib/maintenanceFinancial";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -317,18 +318,7 @@ export async function postMaintenanceToFinancial(formData: FormData): Promise<vo
 
   const { data: ticket, error: ticketError } = await adminSupabase
     .from("maintenance_tickets")
-    .select(`
-      id,
-      ticket_number,
-      property_id,
-      category,
-      problem,
-      final_cost,
-      completed_at,
-      status,
-      charge_owner,
-      posted_to_financial
-    `)
+    .select("id, property_id, final_cost, status, charge_owner")
     .eq("id", ticketId)
     .maybeSingle();
 
@@ -337,10 +327,9 @@ export async function postMaintenanceToFinancial(formData: FormData): Promise<vo
     !ticket ||
     ticket.property_id !== context.propertyId ||
     ticket.status !== "Concluído" ||
-    !ticket.charge_owner ||
-    ticket.posted_to_financial
+    !ticket.charge_owner
   ) {
-    console.error("Chamado não está apto para lançamento financeiro:", ticketError);
+    console.error("Chamado não está apto para sincronização financeira:", ticketError);
     redirect(buildReturnPath(context, { erro: "manutencao-lancar" }));
   }
 
@@ -350,52 +339,20 @@ export async function postMaintenanceToFinancial(formData: FormData): Promise<vo
     redirect(buildReturnPath(context, { erro: "manutencao-sem-custo" }));
   }
 
-  const completedAt = ticket.completed_at
-    ? String(ticket.completed_at).slice(0, 10)
-    : new Date().toISOString().slice(0, 10);
-
-  const { data: insertedEntry, error: insertError } = await adminSupabase
-    .from("property_financial_entries")
-    .insert({
-      property_id: context.propertyId,
-      entry_date: completedAt,
-      entry_type: "expense",
-      category: "Manutenção",
-      description: `${ticket.ticket_number} — ${ticket.problem}`,
-      amount: finalCost,
-      deduct_from_owner: true,
-      maintenance_ticket_id: ticket.id,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !insertedEntry?.id) {
-    console.error("Erro ao lançar manutenção no financeiro:", insertError);
-    redirect(buildReturnPath(context, { erro: "manutencao-lancar" }));
-  }
-
-  const { error: updateError } = await adminSupabase
-    .from("maintenance_tickets")
-    .update({
-      posted_to_financial: true,
-      updated_by: user.id,
-    })
-    .eq("id", ticket.id);
-
-  if (updateError) {
-    console.error("Erro ao marcar manutenção como lançada:", updateError);
-
-    await adminSupabase
-      .from("property_financial_entries")
-      .delete()
-      .eq("id", insertedEntry.id);
-
+  try {
+    await syncMaintenanceFinancialEntry({
+      ticketId,
+      actorUserId: user.id,
+      expectedPropertyId: context.propertyId,
+    });
+  } catch (error) {
+    console.error("Erro ao sincronizar manutenção com o financeiro:", error);
     redirect(buildReturnPath(context, { erro: "manutencao-lancar" }));
   }
 
   revalidatePath("/admin/relatorios");
   revalidatePath("/admin/manutencao");
+  revalidatePath(`/admin/manutencao/${ticketId}`);
   redirect(buildReturnPath(context, { salvo: "manutencao-lancada" }));
 }
 

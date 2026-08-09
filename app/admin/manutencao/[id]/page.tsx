@@ -83,6 +83,14 @@ type MaintenanceUpdate = {
   created_at: string;
 };
 
+type MaintenanceFinancialEntry = {
+  id: string;
+  entry_date: string;
+  amount: number | string;
+  reservation_reference: string | null;
+  deduct_from_owner: boolean;
+};
+
 function formatCurrency(value: number | null): string {
   if (value === null) {
     return "—";
@@ -161,6 +169,8 @@ function errorMessage(error: string | undefined): string | null {
       return "O chamado foi alterado, mas houve erro ao registrar o histórico.";
     case "salvar":
       return "Não foi possível salvar os dados do chamado.";
+    case "financeiro":
+      return "O chamado foi salvo, mas a integração financeira precisa ser revisada.";
     case "chamado":
       return "Chamado não encontrado.";
     default:
@@ -178,6 +188,20 @@ function fileLabel(path: string, index: number): string {
   }
 
   return `Foto ${index + 1}`;
+}
+
+function getReportHref(propertyId: string, entryDate: string): string {
+  const [year, month] = entryDate.slice(0, 10).split("-");
+  const lastDay = new Date(
+    Date.UTC(Number(year), Number(month), 0)
+  ).getUTCDate();
+
+  const periodStart = `${year}-${month}-01`;
+  const periodEnd = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
+
+  return `/admin/relatorios?imovel=${encodeURIComponent(
+    propertyId
+  )}&inicio=${periodStart}&fim=${periodEnd}`;
 }
 
 export default async function AdminMaintenanceDetailPage({
@@ -228,6 +252,7 @@ export default async function AdminMaintenanceDetailPage({
     propertyResult,
     usersResult,
     updatesResult,
+    financialResult,
   ] = await Promise.all([
     adminSupabase
       .from("property_catalog")
@@ -245,6 +270,15 @@ export default async function AdminMaintenanceDetailPage({
       )
       .eq("ticket_id", ticket.id)
       .order("created_at", { ascending: false }),
+    adminSupabase
+      .from("property_financial_entries")
+      .select(
+        "id, entry_date, amount, reservation_reference, deduct_from_owner"
+      )
+      .eq("maintenance_ticket_id", ticket.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const propertyTitle =
@@ -255,6 +289,16 @@ export default async function AdminMaintenanceDetailPage({
 
   const updates =
     (updatesResult.data ?? []) as MaintenanceUpdate[];
+
+  if (financialResult.error) {
+    console.error(
+      "Erro ao carregar integração financeira do chamado:",
+      financialResult.error
+    );
+  }
+
+  const financialEntry =
+    (financialResult.data as MaintenanceFinancialEntry | null) ?? null;
 
   const userNames = new Map(
     users.map((item) => [
@@ -401,12 +445,69 @@ export default async function AdminMaintenanceDetailPage({
                 </p>
                 <p>
                   <strong>Financeiro:</strong>{" "}
-                  {ticket.charge_owner
-                    ? ticket.posted_to_financial
-                      ? "Já lançado"
-                      : "Pendente de lançamento"
-                    : "Não descontar"}
+                  {financialEntry
+                    ? "Integrado automaticamente"
+                    : ticket.charge_owner
+                      ? ticket.status === "Concluído" &&
+                        Number(ticket.final_cost ?? 0) > 0
+                        ? "Pendente de sincronização"
+                        : "Aguardando conclusão e custo final"
+                      : "Não descontar"}
                 </p>
+              </div>
+
+              <div
+                className={`mt-5 rounded-2xl border p-4 ${
+                  financialEntry
+                    ? "border-emerald-200 bg-emerald-50"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
+                {financialEntry ? (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-black text-emerald-900">
+                        ✓ Lançado no relatório do proprietário
+                      </p>
+                      <div className="mt-2 grid gap-1 text-sm text-emerald-900 sm:grid-cols-3 sm:gap-4">
+                        <span>
+                          <strong>Valor:</strong>{" "}
+                          {formatCurrency(Number(financialEntry.amount))}
+                        </span>
+                        <span>
+                          <strong>Referência:</strong>{" "}
+                          {financialEntry.reservation_reference ||
+                            ticket.ticket_number}
+                        </span>
+                        <span>
+                          <strong>Data:</strong>{" "}
+                          {formatDate(financialEntry.entry_date)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={getReportHref(
+                        ticket.property_id,
+                        financialEntry.entry_date
+                      )}
+                      className="inline-flex min-h-10 items-center justify-center rounded-xl bg-emerald-800 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-900"
+                    >
+                      Abrir relatório
+                    </Link>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="font-black text-slate-800">
+                      Integração automática com o financeiro
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {ticket.charge_owner
+                        ? "Ao concluir o chamado com custo final, a despesa será criada automaticamente. Se o custo mudar depois, o mesmo lançamento será atualizado."
+                        : "Este chamado está configurado para não descontar o custo do proprietário."}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <form

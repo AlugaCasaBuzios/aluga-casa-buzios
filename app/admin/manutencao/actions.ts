@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { syncMaintenanceFinancialEntry } from "@/lib/maintenanceFinancial";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -226,11 +227,9 @@ export async function updateMaintenanceTicketStatus(formData: FormData): Promise
   }
 
   const { supabase, user } = await requireAdmin();
-  const completedAt = statusValue === "Concluído" ? new Date().toISOString() : null;
-
   const { data: existingTicket, error: findError } = await supabase
     .from("maintenance_tickets")
-    .select("id, status")
+    .select("id, status, completed_at")
     .eq("id", ticketId)
     .maybeSingle();
 
@@ -238,6 +237,11 @@ export async function updateMaintenanceTicketStatus(formData: FormData): Promise
     console.error("Erro ao localizar chamado de manutenção:", findError);
     redirect("/admin/manutencao?erro=chamado");
   }
+
+  const completedAt =
+    statusValue === "Concluído"
+      ? existingTicket.completed_at ?? new Date().toISOString()
+      : null;
 
   const { error } = await supabase
     .from("maintenance_tickets")
@@ -266,6 +270,17 @@ export async function updateMaintenanceTicketStatus(formData: FormData): Promise
     }
   }
 
+  try {
+    await syncMaintenanceFinancialEntry({
+      ticketId,
+      actorUserId: user.id,
+    });
+  } catch (financialError) {
+    console.error("Erro ao sincronizar manutenção com o financeiro:", financialError);
+  }
+
   revalidatePath("/admin/manutencao");
+  revalidatePath(`/admin/manutencao/${ticketId}`);
+  revalidatePath("/admin/relatorios");
   redirect("/admin/manutencao?salvo=1");
 }

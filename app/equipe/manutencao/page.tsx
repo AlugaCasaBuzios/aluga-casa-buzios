@@ -932,6 +932,13 @@ export default async function TeamMaintenancePage({
                           </p>
                         </div>
 
+                        <Link
+                          href={`/equipe/manutencao/${ticket.id}`}
+                          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl border border-emerald-700 px-5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50"
+                        >
+                          Abrir detalhes, fotos e histórico
+                        </Link>
+
                         <div className="mt-5 rounded-2xl bg-slate-50 p-4">
                           <h3 className="font-black text-slate-800">
                             Últimas atualizações

@@ -585,7 +585,14 @@ export default async function MaintenanceAdminPage({
                         )}
                       </div>
 
-                      <form action={updateMaintenanceTicketStatus} className="mt-5 flex gap-2">
+                      <Link
+                        href={`/admin/manutencao/${ticket.id}`}
+                        className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-blue-950 px-4 text-sm font-bold text-blue-950 transition hover:bg-blue-50"
+                      >
+                        Abrir detalhes, fotos e histórico
+                      </Link>
+
+                      <form action={updateMaintenanceTicketStatus} className="mt-3 flex gap-2">
                         <input type="hidden" name="ticketId" value={ticket.id} />
                         <select name="status" defaultValue={ticket.status} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900">
                           {STATUS_OPTIONS.map((statusOption) => (
@@ -629,6 +636,12 @@ export default async function MaintenanceAdminPage({
                           <td className="px-5 py-4 align-top">
                             <p className="font-black text-slate-900">{ticket.ticket_number}</p>
                             <p className="mt-1 text-xs text-slate-500">{formatDate(ticket.created_at)}</p>
+                            <Link
+                              href={`/admin/manutencao/${ticket.id}`}
+                              className="mt-2 inline-flex text-xs font-bold text-blue-950 underline underline-offset-4"
+                            >
+                              Abrir detalhes
+                            </Link>
                           </td>
                           <td className="max-w-md px-5 py-4 align-top">
                             <p className="font-bold text-slate-900">{propertyNames.get(ticket.property_id) ?? ticket.property_id}</p>

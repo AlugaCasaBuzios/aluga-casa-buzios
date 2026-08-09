@@ -1,17 +1,19 @@
 import Link from "next/link";
 
-import { login } from "./actions";
+import {
+  teamLogin,
+} from "./actions";
 
-type AdminLoginPageProps = {
+type TeamLoginPageProps = {
   searchParams: Promise<{
     erro?: string;
     senha?: string;
   }>;
 };
 
-export default async function AdminLoginPage({
+export default async function TeamLoginPage({
   searchParams,
-}: AdminLoginPageProps) {
+}: TeamLoginPageProps) {
   const {
     erro,
     senha,
@@ -23,7 +25,7 @@ export default async function AdminLoginPage({
       : erro === "login"
         ? "E-mail ou senha incorretos."
         : erro === "acesso"
-          ? "Esta conta não possui acesso administrativo ativo."
+          ? "Seu acesso à equipe está desativado. Procure o administrador."
           : erro === "recuperacao"
             ? "Não foi possível validar o link de recuperação."
             : null;
@@ -32,16 +34,16 @@ export default async function AdminLoginPage({
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-12">
       <section className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-blue-900">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-emerald-700">
             Aluga Casa Búzios
           </p>
 
           <h1 className="text-3xl font-bold text-slate-900">
-            Painel administrativo
+            Área da equipe
           </h1>
 
           <p className="mt-3 text-sm text-slate-600">
-            Acesso exclusivo para administradores.
+            Acompanhe e atualize os chamados de manutenção.
           </p>
         </div>
 
@@ -52,7 +54,7 @@ export default async function AdminLoginPage({
         )}
 
         <form
-          action={login}
+          action={teamLogin}
           className="space-y-5"
         >
           <div>
@@ -69,8 +71,8 @@ export default async function AdminLoginPage({
               type="email"
               autoComplete="email"
               required
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-200"
-              placeholder="seuemail@exemplo.com"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-200"
+              placeholder="funcionario@exemplo.com"
             />
           </div>
 
@@ -88,7 +90,7 @@ export default async function AdminLoginPage({
               type="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-900 focus:ring-2 focus:ring-blue-200"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-200"
               placeholder="Digite sua senha"
             />
           </div>
@@ -101,29 +103,25 @@ export default async function AdminLoginPage({
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-blue-950 px-5 py-3 font-bold text-white transition hover:bg-blue-900"
+            className="w-full rounded-xl bg-emerald-700 px-5 py-3 font-bold text-white transition hover:bg-emerald-800"
           >
-            Entrar no painel
+            Entrar na área da equipe
           </button>
 
           <Link
-            href="/admin/esqueci-senha"
-            className="block text-center text-sm font-semibold text-blue-900 hover:underline"
+            href="/equipe/esqueci-senha"
+            className="block text-center text-sm font-semibold text-emerald-700 hover:underline"
           >
             Esqueci minha senha
           </Link>
         </form>
 
         <div className="mt-6 border-t border-slate-200 pt-6 text-center">
-          <p className="text-sm text-slate-600">
-            Você faz parte da equipe de manutenção?
-          </p>
-
           <Link
-            href="/equipe/login"
-            className="mt-2 inline-flex font-bold text-emerald-700 hover:underline"
+            href="/admin/login"
+            className="text-sm font-semibold text-blue-900 hover:underline"
           >
-            Entrar na área da equipe
+            Acesso administrativo
           </Link>
         </div>
       </section>

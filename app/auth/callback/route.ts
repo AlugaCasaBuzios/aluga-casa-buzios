@@ -3,21 +3,30 @@ import {
   type NextRequest,
 } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabaseServer";
 
 export async function GET(
   request: NextRequest
 ) {
   const code =
-    request.nextUrl.searchParams.get("code");
+    request.nextUrl.searchParams.get(
+      "code"
+    );
 
   const requestedNext =
-    request.nextUrl.searchParams.get("next");
+    request.nextUrl.searchParams.get(
+      "next"
+    );
 
   const next =
     requestedNext?.startsWith("/")
       ? requestedNext
       : "/admin/redefinir-senha";
+
+  const isTeamRecovery =
+    next.startsWith("/equipe/");
 
   if (code) {
     const supabase =
@@ -36,7 +45,9 @@ export async function GET(
       redirectUrl.search = "";
 
       const response =
-        NextResponse.redirect(redirectUrl);
+        NextResponse.redirect(
+          redirectUrl
+        );
 
       response.headers.set(
         "Cache-Control",
@@ -47,14 +58,20 @@ export async function GET(
     }
   }
 
-  const errorUrl = request.nextUrl.clone();
+  const errorUrl =
+    request.nextUrl.clone();
 
-  errorUrl.pathname = "/admin/login";
+  errorUrl.pathname = isTeamRecovery
+    ? "/equipe/login"
+    : "/admin/login";
+
   errorUrl.search = "";
   errorUrl.searchParams.set(
     "erro",
     "recuperacao"
   );
 
-  return NextResponse.redirect(errorUrl);
+  return NextResponse.redirect(
+    errorUrl
+  );
 }

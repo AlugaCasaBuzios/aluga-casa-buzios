@@ -387,7 +387,7 @@ export default async function AdminPage({
 
             <nav
               aria-label="Opções do painel administrativo"
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7"
             >
               <Link
                 href="/admin/propostas"
@@ -478,6 +478,17 @@ export default async function AdminPage({
               >
                 <span>Manutenção</span>
                 <span className="text-xs font-semibold text-green-700">Equipe e chamados</span>
+              </Link>
+
+              <Link
+                href="/admin/funcionarios"
+                style={{
+                  color: "#312e81",
+                }}
+                className="inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-indigo-100 px-5 py-3 text-center font-bold text-indigo-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-200"
+              >
+                <span>Funcionários</span>
+                <span className="text-xs font-semibold text-indigo-700">Acessos da equipe</span>
               </Link>
             </nav>
 

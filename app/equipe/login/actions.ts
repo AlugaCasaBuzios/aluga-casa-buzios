@@ -7,7 +7,7 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
-export async function login(
+export async function teamLogin(
   formData: FormData
 ) {
   const email = String(
@@ -20,7 +20,7 @@ export async function login(
 
   if (!email || !password) {
     redirect(
-      "/admin/login?erro=campos"
+      "/equipe/login?erro=campos"
     );
   }
 
@@ -35,7 +35,7 @@ export async function login(
 
   if (error) {
     redirect(
-      "/admin/login?erro=login"
+      "/equipe/login?erro=login"
     );
   }
 
@@ -45,7 +45,7 @@ export async function login(
 
   if (!user) {
     redirect(
-      "/admin/login?erro=login"
+      "/equipe/login?erro=login"
     );
   }
 
@@ -65,17 +65,17 @@ export async function login(
     await supabase.auth.signOut();
 
     redirect(
-      "/admin/login?erro=acesso"
+      "/equipe/login?erro=acesso"
     );
   }
 
   revalidatePath("/", "layout");
 
-  if (profile.role === "staff") {
-    redirect(
-      "/equipe/manutencao"
-    );
+  if (profile.role === "admin") {
+    redirect("/admin");
   }
 
-  redirect("/admin");
+  redirect(
+    "/equipe/manutencao"
+  );
 }

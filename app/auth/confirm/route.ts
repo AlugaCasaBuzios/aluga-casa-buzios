@@ -1,17 +1,21 @@
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type {
+  EmailOtpType,
+} from "@supabase/supabase-js";
+
 import {
   NextResponse,
   type NextRequest,
 } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  createSupabaseServerClient,
+} from "@/lib/supabaseServer";
 
 export async function GET(
   request: NextRequest
 ) {
-  const { searchParams } = new URL(
-    request.url
-  );
+  const { searchParams } =
+    new URL(request.url);
 
   const tokenHash =
     searchParams.get("token_hash");
@@ -28,6 +32,9 @@ export async function GET(
     requestedNext?.startsWith("/")
       ? requestedNext
       : "/admin/redefinir-senha";
+
+  const isTeamRecovery =
+    next.startsWith("/equipe/");
 
   const redirectTo =
     request.nextUrl.clone();
@@ -52,11 +59,18 @@ export async function GET(
     }
   }
 
-  redirectTo.pathname = "/admin/login";
+  redirectTo.pathname =
+    isTeamRecovery
+      ? "/equipe/login"
+      : "/admin/login";
+
+  redirectTo.search = "";
   redirectTo.searchParams.set(
     "erro",
     "recuperacao"
   );
 
-  return NextResponse.redirect(redirectTo);
+  return NextResponse.redirect(
+    redirectTo
+  );
 }

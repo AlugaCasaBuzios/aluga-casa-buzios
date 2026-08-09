@@ -935,8 +935,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               <div className="rounded-3xl bg-blue-950 p-5 text-white shadow-sm sm:p-6">
                 <h2 className="text-xl font-bold">Salvar prestação de contas</h2>
                 <p className="mt-2 text-sm text-blue-100">
-                  Grave um snapshot dos valores atuais. O PDF profissional será acrescentado na próxima etapa.
+                  Grave um snapshot dos valores atuais e gere a prestação de contas em formato pronto para PDF.
                 </p>
+
+                {owner && selectedProperty && (
+                  <Link
+                    href={`/admin/relatorios/pdf?imovel=${encodeURIComponent(selectedProperty.id)}&inicio=${periodStart}&fim=${periodEnd}`}
+                    target="_blank"
+                    className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl border border-blue-700 bg-blue-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-800"
+                  >
+                    Visualizar / salvar PDF do período
+                  </Link>
+                )}
 
                 <form action={createOwnerReportSnapshot} className="mt-5 grid gap-4">
                   {commonHiddenFields}
@@ -1020,6 +1030,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                           </div>
 
                           <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/admin/relatorios/pdf?imovel=${encodeURIComponent(selectedProperty.id)}&inicio=${report.period_start}&fim=${report.period_end}`}
+                              target="_blank"
+                              className="rounded-lg bg-blue-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-900"
+                            >
+                              PDF
+                            </Link>
+
                             {report.status !== "closed" && (
                               <form action={setOwnerReportStatus}>
                                 {commonHiddenFields}

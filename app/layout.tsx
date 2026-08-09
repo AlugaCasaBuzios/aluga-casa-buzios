@@ -5,6 +5,7 @@ import "./globals.css";
 
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import PrivacyConsent from "@/components/privacy/PrivacyConsent";
+import ThemeController from "@/components/layout/ThemeController";
 
 const siteUrl = "https://alugacasabuzios.com.br";
 
@@ -157,8 +158,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=window.location.pathname;var root=document.documentElement;if(p.indexOf('/admin')===0||p.indexOf('/equipe')===0){root.classList.remove('dark');root.dataset.theme='light';return;}var saved=localStorage.getItem('aluga-casa-buzios:theme');var theme=(saved==='light'||saved==='dark'||saved==='system')?saved:'system';var dark=theme==='dark'||(theme==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);root.classList.toggle('dark',dark);root.dataset.theme=theme;}catch(e){}})();`,
+          }}
+        />
+      </head>
+
       <body>
+        <ThemeController />
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

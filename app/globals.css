@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
+}
+
+html.dark {
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  color-scheme: dark;
 }
 
 * {
@@ -18,6 +27,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 a {
@@ -30,4 +40,307 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+/*
+ * Tema escuro do site público.
+ * As rotas /admin e /equipe são mantidas no tema claro pelo ThemeController.
+ * Os overrides abaixo adaptam os utilitários já existentes sem exigir a
+ * reescrita de todas as páginas e componentes públicos.
+ */
+html.dark .bg-white {
+  background-color: #18181b !important;
+}
+
+html.dark .bg-white\/95 {
+  background-color: rgb(24 24 27 / 0.95) !important;
+}
+
+html.dark .bg-white\/80 {
+  background-color: rgb(24 24 27 / 0.88) !important;
+}
+
+html.dark .bg-zinc-50,
+html.dark .bg-slate-50 {
+  background-color: #09090b !important;
+}
+
+html.dark .bg-zinc-100,
+html.dark .bg-slate-100,
+html.dark .bg-slate-200,
+html.dark .bg-zinc-200 {
+  background-color: #27272a !important;
+}
+
+html.dark .bg-sky-50,
+html.dark .bg-sky-50\/70,
+html.dark .bg-sky-100,
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 {
+  background-color: #0c2538 !important;
+}
+
+html.dark .bg-green-50,
+html.dark .bg-green-100,
+html.dark .bg-emerald-100 {
+  background-color: #0d2d24 !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-100,
+html.dark .bg-yellow-50,
+html.dark .bg-orange-100 {
+  background-color: #33230f !important;
+}
+
+html.dark .bg-red-50,
+html.dark .bg-red-50\/95,
+html.dark .bg-red-100,
+html.dark .bg-rose-100 {
+  background-color: #351417 !important;
+}
+
+html.dark .text-blue-950,
+html.dark .text-zinc-900,
+html.dark .text-zinc-800,
+html.dark .text-zinc-700,
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-sky-950,
+html.dark .text-sky-900 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .text-zinc-600,
+html.dark .text-zinc-500,
+html.dark .text-slate-600,
+html.dark .text-gray-600,
+html.dark .text-gray-500 {
+  color: #a1a1aa !important;
+}
+
+html.dark .text-zinc-400 {
+  color: #71717a !important;
+}
+
+html.dark .text-sky-700,
+html.dark .text-sky-800,
+html.dark .text-sky-600 {
+  color: #7dd3fc !important;
+}
+
+html.dark .text-blue-700,
+html.dark .text-blue-800 {
+  color: #93c5fd !important;
+}
+
+html.dark .text-green-700,
+html.dark .text-green-800,
+html.dark .text-emerald-800 {
+  color: #86efac !important;
+}
+
+html.dark .text-amber-800,
+html.dark .text-amber-900,
+html.dark .text-orange-800 {
+  color: #fcd34d !important;
+}
+
+html.dark .text-red-600,
+html.dark .text-red-700,
+html.dark .text-red-800,
+html.dark .text-red-900,
+html.dark .text-rose-800 {
+  color: #fca5a5 !important;
+}
+
+html.dark .border-zinc-100,
+html.dark .border-zinc-200,
+html.dark .border-zinc-300,
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark .border-sky-100,
+html.dark .border-sky-200,
+html.dark .border-blue-100,
+html.dark .border-blue-200 {
+  border-color: #3f3f46 !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #18181b;
+  color: #f4f4f5;
+  border-color: #52525b;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #71717a;
+}
+
+html.dark select option {
+  background-color: #18181b;
+  color: #f4f4f5;
+}
+
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  --tw-shadow-color: rgb(0 0 0 / 0.45);
+}
+
+html.dark .hover\:bg-zinc-100:hover {
+  background-color: #27272a !important;
+}
+
+html.dark .hover\:bg-zinc-50:hover {
+  background-color: #18181b !important;
+}
+
+html.dark .hover\:bg-sky-50:hover {
+  background-color: #0c2538 !important;
+}
+
+html.dark #mobile-navigation a {
+  color: #e4e4e7 !important;
+}
+
+html.dark #mobile-navigation a.bg-blue-950,
+html.dark #mobile-navigation a.bg-sky-700 {
+  color: #ffffff !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+}
+
+/*
+ * Calendário de reservas: navegação de meses mais clara.
+ * O layout "around" coloca uma seta de cada lado do mês e estes estilos
+ * aumentam a área de clique e o contraste nos temas claro e escuro.
+ */
+.booking-calendar .rdp-button_previous,
+.booking-calendar .rdp-button_next {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d4d4d8;
+  border-radius: 9999px;
+  background-color: #f4f4f5;
+  color: #172554;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.booking-calendar .rdp-button_previous:hover:not(:disabled),
+.booking-calendar .rdp-button_next:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background-color: #dbeafe;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.12);
+  transform: translateY(-1px);
+}
+
+.booking-calendar .rdp-button_previous:focus-visible,
+.booking-calendar .rdp-button_next:focus-visible {
+  outline: 3px solid rgb(14 165 233 / 0.35);
+  outline-offset: 2px;
+}
+
+.booking-calendar .rdp-button_previous:disabled,
+.booking-calendar .rdp-button_next:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.booking-calendar .rdp-chevron {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentColor;
+}
+
+html.dark .booking-calendar .rdp-button_previous,
+html.dark .booking-calendar .rdp-button_next {
+  border-color: #52525b;
+  background-color: #27272a;
+  color: #f4f4f5;
+}
+
+html.dark .booking-calendar .rdp-button_previous:hover:not(:disabled),
+html.dark .booking-calendar .rdp-button_next:hover:not(:disabled) {
+  border-color: #7dd3fc;
+  background-color: #0c2538;
+  color: #bae6fd;
+}
+
+
+/*
+ * Calendário de reservas: contraste do intervalo selecionado.
+ * Mantém o trecho entre check-in e check-out legível nos temas claro e escuro.
+ */
+.booking-calendar .rdp-range_middle {
+  background-color: #dbeafe !important;
+  color: #172554 !important;
+}
+
+.booking-calendar .rdp-range_middle .rdp-day_button {
+  background-color: transparent !important;
+  color: #172554 !important;
+  font-weight: 700;
+}
+
+html.dark .booking-calendar .rdp-range_middle {
+  background-color: #1e3a5f !important;
+  color: #f8fafc !important;
+}
+
+html.dark .booking-calendar .rdp-range_middle .rdp-day_button {
+  background-color: transparent !important;
+  color: #f8fafc !important;
+}
+
+/* Check-in e check-out continuam destacados, mas com contraste consistente. */
+.booking-calendar .rdp-range_start .rdp-day_button,
+.booking-calendar .rdp-range_end .rdp-day_button {
+  color: #ffffff !important;
+  font-weight: 800;
+}
+
+html.dark .booking-calendar .rdp-range_start .rdp-day_button,
+html.dark .booking-calendar .rdp-range_end .rdp-day_button {
+  color: #ffffff !important;
+}
+
+/*
+ * Calendário de reservas: destaque legível para o dia atual.
+ * O marcador só é aplicado quando o dia de hoje não faz parte da seleção,
+ * preservando o contraste do intervalo escolhido.
+ */
+.booking-calendar
+  .rdp-today:not(.rdp-outside):not(.rdp-selected):not(.rdp-range_start):not(.rdp-range_middle):not(.rdp-range_end)
+  .rdp-day_button {
+  background-color: #eff6ff !important;
+  color: #075985 !important;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px #38bdf8;
+}
+
+html.dark
+  .booking-calendar
+  .rdp-today:not(.rdp-outside):not(.rdp-selected):not(.rdp-range_start):not(.rdp-range_middle):not(.rdp-range_end)
+  .rdp-day_button {
+  background-color: #0c2538 !important;
+  color: #bae6fd !important;
+  box-shadow: inset 0 0 0 1px #38bdf8;
 }

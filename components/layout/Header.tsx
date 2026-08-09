@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import {
   usePathname,
 } from "next/navigation";
@@ -175,6 +176,10 @@ export default function Header() {
 
           {/* Ações */}
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
+
             <a
               href="https://instagram.com/aluga.casa.buzios"
               target="_blank"
@@ -323,6 +328,10 @@ export default function Header() {
                 );
               }
             )}
+
+            <div className="mt-3 border-t border-zinc-200 pt-5 sm:hidden">
+              <ThemeToggle fullWidth />
+            </div>
 
             <div className="mt-3 border-t border-zinc-200 pt-5">
               <a

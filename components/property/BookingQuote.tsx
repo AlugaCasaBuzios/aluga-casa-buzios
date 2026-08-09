@@ -735,6 +735,7 @@ export default function BookingQuote({
               animate
               mode="range"
               locale={ptBR}
+              navLayout="around"
               weekStartsOn={0}
               selected={
                 selectedRange
@@ -775,7 +776,7 @@ export default function BookingQuote({
                     "2px",
                 },
               }}
-              className="mx-auto w-full"
+              className="booking-calendar mx-auto w-full"
               footer={
                 selectedRange?.from ? (
                   selectedRange.to ? (

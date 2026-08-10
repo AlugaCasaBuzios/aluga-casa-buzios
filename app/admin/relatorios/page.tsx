@@ -11,11 +11,14 @@ import {
   type ServicePlan,
 } from "@/lib/ownerReportFinancial";
 
+import FinancialEntryAttachmentUploader from "@/components/financial/FinancialEntryAttachmentUploader";
+
 import {
   createFinancialEntry,
   createOwnerReportPayment,
   createOwnerReportSnapshot,
   deleteFinancialEntry,
+  deleteFinancialEntryAttachment,
   deleteOwnerReportPayment,
   postMaintenanceToFinancial,
   savePropertyOwner,
@@ -69,6 +72,22 @@ type FinancialEntry = {
   deduct_from_owner: boolean;
   reservation_reference: string | null;
   maintenance_ticket_id: string | null;
+};
+
+type FinancialEntryAttachment = {
+  id: string;
+  financial_entry_id: string;
+  storage_bucket: string;
+  storage_path: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number | string;
+  document_type: string;
+  document_number: string | null;
+  issued_at: string | null;
+  notes: string | null;
+  created_at: string;
+  signed_url: string | null;
 };
 
 type PendingMaintenance = {
@@ -127,6 +146,21 @@ function getPaymentMethodLabel(value: string | null): string {
       return "Outro";
     default:
       return value || "Forma não informada";
+  }
+}
+
+function getDocumentTypeLabel(
+  value: string
+): string {
+  switch (value) {
+    case "invoice":
+      return "Nota fiscal";
+    case "receipt":
+      return "Recibo";
+    case "payment_proof":
+      return "Comprovante";
+    default:
+      return "Documento";
   }
 }
 
@@ -264,6 +298,8 @@ function getFeedbackMessage(salvo?: string): string | null {
       return "Movimentação financeira cadastrada.";
     case "movimentacao-excluida":
       return "Movimentação financeira excluída.";
+    case "documento-excluido":
+      return "Documento financeiro excluído.";
     case "manutencao-lancada":
       return "Manutenção sincronizada com as despesas do proprietário.";
     case "rascunho":
@@ -294,6 +330,8 @@ function getErrorMessage(erro?: string): string | null {
       return "Não foi possível cadastrar a movimentação.";
     case "movimentacao-excluir":
       return "Não foi possível excluir a movimentação.";
+    case "documento-excluir":
+      return "Não foi possível excluir o documento financeiro.";
     case "manutencao-sem-custo":
       return "Informe o custo final no chamado antes de lançá-lo nas despesas.";
     case "manutencao-lancar":
@@ -371,6 +409,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   let owner: OwnerRow | null = null;
   let ownerLink: OwnerLinkRow | null = null;
   let entries: FinancialEntry[] = [];
+  let entryAttachments: FinancialEntryAttachment[] = [];
   let pendingMaintenance: PendingMaintenance[] = [];
   let reports: OwnerReport[] = [];
   let reportPayments: OwnerReportPayment[] = [];
@@ -467,6 +506,112 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       loadError = "Não foi possível carregar as movimentações financeiras.";
     } else {
       entries = (entriesResult.data ?? []) as FinancialEntry[];
+
+      const entryIds = entries.map(
+        (entry) => entry.id
+      );
+
+      if (entryIds.length > 0) {
+        const {
+          data: attachmentsData,
+          error: attachmentsError,
+        } = await adminSupabase
+          .from(
+            "property_financial_entry_attachments"
+          )
+          .select(`
+            id,
+            financial_entry_id,
+            storage_bucket,
+            storage_path,
+            original_name,
+            mime_type,
+            size_bytes,
+            document_type,
+            document_number,
+            issued_at,
+            notes,
+            created_at
+          `)
+          .in(
+            "financial_entry_id",
+            entryIds
+          )
+          .order("created_at", {
+            ascending: true,
+          });
+
+        if (attachmentsError) {
+          console.error(
+            "Erro ao carregar documentos financeiros:",
+            attachmentsError
+          );
+          loadError =
+            "Não foi possível carregar os documentos financeiros.";
+        } else {
+          const attachmentRows =
+            (attachmentsData ?? []) as Omit<
+              FinancialEntryAttachment,
+              "signed_url"
+            >[];
+
+          const {
+            data: signedUrls,
+            error: signedUrlsError,
+          } = attachmentRows.length > 0
+            ? await adminSupabase.storage
+                .from(
+                  "financial-entry-files"
+                )
+                .createSignedUrls(
+                  attachmentRows.map(
+                    (attachment) =>
+                      attachment.storage_path
+                  ),
+                  60 * 60
+                )
+            : {
+                data: [],
+                error: null,
+              };
+
+          if (signedUrlsError) {
+            console.error(
+              "Erro ao autorizar visualização dos documentos:",
+              signedUrlsError
+            );
+          }
+
+          const signedUrlByPath =
+            new Map<string, string>();
+
+          for (
+            const item of
+            signedUrls ?? []
+          ) {
+            if (
+              item.path &&
+              item.signedUrl
+            ) {
+              signedUrlByPath.set(
+                item.path,
+                item.signedUrl
+              );
+            }
+          }
+
+          entryAttachments =
+            attachmentRows.map(
+              (attachment) => ({
+                ...attachment,
+                signed_url:
+                  signedUrlByPath.get(
+                    attachment.storage_path
+                  ) ?? null,
+              })
+            );
+        }
+      }
     }
 
     if (maintenanceResult.error) {
@@ -582,6 +727,31 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     expenseByCategory.set(
       entry.category,
       (expenseByCategory.get(entry.category) ?? 0) + Number(entry.amount ?? 0)
+    );
+  }
+
+  const attachmentsByEntry =
+    new Map<
+      string,
+      FinancialEntryAttachment[]
+    >();
+
+  for (
+    const attachment of
+    entryAttachments
+  ) {
+    const currentAttachments =
+      attachmentsByEntry.get(
+        attachment.financial_entry_id
+      ) ?? [];
+
+    currentAttachments.push(
+      attachment
+    );
+
+    attachmentsByEntry.set(
+      attachment.financial_entry_id,
+      currentAttachments
     );
   }
 
@@ -1088,6 +1258,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                         <th className="px-3 py-3">Descrição</th>
                         <th className="px-3 py-3 text-right">Valor</th>
                         <th className="px-3 py-3">Pagamento</th>
+                        <th className="px-3 py-3">Documentos</th>
                         <th className="px-3 py-3 text-right">Ação</th>
                       </tr>
                     </thead>
@@ -1132,6 +1303,72 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                                 ? "Reembolsar gestão"
                                 : "Pago pelo proprietário"
                               : "Recebido pelo proprietário"}
+                          </td>
+                          <td className="min-w-[260px] px-3 py-4">
+                            <div className="space-y-2">
+                              {(attachmentsByEntry.get(entry.id) ?? []).length === 0 ? (
+                                <p className="text-xs text-slate-500">
+                                  Nenhum documento
+                                </p>
+                              ) : (
+                                (attachmentsByEntry.get(entry.id) ?? []).map((attachment) => (
+                                  <div
+                                    key={attachment.id}
+                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-black text-slate-800">
+                                          {getDocumentTypeLabel(attachment.document_type)}
+                                        </p>
+                                        <p className="mt-1 break-all text-[11px] text-slate-500">
+                                          {attachment.original_name}
+                                        </p>
+                                        {attachment.document_number && (
+                                          <p className="mt-1 text-[11px] text-slate-500">
+                                            Nº {attachment.document_number}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      {attachment.signed_url && (
+                                        <a
+                                          href={attachment.signed_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs font-black text-sky-800 underline underline-offset-2"
+                                        >
+                                          Abrir
+                                        </a>
+                                      )}
+                                    </div>
+
+                                    <form
+                                      action={deleteFinancialEntryAttachment}
+                                      className="mt-2"
+                                    >
+                                      {commonHiddenFields}
+                                      <input
+                                        type="hidden"
+                                        name="attachmentId"
+                                        value={attachment.id}
+                                      />
+                                      <button
+                                        type="submit"
+                                        className="text-[11px] font-bold text-red-700 underline underline-offset-2"
+                                      >
+                                        Excluir documento
+                                      </button>
+                                    </form>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            <FinancialEntryAttachmentUploader
+                              financialEntryId={entry.id}
+                              defaultIssuedAt={entry.entry_date}
+                            />
                           </td>
                           <td className="px-3 py-4 text-right">
                             <form action={deleteFinancialEntry}>

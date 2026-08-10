@@ -55,6 +55,20 @@ type FinancialEntry = {
   maintenance_ticket_id: string | null;
 };
 
+type FinancialEntryAttachment = {
+  id: string;
+  financial_entry_id: string;
+  storage_path: string;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number | string;
+  document_type: string;
+  document_number: string | null;
+  issued_at: string | null;
+  notes: string | null;
+  signed_url: string | null;
+};
+
 type SavedReport = {
   id: string;
   status: "draft" | "closed" | "sent";
@@ -199,6 +213,42 @@ function getPaymentMethodLabel(value: string | null): string {
     default:
       return value || "Forma não informada";
   }
+}
+
+function getDocumentTypeLabel(
+  value: string
+): string {
+  switch (value) {
+    case "invoice":
+      return "Nota fiscal";
+    case "receipt":
+      return "Recibo";
+    case "payment_proof":
+      return "Comprovante de pagamento";
+    default:
+      return "Documento";
+  }
+}
+
+function formatFileSize(
+  value: number | string
+): string {
+  const bytes = Number(value ?? 0);
+
+  if (
+    !Number.isFinite(bytes) ||
+    bytes <= 0
+  ) {
+    return "—";
+  }
+
+  return `${(
+    bytes /
+    1024 /
+    1024
+  ).toLocaleString("pt-BR", {
+    maximumFractionDigits: 2,
+  })} MB`;
 }
 
 function safeFileName(value: string): string {
@@ -366,7 +416,110 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
   const entries = (entriesResult.data ?? []) as FinancialEntry[];
   const savedReport = (reportResult.data as SavedReport | null) ?? null;
   const pendingMaintenance = (maintenanceResult.data ?? []) as PendingMaintenance[];
+  let entryAttachments: FinancialEntryAttachment[] = [];
   let reportPayments: ReportPayment[] = [];
+
+  const entryIds = entries.map(
+    (entry) => entry.id
+  );
+
+  if (entryIds.length > 0) {
+    const {
+      data: attachmentsData,
+      error: attachmentsError,
+    } = await adminSupabase
+      .from(
+        "property_financial_entry_attachments"
+      )
+      .select(`
+        id,
+        financial_entry_id,
+        storage_path,
+        original_name,
+        mime_type,
+        size_bytes,
+        document_type,
+        document_number,
+        issued_at,
+        notes
+      `)
+      .in(
+        "financial_entry_id",
+        entryIds
+      )
+      .order("created_at", {
+        ascending: true,
+      });
+
+    if (attachmentsError) {
+      console.error(
+        "Erro ao carregar documentos do PDF:",
+        attachmentsError
+      );
+    } else {
+      const attachmentRows =
+        (attachmentsData ?? []) as Omit<
+          FinancialEntryAttachment,
+          "signed_url"
+        >[];
+
+      const {
+        data: signedUrls,
+        error: signedUrlsError,
+      } = attachmentRows.length > 0
+        ? await adminSupabase.storage
+            .from(
+              "financial-entry-files"
+            )
+            .createSignedUrls(
+              attachmentRows.map(
+                (attachment) =>
+                  attachment.storage_path
+              ),
+              24 * 60 * 60
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+      if (signedUrlsError) {
+        console.error(
+          "Erro ao autorizar documentos do PDF:",
+          signedUrlsError
+        );
+      }
+
+      const signedUrlByPath =
+        new Map<string, string>();
+
+      for (
+        const item of
+        signedUrls ?? []
+      ) {
+        if (
+          item.path &&
+          item.signedUrl
+        ) {
+          signedUrlByPath.set(
+            item.path,
+            item.signedUrl
+          );
+        }
+      }
+
+      entryAttachments =
+        attachmentRows.map(
+          (attachment) => ({
+            ...attachment,
+            signed_url:
+              signedUrlByPath.get(
+                attachment.storage_path
+              ) ?? null,
+          })
+        );
+    }
+  }
 
   if (savedReport) {
     const { data: paymentsData, error: paymentsError } = await adminSupabase
@@ -479,6 +632,31 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
 
   const revenueByChannel = new Map<string, number>();
   const expenseByCategory = new Map<string, number>();
+
+  const attachmentsByEntry =
+    new Map<
+      string,
+      FinancialEntryAttachment[]
+    >();
+
+  for (
+    const attachment of
+    entryAttachments
+  ) {
+    const currentAttachments =
+      attachmentsByEntry.get(
+        attachment.financial_entry_id
+      ) ?? [];
+
+    currentAttachments.push(
+      attachment
+    );
+
+    attachmentsByEntry.set(
+      attachment.financial_entry_id,
+      currentAttachments
+    );
+  }
 
   for (const entry of entries) {
     if (entry.entry_type === "revenue") {
@@ -676,6 +854,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
                   <th>Descrição</th>
                   <th className="money">Valor</th>
                   <th>Pagamento</th>
+                  <th>Docs.</th>
                 </tr>
               </thead>
               <tbody>
@@ -699,12 +878,98 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
                             ? "Reembolsar gestão"
                             : "Pago pelo proprietário"}
                     </td>
+                    <td>
+                      {(attachmentsByEntry.get(entry.id) ?? []).length || "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </section>
+
+        {entryAttachments.length > 0 && (
+          <section className="attachments-section">
+            <div className="section-heading-row">
+              <h2>Documentos comprobatórios</h2>
+              <span>
+                {entryAttachments.length} documento(s)
+              </span>
+            </div>
+
+            <p className="attachments-intro">
+              Notas fiscais, recibos e comprovantes vinculados às movimentações deste período.
+            </p>
+
+            <div className="attachments-grid">
+              {entries.flatMap((entry) =>
+                (attachmentsByEntry.get(entry.id) ?? []).map((attachment) => (
+                  <article
+                    key={attachment.id}
+                    className="attachment-card"
+                  >
+                    <div className="attachment-heading">
+                      <div>
+                        <strong>
+                          {getDocumentTypeLabel(attachment.document_type)}
+                        </strong>
+                        <span>
+                          {formatDate(entry.entry_date)} • {entry.category}
+                        </span>
+                      </div>
+                      <span>
+                        {formatFileSize(attachment.size_bytes)}
+                      </span>
+                    </div>
+
+                    <p className="attachment-name">
+                      {attachment.original_name}
+                    </p>
+
+                    {(attachment.document_number || attachment.issued_at) && (
+                      <p className="attachment-meta">
+                        {attachment.document_number
+                          ? `Nº ${attachment.document_number}`
+                          : ""}
+                        {attachment.document_number && attachment.issued_at
+                          ? " • "
+                          : ""}
+                        {attachment.issued_at
+                          ? `Emitido em ${formatDate(attachment.issued_at)}`
+                          : ""}
+                      </p>
+                    )}
+
+                    {attachment.notes && (
+                      <p className="attachment-notes">
+                        {attachment.notes}
+                      </p>
+                    )}
+
+                    {attachment.signed_url && attachment.mime_type.startsWith("image/") && (
+                      <img
+                        src={attachment.signed_url}
+                        alt={`${getDocumentTypeLabel(attachment.document_type)} — ${attachment.original_name}`}
+                        className="attachment-image"
+                      />
+                    )}
+
+                    {attachment.signed_url && attachment.mime_type === "application/pdf" && (
+                      <a
+                        href={attachment.signed_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="attachment-link"
+                      >
+                        Abrir documento PDF anexado
+                      </a>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        )}
 
         <section className="payments-section">
           <div className="section-heading-row">
@@ -1105,6 +1370,79 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           line-height: 1.55;
           white-space: pre-wrap;
         }
+        .attachments-section {
+          border: 1px solid #cbd5e1;
+          border-radius: 12px;
+          padding: 13px;
+        }
+        .attachments-intro {
+          margin: -3px 0 11px;
+          color: #64748b;
+          font-size: 10px;
+        }
+        .attachments-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+        .attachment-card {
+          min-width: 0;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 10px;
+          background: #f8fafc;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .attachment-heading {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          color: #64748b;
+          font-size: 8px;
+        }
+        .attachment-heading strong,
+        .attachment-heading span {
+          display: block;
+        }
+        .attachment-heading strong {
+          color: #172554;
+          font-size: 10px;
+        }
+        .attachment-heading > div > span {
+          margin-top: 3px;
+        }
+        .attachment-name,
+        .attachment-meta,
+        .attachment-notes {
+          margin: 6px 0 0;
+          overflow-wrap: anywhere;
+          color: #475569;
+          font-size: 8.5px;
+          line-height: 1.35;
+        }
+        .attachment-name {
+          font-weight: 800;
+          color: #334155;
+        }
+        .attachment-image {
+          display: block;
+          width: 100%;
+          max-height: 300px;
+          margin-top: 9px;
+          border-radius: 7px;
+          object-fit: contain;
+          background: white;
+          border: 1px solid #e2e8f0;
+        }
+        .attachment-link {
+          display: inline-block;
+          margin-top: 9px;
+          color: #1d4ed8;
+          font-size: 9px;
+          font-weight: 800;
+          text-decoration: underline;
+        }
         .payments-section {
           border: 1px solid #bfdbfe;
           border-radius: 12px;
@@ -1192,7 +1530,8 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           .identity-grid,
           .summary-grid,
           .two-columns,
-          .payment-summary {
+          .payment-summary,
+          .attachments-grid {
             grid-template-columns: 1fr 1fr;
           }
         }
@@ -1226,6 +1565,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           .summary-card,
           .notes-section,
           .warning-section,
+          .attachment-card,
           .identity-grid > div {
             break-inside: avoid;
             page-break-inside: avoid;

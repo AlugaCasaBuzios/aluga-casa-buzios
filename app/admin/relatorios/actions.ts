@@ -14,6 +14,9 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 const REPORT_STATUSES = ["draft", "closed", "sent"] as const;
 
+const FINANCIAL_ENTRY_FILES_BUCKET =
+  "financial-entry-files";
+
 type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 type ReturnContext = {
@@ -354,6 +357,23 @@ export async function deleteFinancialEntry(formData: FormData): Promise<void> {
 
   const { adminSupabase } = await requireAdmin();
 
+  const {
+    data: attachmentRows,
+    error: attachmentsError,
+  } = await adminSupabase
+    .from(
+      "property_financial_entry_attachments"
+    )
+    .select("storage_path")
+    .eq("financial_entry_id", entryId);
+
+  if (attachmentsError) {
+    console.error(
+      "Erro ao localizar documentos da movimentação:",
+      attachmentsError
+    );
+  }
+
   const { data: entry, error: entryError } = await adminSupabase
     .from("property_financial_entries")
     .select("maintenance_ticket_id")
@@ -375,6 +395,37 @@ export async function deleteFinancialEntry(formData: FormData): Promise<void> {
     redirect(buildReturnPath(context, { erro: "movimentacao-excluir" }));
   }
 
+  const attachmentPaths =
+    (attachmentRows ?? [])
+      .map(
+        (attachment) =>
+          attachment.storage_path
+      )
+      .filter(
+        (path): path is string =>
+          typeof path === "string" &&
+          path !== ""
+      );
+
+  if (
+    attachmentPaths.length > 0
+  ) {
+    const {
+      error: storageError,
+    } = await adminSupabase.storage
+      .from(
+        FINANCIAL_ENTRY_FILES_BUCKET
+      )
+      .remove(attachmentPaths);
+
+    if (storageError) {
+      console.error(
+        "Movimentação excluída, mas alguns documentos permaneceram no armazenamento:",
+        storageError
+      );
+    }
+  }
+
   if (entry?.maintenance_ticket_id) {
     const { error: ticketError } = await adminSupabase
       .from("maintenance_tickets")
@@ -392,6 +443,193 @@ export async function deleteFinancialEntry(formData: FormData): Promise<void> {
   revalidatePath("/admin/relatorios");
   revalidatePath("/admin/manutencao");
   redirect(buildReturnPath(context, { salvo: "movimentacao-excluida" }));
+}
+
+export async function deleteFinancialEntryAttachment(
+  formData: FormData
+): Promise<void> {
+  const context =
+    getReturnContext(formData);
+
+  const attachmentId =
+    getTextValue(
+      formData,
+      "attachmentId"
+    );
+
+  if (
+    !isValidUuid(attachmentId) ||
+    !context.propertyId
+  ) {
+    redirect(
+      buildReturnPath(context, {
+        erro: "documento-excluir",
+      })
+    );
+  }
+
+  const { adminSupabase } =
+    await requireAdmin();
+
+  const {
+    data: attachment,
+    error: attachmentError,
+  } = await adminSupabase
+    .from(
+      "property_financial_entry_attachments"
+    )
+    .select(`
+      id,
+      financial_entry_id,
+      storage_bucket,
+      storage_path
+    `)
+    .eq("id", attachmentId)
+    .maybeSingle();
+
+  if (
+    attachmentError ||
+    !attachment
+  ) {
+    console.error(
+      "Erro ao localizar documento financeiro:",
+      attachmentError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro: "documento-excluir",
+      })
+    );
+  }
+
+  const {
+    data: financialEntry,
+    error: entryError,
+  } = await adminSupabase
+    .from(
+      "property_financial_entries"
+    )
+    .select(
+      "id, property_id, entry_type"
+    )
+    .eq(
+      "id",
+      attachment.financial_entry_id
+    )
+    .maybeSingle();
+
+  if (
+    entryError ||
+    !financialEntry ||
+    financialEntry.property_id !==
+      context.propertyId
+  ) {
+    console.error(
+      "Documento não pertence ao imóvel selecionado:",
+      entryError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro: "documento-excluir",
+      })
+    );
+  }
+
+  const {
+    error: storageError,
+  } = await adminSupabase.storage
+    .from(
+      attachment.storage_bucket ||
+        FINANCIAL_ENTRY_FILES_BUCKET
+    )
+    .remove([
+      attachment.storage_path,
+    ]);
+
+  if (storageError) {
+    console.error(
+      "Erro ao excluir arquivo financeiro:",
+      storageError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro: "documento-excluir",
+      })
+    );
+  }
+
+  const {
+    error: deleteError,
+  } = await adminSupabase
+    .from(
+      "property_financial_entry_attachments"
+    )
+    .delete()
+    .eq("id", attachmentId);
+
+  if (deleteError) {
+    console.error(
+      "Erro ao excluir registro do documento financeiro:",
+      deleteError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro: "documento-excluir",
+      })
+    );
+  }
+
+  if (
+    financialEntry.entry_type ===
+    "expense"
+  ) {
+    const {
+      count,
+      error: countError,
+    } = await adminSupabase
+      .from(
+        "property_financial_entry_attachments"
+      )
+      .select("id", {
+        count: "exact",
+        head: true,
+      })
+      .eq(
+        "financial_entry_id",
+        financialEntry.id
+      );
+
+    if (!countError) {
+      await adminSupabase
+        .from(
+          "property_financial_entries"
+        )
+        .update({
+          receipt_status:
+            (count ?? 0) > 0
+              ? "received"
+              : "pending",
+        })
+        .eq("id", financialEntry.id);
+    }
+  }
+
+  revalidatePath(
+    "/admin/relatorios"
+  );
+  revalidatePath(
+    "/admin/relatorios/pdf"
+  );
+
+  redirect(
+    buildReturnPath(context, {
+      salvo: "documento-excluido",
+    })
+  );
 }
 
 export async function postMaintenanceToFinancial(formData: FormData): Promise<void> {

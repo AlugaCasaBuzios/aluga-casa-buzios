@@ -12,6 +12,7 @@ import {
 } from "@/lib/ownerReportFinancial";
 
 import FinancialEntryAttachmentUploader from "@/components/financial/FinancialEntryAttachmentUploader";
+import OwnerReportPaymentAttachmentUploader from "@/components/financial/OwnerReportPaymentAttachmentUploader";
 
 import {
   createFinancialEntry,
@@ -20,6 +21,7 @@ import {
   deleteFinancialEntry,
   deleteFinancialEntryAttachment,
   deleteOwnerReportPayment,
+  deleteOwnerReportPaymentAttachment,
   postMaintenanceToFinancial,
   savePropertyOwner,
   setOwnerReportStatus,
@@ -129,6 +131,7 @@ type OwnerReportPayment = {
   payment_reference: string | null;
   notes: string | null;
   attachment_path: string | null;
+  attachment_signed_url: string | null;
   created_at: string;
 };
 
@@ -312,6 +315,8 @@ function getFeedbackMessage(salvo?: string): string | null {
       return "Pagamento registrado e saldo atualizado.";
     case "pagamento-excluido":
       return "Pagamento excluído e saldo recalculado.";
+    case "comprovante-pagamento-excluido":
+      return "Comprovante do pagamento excluído.";
     default:
       return null;
   }
@@ -356,6 +361,8 @@ function getErrorMessage(erro?: string): string | null {
       return "Não foi possível excluir o pagamento.";
     case "pagamento-status":
       return "O pagamento foi alterado, mas o status precisa ser conferido.";
+    case "comprovante-pagamento-excluir":
+      return "Não foi possível excluir o comprovante do pagamento.";
     default:
       return null;
   }
@@ -652,7 +659,83 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           console.error("Erro ao carregar pagamentos dos relatórios:", paymentsError);
           loadError = "Não foi possível carregar os pagamentos dos relatórios.";
         } else {
-          reportPayments = (paymentsData ?? []) as OwnerReportPayment[];
+          const paymentRows =
+            (paymentsData ?? []) as Omit<
+              OwnerReportPayment,
+              "attachment_signed_url"
+            >[];
+
+          const attachmentPaths =
+            paymentRows
+              .map(
+                (payment) =>
+                  payment.attachment_path
+              )
+              .filter(
+                (path): path is string =>
+                  typeof path ===
+                    "string" &&
+                  path !== ""
+              );
+
+          const {
+            data: paymentSignedUrls,
+            error:
+              paymentSignedUrlsError,
+          } =
+            attachmentPaths.length > 0
+              ? await adminSupabase.storage
+                  .from(
+                    "financial-entry-files"
+                  )
+                  .createSignedUrls(
+                    attachmentPaths,
+                    60 * 60
+                  )
+              : {
+                  data: [],
+                  error: null,
+                };
+
+          if (
+            paymentSignedUrlsError
+          ) {
+            console.error(
+              "Erro ao autorizar comprovantes dos pagamentos:",
+              paymentSignedUrlsError
+            );
+          }
+
+          const signedUrlByPath =
+            new Map<string, string>();
+
+          for (
+            const item of
+            paymentSignedUrls ?? []
+          ) {
+            if (
+              item.path &&
+              item.signedUrl
+            ) {
+              signedUrlByPath.set(
+                item.path,
+                item.signedUrl
+              );
+            }
+          }
+
+          reportPayments =
+            paymentRows.map(
+              (payment) => ({
+                ...payment,
+                attachment_signed_url:
+                  payment.attachment_path
+                    ? signedUrlByPath.get(
+                        payment.attachment_path
+                      ) ?? null
+                    : null,
+              })
+            );
         }
       }
     }
@@ -1624,17 +1707,54 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                                   )}
                                 </div>
 
-                                <form action={deleteOwnerReportPayment}>
-                                  {commonHiddenFields}
-                                  <input type="hidden" name="reportId" value={report.id} />
-                                  <input type="hidden" name="paymentId" value={payment.id} />
-                                  <button
-                                    type="submit"
-                                    className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50"
-                                  >
-                                    Excluir pagamento
-                                  </button>
-                                </form>
+                                <div className="flex flex-col gap-2 sm:items-end">
+                                  {payment.attachment_path ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {payment.attachment_signed_url ? (
+                                        <a
+                                          href={payment.attachment_signed_url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+                                        >
+                                          Abrir comprovante
+                                        </a>
+                                      ) : (
+                                        <span className="rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-900">
+                                          Comprovante indisponível
+                                        </span>
+                                      )}
+
+                                      <form action={deleteOwnerReportPaymentAttachment}>
+                                        {commonHiddenFields}
+                                        <input type="hidden" name="reportId" value={report.id} />
+                                        <input type="hidden" name="paymentId" value={payment.id} />
+                                        <button
+                                          type="submit"
+                                          className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50"
+                                        >
+                                          Excluir comprovante
+                                        </button>
+                                      </form>
+                                    </div>
+                                  ) : (
+                                    <OwnerReportPaymentAttachmentUploader
+                                      paymentId={payment.id}
+                                    />
+                                  )}
+
+                                  <form action={deleteOwnerReportPayment}>
+                                    {commonHiddenFields}
+                                    <input type="hidden" name="reportId" value={report.id} />
+                                    <input type="hidden" name="paymentId" value={payment.id} />
+                                    <button
+                                      type="submit"
+                                      className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50"
+                                    >
+                                      Excluir pagamento
+                                    </button>
+                                  </form>
+                                </div>
                               </div>
                             ))}
                           </div>

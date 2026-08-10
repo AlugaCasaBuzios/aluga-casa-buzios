@@ -1016,7 +1016,7 @@ export async function deleteOwnerReportPayment(
 
   const { data: payment, error: paymentError } = await adminSupabase
     .from("owner_report_payments")
-    .select("id, report_id")
+    .select("id, report_id, attachment_path")
     .eq("id", paymentId)
     .eq("report_id", reportId)
     .maybeSingle();
@@ -1037,6 +1037,24 @@ export async function deleteOwnerReportPayment(
     redirect(buildReturnPath(context, { erro: "pagamento-excluir" }));
   }
 
+  if (payment.attachment_path) {
+    const { error: storageError } =
+      await adminSupabase.storage
+        .from(
+          FINANCIAL_ENTRY_FILES_BUCKET
+        )
+        .remove([
+          payment.attachment_path,
+        ]);
+
+    if (storageError) {
+      console.error(
+        "Pagamento excluído, mas o comprovante permaneceu no armazenamento:",
+        storageError
+      );
+    }
+  }
+
   try {
     await synchronizeReportPaymentStatus(adminSupabase, reportId);
   } catch (error) {
@@ -1047,4 +1065,148 @@ export async function deleteOwnerReportPayment(
   revalidatePath("/admin/relatorios");
   revalidatePath("/admin/relatorios/pdf");
   redirect(buildReturnPath(context, { salvo: "pagamento-excluido" }));
+}
+
+export async function deleteOwnerReportPaymentAttachment(
+  formData: FormData
+): Promise<void> {
+  const context =
+    getReturnContext(formData);
+
+  const reportId = getTextValue(
+    formData,
+    "reportId"
+  );
+
+  const paymentId = getTextValue(
+    formData,
+    "paymentId"
+  );
+
+  if (
+    !isValidUuid(reportId) ||
+    !isValidUuid(paymentId) ||
+    !context.propertyId
+  ) {
+    redirect(
+      buildReturnPath(context, {
+        erro:
+          "comprovante-pagamento-excluir",
+      })
+    );
+  }
+
+  const { adminSupabase } =
+    await requireAdmin();
+
+  const {
+    data: report,
+    error: reportError,
+  } = await adminSupabase
+    .from("owner_reports")
+    .select("id")
+    .eq("id", reportId)
+    .eq(
+      "property_id",
+      context.propertyId
+    )
+    .maybeSingle();
+
+  if (reportError || !report) {
+    console.error(
+      "Erro ao validar relatório do comprovante:",
+      reportError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro:
+          "comprovante-pagamento-excluir",
+      })
+    );
+  }
+
+  const {
+    data: payment,
+    error: paymentError,
+  } = await adminSupabase
+    .from("owner_report_payments")
+    .select(
+      "id, report_id, attachment_path"
+    )
+    .eq("id", paymentId)
+    .eq("report_id", reportId)
+    .maybeSingle();
+
+  if (
+    paymentError ||
+    !payment ||
+    !payment.attachment_path
+  ) {
+    console.error(
+      "Erro ao localizar comprovante do pagamento:",
+      paymentError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro:
+          "comprovante-pagamento-excluir",
+      })
+    );
+  }
+
+  const attachmentPath =
+    payment.attachment_path;
+
+  const { error: updateError } =
+    await adminSupabase
+      .from("owner_report_payments")
+      .update({
+        attachment_path: null,
+      })
+      .eq("id", paymentId)
+      .eq("report_id", reportId);
+
+  if (updateError) {
+    console.error(
+      "Erro ao remover comprovante do pagamento:",
+      updateError
+    );
+
+    redirect(
+      buildReturnPath(context, {
+        erro:
+          "comprovante-pagamento-excluir",
+      })
+    );
+  }
+
+  const { error: storageError } =
+    await adminSupabase.storage
+      .from(
+        FINANCIAL_ENTRY_FILES_BUCKET
+      )
+      .remove([attachmentPath]);
+
+  if (storageError) {
+    console.error(
+      "Comprovante desvinculado, mas o arquivo permaneceu no armazenamento:",
+      storageError
+    );
+  }
+
+  revalidatePath(
+    "/admin/relatorios"
+  );
+  revalidatePath(
+    "/admin/relatorios/pdf"
+  );
+
+  redirect(
+    buildReturnPath(context, {
+      salvo:
+        "comprovante-pagamento-excluido",
+    })
+  );
 }

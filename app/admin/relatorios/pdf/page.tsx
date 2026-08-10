@@ -97,6 +97,7 @@ type ReportPayment = {
   payment_reference: string | null;
   notes: string | null;
   attachment_path: string | null;
+  attachment_signed_url: string | null;
 };
 
 type PendingMaintenance = {
@@ -120,6 +121,16 @@ function isDateOnly(value?: string): value is string {
     parsedDate.getUTCMonth() === month - 1 &&
     parsedDate.getUTCDate() === day
   );
+}
+
+function isImageAttachmentPath(
+  value: string | null
+): boolean {
+  return value
+    ? /\.(?:jpe?g|png|webp)$/i.test(
+        value
+      )
+    : false;
 }
 
 function formatCurrency(value: number | string | null | undefined): string {
@@ -540,7 +551,81 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
     if (paymentsError) {
       console.error("Erro ao carregar pagamentos do PDF:", paymentsError);
     } else {
-      reportPayments = (paymentsData ?? []) as ReportPayment[];
+      const paymentRows =
+        (paymentsData ?? []) as Omit<
+          ReportPayment,
+          "attachment_signed_url"
+        >[];
+
+      const attachmentPaths =
+        paymentRows
+          .map(
+            (payment) =>
+              payment.attachment_path
+          )
+          .filter(
+            (path): path is string =>
+              typeof path ===
+                "string" &&
+              path !== ""
+          );
+
+      const {
+        data: paymentSignedUrls,
+        error:
+          paymentSignedUrlsError,
+      } =
+        attachmentPaths.length > 0
+          ? await adminSupabase.storage
+              .from(
+                "financial-entry-files"
+              )
+              .createSignedUrls(
+                attachmentPaths,
+                24 * 60 * 60
+              )
+          : {
+              data: [],
+              error: null,
+            };
+
+      if (paymentSignedUrlsError) {
+        console.error(
+          "Erro ao autorizar comprovantes dos pagamentos no PDF:",
+          paymentSignedUrlsError
+        );
+      }
+
+      const signedUrlByPath =
+        new Map<string, string>();
+
+      for (
+        const item of
+        paymentSignedUrls ?? []
+      ) {
+        if (
+          item.path &&
+          item.signedUrl
+        ) {
+          signedUrlByPath.set(
+            item.path,
+            item.signedUrl
+          );
+        }
+      }
+
+      reportPayments =
+        paymentRows.map(
+          (payment) => ({
+            ...payment,
+            attachment_signed_url:
+              payment.attachment_path
+                ? signedUrlByPath.get(
+                    payment.attachment_path
+                  ) ?? null
+                : null,
+          })
+        );
     }
   }
 
@@ -999,15 +1084,51 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           ) : (
             <div className="payment-list">
               {reportPayments.map((payment) => (
-                <div key={payment.id}>
-                  <span>
-                    {formatDate(payment.payment_date)} • {getPaymentMethodLabel(payment.payment_method)}
-                    {payment.payment_reference
-                      ? ` • ${payment.payment_reference}`
-                      : ""}
-                  </span>
-                  <strong>{formatCurrency(payment.amount)}</strong>
-                </div>
+                <article
+                  key={payment.id}
+                  className="payment-item"
+                >
+                  <div className="payment-item-heading">
+                    <span>
+                      {formatDate(payment.payment_date)} • {getPaymentMethodLabel(payment.payment_method)}
+                      {payment.payment_reference
+                        ? ` • ${payment.payment_reference}`
+                        : ""}
+                    </span>
+                    <strong>{formatCurrency(payment.amount)}</strong>
+                  </div>
+
+                  {payment.notes && (
+                    <p className="payment-notes">
+                      {payment.notes}
+                    </p>
+                  )}
+
+                  {payment.attachment_signed_url && (
+                    <div className="payment-proof">
+                      <p>Comprovante do pagamento</p>
+
+                      {isImageAttachmentPath(
+                        payment.attachment_path
+                      ) ? (
+                        <img
+                          src={payment.attachment_signed_url}
+                          alt="Comprovante do pagamento do proprietário"
+                          className="payment-proof-image"
+                        />
+                      ) : (
+                        <a
+                          href={payment.attachment_signed_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="payment-proof-link"
+                        >
+                          Abrir comprovante PDF anexado
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </article>
               ))}
             </div>
           )}
@@ -1476,17 +1597,56 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
         .payment-list {
           margin-top: 8px;
         }
-        .payment-list > div {
+        .payment-item {
+          border-top: 1px solid #e2e8f0;
+          padding: 7px 2px;
+        }
+        .payment-item-heading {
           display: flex;
           justify-content: space-between;
           gap: 12px;
-          border-top: 1px solid #e2e8f0;
-          padding: 7px 2px;
           font-size: 10px;
         }
-        .payment-list strong {
+        .payment-item-heading strong {
           white-space: nowrap;
           color: #047857;
+        }
+        .payment-notes {
+          margin: 5px 0 0;
+          color: #64748b;
+          font-size: 8.5px;
+        }
+        .payment-proof {
+          margin-top: 8px;
+          border-radius: 8px;
+          border: 1px solid #bbf7d0;
+          background: #f0fdf4;
+          padding: 8px;
+        }
+        .payment-proof p {
+          margin: 0;
+          color: #166534;
+          font-size: 8px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .payment-proof-image {
+          display: block;
+          width: 100%;
+          max-height: 300px;
+          margin-top: 7px;
+          border-radius: 6px;
+          object-fit: contain;
+          background: white;
+          border: 1px solid #dcfce7;
+        }
+        .payment-proof-link {
+          display: inline-block;
+          margin-top: 7px;
+          color: #1d4ed8;
+          font-size: 9px;
+          font-weight: 800;
+          text-decoration: underline;
         }
         .payment-empty {
           margin-top: 9px;

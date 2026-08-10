@@ -13,8 +13,10 @@ import {
 
 import {
   createFinancialEntry,
+  createOwnerReportPayment,
   createOwnerReportSnapshot,
   deleteFinancialEntry,
+  deleteOwnerReportPayment,
   postMaintenanceToFinancial,
   savePropertyOwner,
   setOwnerReportStatus,
@@ -98,6 +100,35 @@ type OwnerReport = {
   sent_at: string | null;
   created_at: string;
 };
+
+type OwnerReportPayment = {
+  id: string;
+  report_id: string;
+  payment_date: string;
+  amount: number | string;
+  payment_method: string | null;
+  payment_reference: string | null;
+  notes: string | null;
+  attachment_path: string | null;
+  created_at: string;
+};
+
+function getPaymentMethodLabel(value: string | null): string {
+  switch (value) {
+    case "pix":
+      return "Pix";
+    case "transfer":
+      return "Transferência bancária";
+    case "cash":
+      return "Dinheiro";
+    case "card":
+      return "Cartão";
+    case "other":
+      return "Outro";
+    default:
+      return value || "Forma não informada";
+  }
+}
 
 function getPaymentStatusLabel(
   status: OwnerReport["payment_status"]
@@ -241,6 +272,10 @@ function getFeedbackMessage(salvo?: string): string | null {
       return "Relatório fechado e salvo no histórico.";
     case "status-relatorio":
       return "Status do relatório atualizado.";
+    case "pagamento":
+      return "Pagamento registrado e saldo atualizado.";
+    case "pagamento-excluido":
+      return "Pagamento excluído e saldo recalculado.";
     default:
       return null;
   }
@@ -271,6 +306,18 @@ function getErrorMessage(erro?: string): string | null {
       return "Não foi possível salvar o relatório.";
     case "relatorio-status":
       return "Não foi possível atualizar o status do relatório.";
+    case "pagamento-campos":
+      return "Revise a data e o valor do pagamento.";
+    case "pagamento-relatorio":
+      return "Feche o relatório antes de registrar um pagamento.";
+    case "pagamento-excede":
+      return "O pagamento informado ultrapassa o saldo pendente.";
+    case "pagamento-salvar":
+      return "Não foi possível registrar o pagamento.";
+    case "pagamento-excluir":
+      return "Não foi possível excluir o pagamento.";
+    case "pagamento-status":
+      return "O pagamento foi alterado, mas o status precisa ser conferido.";
     default:
       return null;
   }
@@ -326,6 +373,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   let entries: FinancialEntry[] = [];
   let pendingMaintenance: PendingMaintenance[] = [];
   let reports: OwnerReport[] = [];
+  let reportPayments: OwnerReportPayment[] = [];
   let loadError: string | null = null;
 
   if (selectedProperty) {
@@ -433,6 +481,35 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       loadError = "Não foi possível carregar o histórico de relatórios.";
     } else {
       reports = (reportsResult.data ?? []) as OwnerReport[];
+
+      const reportIds = reports.map((report) => report.id);
+
+      if (reportIds.length > 0) {
+        const { data: paymentsData, error: paymentsError } =
+          await adminSupabase
+            .from("owner_report_payments")
+            .select(`
+              id,
+              report_id,
+              payment_date,
+              amount,
+              payment_method,
+              payment_reference,
+              notes,
+              attachment_path,
+              created_at
+            `)
+            .in("report_id", reportIds)
+            .order("payment_date", { ascending: false })
+            .order("created_at", { ascending: false });
+
+        if (paymentsError) {
+          console.error("Erro ao carregar pagamentos dos relatórios:", paymentsError);
+          loadError = "Não foi possível carregar os pagamentos dos relatórios.";
+        } else {
+          reportPayments = (paymentsData ?? []) as OwnerReportPayment[];
+        }
+      }
     }
 
     if (ownerLink?.owner_id) {
@@ -476,6 +553,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     amountDueToManager,
     netOwnerAmount,
   } = financial;
+
+  const todayInBrazil = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
   const pendingMaintenanceTotal = pendingMaintenance.reduce(
     (sum, ticket) => sum + Number(ticket.final_cost ?? 0),
@@ -1164,7 +1248,21 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    {reports.map((report) => (
+                    {reports.map((report) => {
+                      const payments = reportPayments.filter(
+                        (payment) => payment.report_id === report.id
+                      );
+                      const amountPaid = payments.reduce(
+                        (total, payment) => total + Number(payment.amount ?? 0),
+                        0
+                      );
+                      const amountDue = Number(report.amount_due_to_manager ?? 0);
+                      const remainingAmount = Math.max(
+                        0,
+                        Math.round((amountDue - amountPaid) * 100) / 100
+                      );
+
+                      return (
                       <article key={report.id} className="rounded-2xl border border-slate-200 p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                           <div>
@@ -1237,8 +1335,163 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                             )}
                           </div>
                         </div>
+
+                        <div className="mt-4 grid gap-2 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-3">
+                          <div>
+                            <span className="block text-xs font-bold uppercase text-slate-500">
+                              Total devido
+                            </span>
+                            <strong className="mt-1 block text-slate-900">
+                              {formatCurrency(amountDue)}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold uppercase text-slate-500">
+                              Total pago
+                            </span>
+                            <strong className="mt-1 block text-emerald-700">
+                              {formatCurrency(amountPaid)}
+                            </strong>
+                          </div>
+                          <div>
+                            <span className="block text-xs font-bold uppercase text-slate-500">
+                              Saldo pendente
+                            </span>
+                            <strong className="mt-1 block text-red-700">
+                              {formatCurrency(remainingAmount)}
+                            </strong>
+                          </div>
+                        </div>
+
+                        {payments.length > 0 && (
+                          <div className="mt-3 grid gap-2">
+                            {payments.map((payment) => (
+                              <div
+                                key={payment.id}
+                                className="flex flex-col gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div>
+                                  <p className="font-bold text-emerald-950">
+                                    {formatCurrency(payment.amount)} em {formatDate(payment.payment_date)}
+                                  </p>
+                                  <p className="mt-1 text-xs text-emerald-800">
+                                    {getPaymentMethodLabel(payment.payment_method)}
+                                    {payment.payment_reference
+                                      ? ` • ${payment.payment_reference}`
+                                      : ""}
+                                  </p>
+                                  {payment.notes && (
+                                    <p className="mt-1 text-xs text-slate-600">
+                                      {payment.notes}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <form action={deleteOwnerReportPayment}>
+                                  {commonHiddenFields}
+                                  <input type="hidden" name="reportId" value={report.id} />
+                                  <input type="hidden" name="paymentId" value={payment.id} />
+                                  <button
+                                    type="submit"
+                                    className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50"
+                                  >
+                                    Excluir pagamento
+                                  </button>
+                                </form>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {report.status !== "draft" && remainingAmount > 0 && (
+                          <form
+                            action={createOwnerReportPayment}
+                            className="mt-4 grid gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:grid-cols-2"
+                          >
+                            {commonHiddenFields}
+                            <input type="hidden" name="reportId" value={report.id} />
+
+                            <div className="sm:col-span-2">
+                              <h3 className="font-bold text-blue-950">
+                                Registrar pagamento do proprietário
+                              </h3>
+                              <p className="mt-1 text-xs text-slate-600">
+                                Pode registrar o saldo completo ou apenas parte dele.
+                              </p>
+                            </div>
+
+                            <label className="grid gap-1 text-xs font-bold text-slate-700">
+                              Data do pagamento
+                              <input
+                                type="date"
+                                name="paymentDate"
+                                required
+                                defaultValue={todayInBrazil}
+                                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-700"
+                              />
+                            </label>
+
+                            <label className="grid gap-1 text-xs font-bold text-slate-700">
+                              Valor pago
+                              <input
+                                name="amount"
+                                required
+                                inputMode="decimal"
+                                defaultValue={remainingAmount.toFixed(2).replace(".", ",")}
+                                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-700"
+                              />
+                            </label>
+
+                            <label className="grid gap-1 text-xs font-bold text-slate-700">
+                              Forma de pagamento
+                              <select
+                                name="paymentMethod"
+                                defaultValue="pix"
+                                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-700"
+                              >
+                                <option value="pix">Pix</option>
+                                <option value="transfer">Transferência bancária</option>
+                                <option value="cash">Dinheiro</option>
+                                <option value="card">Cartão</option>
+                                <option value="other">Outro</option>
+                              </select>
+                            </label>
+
+                            <label className="grid gap-1 text-xs font-bold text-slate-700">
+                              Referência
+                              <input
+                                name="paymentReference"
+                                placeholder="Ex.: Pix de 10/08"
+                                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-700"
+                              />
+                            </label>
+
+                            <label className="grid gap-1 text-xs font-bold text-slate-700 sm:col-span-2">
+                              Observações
+                              <input
+                                name="paymentNotes"
+                                placeholder="Observação opcional"
+                                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-700"
+                              />
+                            </label>
+
+                            <button
+                              type="submit"
+                              className="min-h-11 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-800 sm:col-span-2"
+                            >
+                              Registrar pagamento
+                            </button>
+                          </form>
+                        )}
+
+                        {report.status === "draft" && amountDue > 0 && (
+                          <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                            Feche o relatório para liberar o registro de pagamentos.
+                          </p>
+                        )}
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

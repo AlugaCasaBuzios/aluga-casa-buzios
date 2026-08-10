@@ -75,6 +75,16 @@ type SavedReport = {
   created_at: string;
 };
 
+type ReportPayment = {
+  id: string;
+  payment_date: string;
+  amount: number | string;
+  payment_method: string | null;
+  payment_reference: string | null;
+  notes: string | null;
+  attachment_path: string | null;
+};
+
 type PendingMaintenance = {
   id: string;
   ticket_number: string;
@@ -171,6 +181,23 @@ function getPaymentStatusLabel(
       return "Ainda não devido";
     default:
       return "Prévia financeira";
+  }
+}
+
+function getPaymentMethodLabel(value: string | null): string {
+  switch (value) {
+    case "pix":
+      return "Pix";
+    case "transfer":
+      return "Transferência bancária";
+    case "cash":
+      return "Dinheiro";
+    case "card":
+      return "Cartão";
+    case "other":
+      return "Outro";
+    default:
+      return value || "Forma não informada";
   }
 }
 
@@ -339,6 +366,30 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
   const entries = (entriesResult.data ?? []) as FinancialEntry[];
   const savedReport = (reportResult.data as SavedReport | null) ?? null;
   const pendingMaintenance = (maintenanceResult.data ?? []) as PendingMaintenance[];
+  let reportPayments: ReportPayment[] = [];
+
+  if (savedReport) {
+    const { data: paymentsData, error: paymentsError } = await adminSupabase
+      .from("owner_report_payments")
+      .select(`
+        id,
+        payment_date,
+        amount,
+        payment_method,
+        payment_reference,
+        notes,
+        attachment_path
+      `)
+      .eq("report_id", savedReport.id)
+      .order("payment_date", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (paymentsError) {
+      console.error("Erro ao carregar pagamentos do PDF:", paymentsError);
+    } else {
+      reportPayments = (paymentsData ?? []) as ReportPayment[];
+    }
+  }
 
   const linkServicePlan: ServicePlan =
     ownerLink && isServicePlan(ownerLink.service_plan)
@@ -400,6 +451,16 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
   const ownerPaidExpenses = Math.max(
     0,
     Math.round((totalExpenses - reimbursableExpenses) * 100) / 100
+  );
+
+  const amountPaid = reportPayments.reduce(
+    (total, payment) => total + Number(payment.amount ?? 0),
+    0
+  );
+
+  const remainingAmount = Math.max(
+    0,
+    Math.round((amountDueToManager - amountPaid) * 100) / 100
   );
 
   const maintenanceExpenses = entries
@@ -642,6 +703,48 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
                 ))}
               </tbody>
             </table>
+          )}
+        </section>
+
+        <section className="payments-section">
+          <div className="section-heading-row">
+            <h2>Pagamentos à gestão</h2>
+            <span>{getPaymentStatusLabel(savedReport?.payment_status)}</span>
+          </div>
+
+          <div className="payment-summary">
+            <div>
+              <span>Total devido</span>
+              <strong>{formatCurrency(amountDueToManager)}</strong>
+            </div>
+            <div>
+              <span>Total pago</span>
+              <strong>{formatCurrency(amountPaid)}</strong>
+            </div>
+            <div>
+              <span>Saldo pendente</span>
+              <strong>{formatCurrency(remainingAmount)}</strong>
+            </div>
+          </div>
+
+          {reportPayments.length === 0 ? (
+            <p className="empty payment-empty">
+              Nenhum pagamento registrado para este relatório.
+            </p>
+          ) : (
+            <div className="payment-list">
+              {reportPayments.map((payment) => (
+                <div key={payment.id}>
+                  <span>
+                    {formatDate(payment.payment_date)} • {getPaymentMethodLabel(payment.payment_method)}
+                    {payment.payment_reference
+                      ? ` • ${payment.payment_reference}`
+                      : ""}
+                  </span>
+                  <strong>{formatCurrency(payment.amount)}</strong>
+                </div>
+              ))}
+            </div>
           )}
         </section>
 
@@ -1002,6 +1105,54 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           line-height: 1.55;
           white-space: pre-wrap;
         }
+        .payments-section {
+          border: 1px solid #bfdbfe;
+          border-radius: 12px;
+          padding: 13px;
+          background: #f8fafc;
+        }
+        .payment-summary {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 9px;
+        }
+        .payment-summary > div {
+          border-radius: 9px;
+          border: 1px solid #dbeafe;
+          background: white;
+          padding: 9px 10px;
+        }
+        .payment-summary span {
+          display: block;
+          color: #64748b;
+          font-size: 8px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        .payment-summary strong {
+          display: block;
+          margin-top: 4px;
+          color: #172554;
+          font-size: 13px;
+        }
+        .payment-list {
+          margin-top: 8px;
+        }
+        .payment-list > div {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          border-top: 1px solid #e2e8f0;
+          padding: 7px 2px;
+          font-size: 10px;
+        }
+        .payment-list strong {
+          white-space: nowrap;
+          color: #047857;
+        }
+        .payment-empty {
+          margin-top: 9px;
+        }
         .report-footer {
           margin-top: 24px;
           padding-top: 14px;
@@ -1040,7 +1191,8 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           }
           .identity-grid,
           .summary-grid,
-          .two-columns {
+          .two-columns,
+          .payment-summary {
             grid-template-columns: 1fr 1fr;
           }
         }

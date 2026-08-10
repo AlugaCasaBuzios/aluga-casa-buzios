@@ -46,6 +46,12 @@ function isDateOnly(value: string): boolean {
   );
 }
 
+function isValidUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+
 function parseMoney(value: string): number | null {
   const trimmed = value.trim();
 
@@ -127,6 +133,60 @@ async function requireAdmin() {
     user,
     adminSupabase: createSupabaseAdminClient(),
   };
+}
+
+async function synchronizeReportPaymentStatus(
+  adminSupabase: ReturnType<typeof createSupabaseAdminClient>,
+  reportId: string
+): Promise<void> {
+  const { data: report, error: reportError } = await adminSupabase
+    .from("owner_reports")
+    .select("amount_due_to_manager, status")
+    .eq("id", reportId)
+    .maybeSingle();
+
+  if (reportError || !report) {
+    throw new Error("Não foi possível localizar o relatório.");
+  }
+
+  const { data: payments, error: paymentsError } = await adminSupabase
+    .from("owner_report_payments")
+    .select("amount")
+    .eq("report_id", reportId);
+
+  if (paymentsError) {
+    throw new Error("Não foi possível calcular os pagamentos do relatório.");
+  }
+
+  const amountDue = Number(report.amount_due_to_manager ?? 0);
+  const amountPaid = (payments ?? []).reduce(
+    (total, payment) => total + Number(payment.amount ?? 0),
+    0
+  );
+
+  let paymentStatus: "not_due" | "pending" | "partial" | "paid";
+
+  if (report.status === "draft" || amountDue <= 0) {
+    paymentStatus = "not_due";
+  } else if (amountPaid <= 0) {
+    paymentStatus = "pending";
+  } else if (amountPaid + 0.005 >= amountDue) {
+    paymentStatus = "paid";
+  } else {
+    paymentStatus = "partial";
+  }
+
+  const { error: updateError } = await adminSupabase
+    .from("owner_reports")
+    .update({
+      payment_status: paymentStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", reportId);
+
+  if (updateError) {
+    throw new Error("Não foi possível atualizar o status do pagamento.");
+  }
 }
 
 export async function savePropertyOwner(formData: FormData): Promise<void> {
@@ -484,18 +544,17 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
   }
 
   const primaryReportId = existingReports?.[0]?.id ?? null;
-  const previousPaymentStatus = existingReports?.[0]?.payment_status;
   const paymentStatus =
-    previousPaymentStatus === "paid" || previousPaymentStatus === "partial"
-      ? previousPaymentStatus
-      : financial.amountDueToManager <= 0 || status === "draft"
-        ? "not_due"
-        : "pending";
+    financial.amountDueToManager <= 0 || status === "draft"
+      ? "not_due"
+      : "pending";
 
   const reportSnapshot = {
     ...baseReportSnapshot,
     payment_status: paymentStatus,
   };
+
+  let savedReportId = primaryReportId;
 
   if (primaryReportId) {
     const { error } = await adminSupabase
@@ -526,14 +585,29 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
       }
     }
   } else {
-    const { error } = await adminSupabase.from("owner_reports").insert({
-      ...reportSnapshot,
-      created_by: user.id,
-    });
+    const { data: insertedReport, error } = await adminSupabase
+      .from("owner_reports")
+      .insert({
+        ...reportSnapshot,
+        created_by: user.id,
+      })
+      .select("id")
+      .single();
 
-    if (error) {
+    if (error || !insertedReport) {
       console.error("Erro ao salvar relatório do proprietário:", error);
       redirect(buildReturnPath(context, { erro: "relatorio-salvar" }));
+    }
+
+    savedReportId = insertedReport.id;
+  }
+
+  if (savedReportId) {
+    try {
+      await synchronizeReportPaymentStatus(adminSupabase, savedReportId);
+    } catch (error) {
+      console.error("Erro ao sincronizar pagamentos do relatório:", error);
+      redirect(buildReturnPath(context, { erro: "pagamento-status" }));
     }
   }
 
@@ -546,19 +620,18 @@ export async function setOwnerReportStatus(formData: FormData): Promise<void> {
   const reportId = getTextValue(formData, "reportId");
   const status = getTextValue(formData, "status") as ReportStatus;
 
-  if (!reportId || !REPORT_STATUSES.includes(status)) {
+  if (!isValidUuid(reportId) || !REPORT_STATUSES.includes(status)) {
     redirect(buildReturnPath(context, { erro: "relatorio-status" }));
   }
 
   const { adminSupabase } = await requireAdmin();
   const now = new Date().toISOString();
 
-  const { data: currentReport, error: currentReportError } =
-    await adminSupabase
-      .from("owner_reports")
-      .select("payment_status, amount_due_to_manager")
-      .eq("id", reportId)
-      .maybeSingle();
+  const { data: currentReport, error: currentReportError } = await adminSupabase
+    .from("owner_reports")
+    .select("id")
+    .eq("id", reportId)
+    .maybeSingle();
 
   if (currentReportError || !currentReport) {
     console.error(
@@ -571,21 +644,6 @@ export async function setOwnerReportStatus(formData: FormData): Promise<void> {
   const updates: Record<string, string | null> = {
     status,
   };
-
-  const preservesPaymentStatus =
-    currentReport.payment_status === "paid" ||
-    currentReport.payment_status === "partial";
-
-  if (!preservesPaymentStatus) {
-    const amountDueToManager = Number(
-      currentReport.amount_due_to_manager ?? 0
-    );
-
-    updates.payment_status =
-      status === "draft" || amountDueToManager <= 0
-        ? "not_due"
-        : "pending";
-  }
 
   if (status === "closed") {
     updates.generated_at = now;
@@ -607,6 +665,148 @@ export async function setOwnerReportStatus(formData: FormData): Promise<void> {
     redirect(buildReturnPath(context, { erro: "relatorio-status" }));
   }
 
+  try {
+    await synchronizeReportPaymentStatus(adminSupabase, reportId);
+  } catch (syncError) {
+    console.error("Erro ao sincronizar status do pagamento:", syncError);
+    redirect(buildReturnPath(context, { erro: "pagamento-status" }));
+  }
+
   revalidatePath("/admin/relatorios");
   redirect(buildReturnPath(context, { salvo: "status-relatorio" }));
+}
+
+export async function createOwnerReportPayment(
+  formData: FormData
+): Promise<void> {
+  const context = getReturnContext(formData);
+  const reportId = getTextValue(formData, "reportId");
+  const paymentDate = getTextValue(formData, "paymentDate");
+  const amount = parseMoney(getTextValue(formData, "amount"));
+  const paymentMethod = getTextValue(formData, "paymentMethod").slice(0, 80);
+  const paymentReference = getTextValue(formData, "paymentReference").slice(
+    0,
+    180
+  );
+  const notes = getTextValue(formData, "paymentNotes").slice(0, 1000);
+
+  if (
+    !isValidUuid(reportId) ||
+    !isDateOnly(paymentDate) ||
+    amount === null ||
+    amount <= 0
+  ) {
+    redirect(buildReturnPath(context, { erro: "pagamento-campos" }));
+  }
+
+  const { user, adminSupabase } = await requireAdmin();
+
+  const { data: report, error: reportError } = await adminSupabase
+    .from("owner_reports")
+    .select("id, property_id, status, amount_due_to_manager")
+    .eq("id", reportId)
+    .eq("property_id", context.propertyId)
+    .maybeSingle();
+
+  if (reportError || !report || report.status === "draft") {
+    console.error("Erro ao localizar relatório para pagamento:", reportError);
+    redirect(buildReturnPath(context, { erro: "pagamento-relatorio" }));
+  }
+
+  const { data: existingPayments, error: paymentsError } = await adminSupabase
+    .from("owner_report_payments")
+    .select("amount")
+    .eq("report_id", reportId);
+
+  if (paymentsError) {
+    console.error("Erro ao consultar pagamentos existentes:", paymentsError);
+    redirect(buildReturnPath(context, { erro: "pagamento-salvar" }));
+  }
+
+  const amountDue = Number(report.amount_due_to_manager ?? 0);
+  const amountAlreadyPaid = (existingPayments ?? []).reduce(
+    (total, payment) => total + Number(payment.amount ?? 0),
+    0
+  );
+  const remainingAmount = Math.max(0, amountDue - amountAlreadyPaid);
+
+  if (amountDue <= 0 || amount > remainingAmount + 0.005) {
+    redirect(buildReturnPath(context, { erro: "pagamento-excede" }));
+  }
+
+  const { error: insertError } = await adminSupabase
+    .from("owner_report_payments")
+    .insert({
+      report_id: reportId,
+      payment_date: paymentDate,
+      amount,
+      payment_method: paymentMethod || null,
+      payment_reference: paymentReference || null,
+      notes: notes || null,
+      created_by: user.id,
+    });
+
+  if (insertError) {
+    console.error("Erro ao registrar pagamento:", insertError);
+    redirect(buildReturnPath(context, { erro: "pagamento-salvar" }));
+  }
+
+  try {
+    await synchronizeReportPaymentStatus(adminSupabase, reportId);
+  } catch (error) {
+    console.error("Erro ao sincronizar status do pagamento:", error);
+    redirect(buildReturnPath(context, { erro: "pagamento-status" }));
+  }
+
+  revalidatePath("/admin/relatorios");
+  revalidatePath("/admin/relatorios/pdf");
+  redirect(buildReturnPath(context, { salvo: "pagamento" }));
+}
+
+export async function deleteOwnerReportPayment(
+  formData: FormData
+): Promise<void> {
+  const context = getReturnContext(formData);
+  const reportId = getTextValue(formData, "reportId");
+  const paymentId = getTextValue(formData, "paymentId");
+
+  if (!isValidUuid(reportId) || !isValidUuid(paymentId)) {
+    redirect(buildReturnPath(context, { erro: "pagamento-excluir" }));
+  }
+
+  const { adminSupabase } = await requireAdmin();
+
+  const { data: payment, error: paymentError } = await adminSupabase
+    .from("owner_report_payments")
+    .select("id, report_id")
+    .eq("id", paymentId)
+    .eq("report_id", reportId)
+    .maybeSingle();
+
+  if (paymentError || !payment) {
+    console.error("Erro ao localizar pagamento para exclusão:", paymentError);
+    redirect(buildReturnPath(context, { erro: "pagamento-excluir" }));
+  }
+
+  const { error: deleteError } = await adminSupabase
+    .from("owner_report_payments")
+    .delete()
+    .eq("id", paymentId)
+    .eq("report_id", reportId);
+
+  if (deleteError) {
+    console.error("Erro ao excluir pagamento:", deleteError);
+    redirect(buildReturnPath(context, { erro: "pagamento-excluir" }));
+  }
+
+  try {
+    await synchronizeReportPaymentStatus(adminSupabase, reportId);
+  } catch (error) {
+    console.error("Erro ao sincronizar status após exclusão:", error);
+    redirect(buildReturnPath(context, { erro: "pagamento-status" }));
+  }
+
+  revalidatePath("/admin/relatorios");
+  revalidatePath("/admin/relatorios/pdf");
+  redirect(buildReturnPath(context, { salvo: "pagamento-excluido" }));
 }

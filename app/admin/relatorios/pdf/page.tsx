@@ -2,6 +2,14 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  calculateOwnerReportFinancial,
+  getServicePlanLabel,
+  isCleaningCategory,
+  isServicePlan,
+  resolveCommissionPercentage,
+  type ServicePlan,
+} from "@/lib/ownerReportFinancial";
 
 import PrintActions from "./PrintActions";
 
@@ -28,6 +36,12 @@ type OwnerRow = {
   whatsapp: string | null;
 };
 
+type OwnerLinkRow = {
+  owner_id: string;
+  service_plan: string;
+  commission_percentage: number | string;
+};
+
 type FinancialEntry = {
   id: string;
   entry_date: string;
@@ -44,9 +58,17 @@ type FinancialEntry = {
 type SavedReport = {
   id: string;
   status: "draft" | "closed" | "sent";
+  service_plan: string;
+  commission_percentage: number | string;
   gross_revenue: number | string;
+  cleaning_total: number | string;
+  commission_base: number | string;
+  commission_amount: number | string;
   deductible_expenses: number | string;
+  reimbursable_expenses: number | string;
+  amount_due_to_manager: number | string;
   net_owner_amount: number | string;
+  payment_status: "not_due" | "pending" | "partial" | "paid" | "cancelled";
   notes: string | null;
   generated_at: string | null;
   sent_at: string | null;
@@ -133,6 +155,25 @@ function getStatusLabel(status?: SavedReport["status"]): string {
   return "Prévia";
 }
 
+function getPaymentStatusLabel(
+  status?: SavedReport["payment_status"]
+): string {
+  switch (status) {
+    case "pending":
+      return "Pagamento pendente";
+    case "partial":
+      return "Pago parcialmente";
+    case "paid":
+      return "Pago";
+    case "cancelled":
+      return "Cancelado";
+    case "not_due":
+      return "Ainda não devido";
+    default:
+      return "Prévia financeira";
+  }
+}
+
 function safeFileName(value: string): string {
   return value
     .normalize("NFD")
@@ -194,7 +235,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
     await Promise.all([
       adminSupabase
         .from("property_owner_links")
-        .select("owner_id")
+        .select("owner_id, service_plan, commission_percentage")
         .eq("property_id", propertyId)
         .eq("is_primary", true)
         .limit(1)
@@ -222,9 +263,17 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
         .select(`
           id,
           status,
+          service_plan,
+          commission_percentage,
           gross_revenue,
+          cleaning_total,
+          commission_base,
+          commission_amount,
           deductible_expenses,
+          reimbursable_expenses,
+          amount_due_to_manager,
           net_owner_amount,
+          payment_status,
           notes,
           generated_at,
           sent_at,
@@ -263,13 +312,15 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
     );
   }
 
+  const ownerLink = (ownerLinkResult.data as OwnerLinkRow | null) ?? null;
+
   let owner: OwnerRow | null = null;
 
-  if (ownerLinkResult.data?.owner_id) {
+  if (ownerLink?.owner_id) {
     const { data: ownerData, error: ownerError } = await adminSupabase
       .from("property_owners")
       .select("id, full_name, email, phone, whatsapp")
-      .eq("id", ownerLinkResult.data.owner_id)
+      .eq("id", ownerLink.owner_id)
       .maybeSingle();
 
     if (ownerError) {
@@ -289,31 +340,67 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
   const savedReport = (reportResult.data as SavedReport | null) ?? null;
   const pendingMaintenance = (maintenanceResult.data ?? []) as PendingMaintenance[];
 
-  const currentGrossRevenue = entries
-    .filter((entry) => entry.entry_type === "revenue")
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const linkServicePlan: ServicePlan =
+    ownerLink && isServicePlan(ownerLink.service_plan)
+      ? ownerLink.service_plan
+      : "custom";
 
-  const currentDeductibleExpenses = entries
-    .filter(
-      (entry) => entry.entry_type === "expense" && entry.deduct_from_owner
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const currentCommissionPercentage = resolveCommissionPercentage(
+    linkServicePlan,
+    ownerLink?.commission_percentage ?? 0
+  );
+
+  const currentFinancial = calculateOwnerReportFinancial(
+    entries,
+    currentCommissionPercentage
+  );
+
+  const servicePlan: ServicePlan =
+    savedReport && isServicePlan(savedReport.service_plan)
+      ? savedReport.service_plan
+      : linkServicePlan;
+
+  const commissionPercentage = savedReport
+    ? Number(savedReport.commission_percentage ?? 0)
+    : currentFinancial.commissionPercentage;
 
   const grossRevenue = savedReport
     ? Number(savedReport.gross_revenue ?? 0)
-    : currentGrossRevenue;
-  const deductibleExpenses = savedReport
-    ? Number(savedReport.deductible_expenses ?? 0)
-    : currentDeductibleExpenses;
+    : currentFinancial.grossRevenue;
+
+  const cleaningTotal = savedReport
+    ? Number(savedReport.cleaning_total ?? 0)
+    : currentFinancial.cleaningTotal;
+
+  const commissionBase = savedReport
+    ? Number(savedReport.commission_base ?? 0)
+    : currentFinancial.commissionBase;
+
+  const commissionAmount = savedReport
+    ? Number(savedReport.commission_amount ?? 0)
+    : currentFinancial.commissionAmount;
+
+  const reimbursableExpenses = savedReport
+    ? Number(savedReport.reimbursable_expenses ?? savedReport.deductible_expenses ?? 0)
+    : currentFinancial.reimbursableExpenses;
+
+  const amountDueToManager = savedReport
+    ? Number(savedReport.amount_due_to_manager ?? 0)
+    : currentFinancial.amountDueToManager;
+
   const netOwnerAmount = savedReport
     ? Number(savedReport.net_owner_amount ?? 0)
-    : grossRevenue - deductibleExpenses;
+    : currentFinancial.netOwnerAmount;
 
-  const nonDeductibleExpenses = entries
-    .filter(
-      (entry) => entry.entry_type === "expense" && !entry.deduct_from_owner
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const totalExpenses = Math.max(
+    0,
+    Math.round((grossRevenue - commissionAmount - netOwnerAmount) * 100) / 100
+  );
+
+  const ownerPaidExpenses = Math.max(
+    0,
+    Math.round((totalExpenses - reimbursableExpenses) * 100) / 100
+  );
 
   const maintenanceExpenses = entries
     .filter(
@@ -377,6 +464,9 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
             <span className={`status status-${savedReport?.status ?? "preview"}`}>
               {getStatusLabel(savedReport?.status)}
             </span>
+            <span className={`payment-status payment-${savedReport?.payment_status ?? "preview"}`}>
+              {getPaymentStatusLabel(savedReport?.payment_status)}
+            </span>
             <small>Gerado em {generatedNow}</small>
           </div>
         </header>
@@ -406,25 +496,41 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           <h2>Resumo financeiro</h2>
           <div className="summary-grid">
             <div className="summary-card revenue">
-              <span>Receita bruta</span>
+              <span>Receita recebida pelo proprietário</span>
               <strong>{formatCurrency(grossRevenue)}</strong>
             </div>
-            <div className="summary-card expense">
-              <span>Despesas descontáveis</span>
-              <strong>{formatCurrency(deductibleExpenses)}</strong>
+            <div className="summary-card cleaning">
+              <span>Faxina paga diretamente</span>
+              <strong>{formatCurrency(cleaningTotal)}</strong>
             </div>
-            <div className="summary-card maintenance">
-              <span>Manutenção incluída</span>
-              <strong>{formatCurrency(maintenanceExpenses)}</strong>
+            <div className="summary-card commission">
+              <span>Comissão ({commissionPercentage.toLocaleString("pt-BR")}%)</span>
+              <strong>{formatCurrency(commissionAmount)}</strong>
+            </div>
+            <div className="summary-card expense">
+              <span>Despesas a reembolsar</span>
+              <strong>{formatCurrency(reimbursableExpenses)}</strong>
+            </div>
+            <div className="summary-card due">
+              <span>Total a pagar à gestão</span>
+              <strong>{formatCurrency(amountDueToManager)}</strong>
             </div>
             <div className="summary-card net">
-              <span>Repasse líquido</span>
+              <span>Resultado líquido do proprietário</span>
               <strong>{formatCurrency(netOwnerAmount)}</strong>
             </div>
           </div>
-          {nonDeductibleExpenses > 0 && (
+          <p className="info-note">
+            Plano: <strong>{getServicePlanLabel(servicePlan)}</strong>. A comissão foi calculada sobre {formatCurrency(commissionBase)}, após descontar {formatCurrency(cleaningTotal)} de faxinas da receita bruta. O proprietário paga as faxinas diretamente.
+          </p>
+          {ownerPaidExpenses > 0 && (
             <p className="info-note">
-              Despesas informativas que não reduzem o repasse: {formatCurrency(nonDeductibleExpenses)}.
+              Outras despesas pagas diretamente pelo proprietário: {formatCurrency(ownerPaidExpenses)}. Elas reduzem o resultado líquido, mas não entram no valor a reembolsar à gestão.
+            </p>
+          )}
+          {maintenanceExpenses > 0 && (
+            <p className="info-note">
+              Manutenções pagas pela gestão e incluídas no reembolso: {formatCurrency(maintenanceExpenses)}.
             </p>
           )}
         </section>
@@ -471,7 +577,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           <section className="warning-section">
             <h2>Manutenções pendentes de lançamento</h2>
             <p>
-              Estes valores ainda não estão incluídos no repasse líquido acima.
+              Estes valores ainda não estão incluídos no resultado nem no total a pagar à gestão.
             </p>
             <div className="summary-list">
               {pendingMaintenance.map((ticket) => (
@@ -508,7 +614,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
                   <th>Canal / referência</th>
                   <th>Descrição</th>
                   <th className="money">Valor</th>
-                  <th>Repasse</th>
+                  <th>Pagamento</th>
                 </tr>
               </thead>
               <tbody>
@@ -525,10 +631,12 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
                     </td>
                     <td>
                       {entry.entry_type === "revenue"
-                        ? "Soma"
-                        : entry.deduct_from_owner
-                          ? "Desconta"
-                          : "Informativa"}
+                        ? "Recebido pelo proprietário"
+                        : isCleaningCategory(entry.category)
+                          ? "Pago pelo proprietário"
+                          : entry.deduct_from_owner
+                            ? "Reembolsar gestão"
+                            : "Pago pelo proprietário"}
                     </td>
                   </tr>
                 ))}
@@ -665,6 +773,35 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
           text-transform: uppercase;
           letter-spacing: 0.06em;
         }
+        .payment-status {
+          border-radius: 999px;
+          padding: 6px 10px;
+          font-size: 9px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+        .payment-paid {
+          background: #dcfce7;
+          color: #166534;
+        }
+        .payment-partial {
+          background: #e0f2fe;
+          color: #075985;
+        }
+        .payment-pending {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        .payment-not_due,
+        .payment-preview {
+          background: #fef3c7;
+          color: #92400e;
+        }
+        .payment-cancelled {
+          background: #e2e8f0;
+          color: #475569;
+        }
         .status-draft,
         .status-preview {
           background: #fef3c7;
@@ -719,7 +856,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
         }
         .summary-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 10px;
         }
         .summary-card {
@@ -739,8 +876,21 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
         .summary-card.expense strong {
           color: #b91c1c;
         }
+        .summary-card.cleaning strong {
+          color: #b45309;
+        }
+        .summary-card.commission strong {
+          color: #1d4ed8;
+        }
         .summary-card.maintenance strong {
           color: #b45309;
+        }
+        .summary-card.due {
+          background: #ecfdf5;
+          border-color: #6ee7b7;
+        }
+        .summary-card.due strong {
+          color: #047857;
         }
         .summary-card.net {
           background: #172554;

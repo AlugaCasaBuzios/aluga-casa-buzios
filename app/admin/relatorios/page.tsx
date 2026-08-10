@@ -3,6 +3,13 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import {
+  calculateOwnerReportFinancial,
+  getServicePlanLabel,
+  isServicePlan,
+  resolveCommissionPercentage,
+  type ServicePlan,
+} from "@/lib/ownerReportFinancial";
 
 import {
   createFinancialEntry,
@@ -41,6 +48,14 @@ type OwnerRow = {
   notes: string | null;
 };
 
+type OwnerLinkRow = {
+  owner_id: string;
+  service_plan: string;
+  commission_percentage: number | string;
+  contract_start_date: string | null;
+  contract_notes: string | null;
+};
+
 type FinancialEntry = {
   id: string;
   entry_date: string;
@@ -69,13 +84,54 @@ type OwnerReport = {
   period_end: string;
   status: "draft" | "closed" | "sent";
   gross_revenue: number | string;
+  cleaning_total: number | string;
+  commission_base: number | string;
+  commission_percentage: number | string;
+  commission_amount: number | string;
   deductible_expenses: number | string;
+  reimbursable_expenses: number | string;
+  amount_due_to_manager: number | string;
   net_owner_amount: number | string;
+  payment_status: "not_due" | "pending" | "partial" | "paid" | "cancelled";
   notes: string | null;
   generated_at: string | null;
   sent_at: string | null;
   created_at: string;
 };
+
+function getPaymentStatusLabel(
+  status: OwnerReport["payment_status"]
+): string {
+  switch (status) {
+    case "not_due":
+      return "Ainda não devido";
+    case "pending":
+      return "Pagamento pendente";
+    case "partial":
+      return "Pago parcialmente";
+    case "paid":
+      return "Pago";
+    case "cancelled":
+      return "Cancelado";
+  }
+}
+
+function getPaymentStatusClass(
+  status: OwnerReport["payment_status"]
+): string {
+  switch (status) {
+    case "paid":
+      return "bg-emerald-100 text-emerald-900";
+    case "partial":
+      return "bg-sky-100 text-sky-900";
+    case "pending":
+      return "bg-red-100 text-red-900";
+    case "cancelled":
+      return "bg-slate-200 text-slate-700";
+    case "not_due":
+      return "bg-amber-100 text-amber-900";
+  }
+}
 
 function isDateOnly(value?: string): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -193,7 +249,7 @@ function getFeedbackMessage(salvo?: string): string | null {
 function getErrorMessage(erro?: string): string | null {
   switch (erro) {
     case "proprietario-campos":
-      return "Informe pelo menos o nome do proprietário.";
+      return "Informe o nome, o plano de serviço e um percentual de comissão válido.";
     case "proprietario-salvar":
     case "proprietario-vinculo":
       return "Não foi possível salvar o proprietário. Tente novamente.";
@@ -266,6 +322,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const periodEnd = isDateOnly(params.fim) ? params.fim : defaultPeriod.end;
 
   let owner: OwnerRow | null = null;
+  let ownerLink: OwnerLinkRow | null = null;
   let entries: FinancialEntry[] = [];
   let pendingMaintenance: PendingMaintenance[] = [];
   let reports: OwnerReport[] = [];
@@ -276,7 +333,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       await Promise.all([
         adminSupabase
           .from("property_owner_links")
-          .select("owner_id")
+          .select(`
+            owner_id,
+            service_plan,
+            commission_percentage,
+            contract_start_date,
+            contract_notes
+          `)
           .eq("property_id", selectedProperty.id)
           .eq("is_primary", true)
           .limit(1)
@@ -325,8 +388,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             period_end,
             status,
             gross_revenue,
+            cleaning_total,
+            commission_base,
+            commission_percentage,
+            commission_amount,
             deductible_expenses,
+            reimbursable_expenses,
+            amount_due_to_manager,
             net_owner_amount,
+            payment_status,
             notes,
             generated_at,
             sent_at,
@@ -340,6 +410,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     if (ownerLinkResult.error) {
       console.error("Erro ao carregar vínculo do proprietário:", ownerLinkResult.error);
       loadError = "Não foi possível carregar o vínculo do proprietário.";
+    } else {
+      ownerLink = (ownerLinkResult.data as OwnerLinkRow | null) ?? null;
     }
 
     if (entriesResult.error) {
@@ -363,11 +435,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       reports = (reportsResult.data ?? []) as OwnerReport[];
     }
 
-    if (ownerLinkResult.data?.owner_id) {
+    if (ownerLink?.owner_id) {
       const { data: ownerData, error: ownerError } = await adminSupabase
         .from("property_owners")
         .select("id, full_name, email, phone, whatsapp, notes")
-        .eq("id", ownerLinkResult.data.owner_id)
+        .eq("id", ownerLink.owner_id)
         .maybeSingle();
 
       if (ownerError) {
@@ -379,30 +451,37 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     }
   }
 
-  const grossRevenue = entries
-    .filter((entry) => entry.entry_type === "revenue")
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const servicePlan: ServicePlan =
+    ownerLink && isServicePlan(ownerLink.service_plan)
+      ? ownerLink.service_plan
+      : "custom";
 
-  const deductibleExpenses = entries
-    .filter(
-      (entry) => entry.entry_type === "expense" && entry.deduct_from_owner
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const commissionPercentage = resolveCommissionPercentage(
+    servicePlan,
+    ownerLink?.commission_percentage ?? 0
+  );
 
-  const nonDeductibleExpenses = entries
-    .filter(
-      (entry) => entry.entry_type === "expense" && !entry.deduct_from_owner
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const financial = calculateOwnerReportFinancial(
+    entries,
+    commissionPercentage
+  );
 
-  const netOwnerAmount = grossRevenue - deductibleExpenses;
+  const {
+    grossRevenue,
+    cleaningTotal,
+    commissionBase,
+    commissionAmount,
+    reimbursableExpenses,
+    ownerPaidExpenses,
+    amountDueToManager,
+    netOwnerAmount,
+  } = financial;
 
   const pendingMaintenanceTotal = pendingMaintenance.reduce(
     (sum, ticket) => sum + Number(ticket.final_cost ?? 0),
     0
   );
 
-  const projectedNetOwnerAmount = netOwnerAmount - pendingMaintenanceTotal;
   const revenueEntries = entries.filter((entry) => entry.entry_type === "revenue");
 
   const revenueByChannel = new Map<string, number>();
@@ -530,35 +609,43 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           </section>
         ) : (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-3xl bg-white p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Receita bruta</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Receita recebida pelo proprietário</p>
                 <p className="mt-2 text-2xl font-black text-emerald-700">{formatCurrency(grossRevenue)}</p>
                 <p className="mt-1 text-xs text-slate-500">{revenueEntries.length} lançamento(s)</p>
               </div>
 
               <div className="rounded-3xl bg-white p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Despesas descontáveis</p>
-                <p className="mt-2 text-2xl font-black text-red-700">{formatCurrency(deductibleExpenses)}</p>
-                <p className="mt-1 text-xs text-slate-500">Impactam o repasse</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Faxinas pagas diretamente</p>
+                <p className="mt-2 text-2xl font-black text-amber-700">{formatCurrency(cleaningTotal)}</p>
+                <p className="mt-1 text-xs text-slate-500">Reduzem apenas a base da comissão</p>
+              </div>
+
+              <div className="rounded-3xl bg-white p-5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Comissão da gestão</p>
+                <p className="mt-2 text-2xl font-black text-sky-700">{formatCurrency(commissionAmount)}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {getServicePlanLabel(servicePlan)} • {financial.commissionPercentage.toLocaleString("pt-BR")}% sobre {formatCurrency(commissionBase)}
+                </p>
+              </div>
+
+              <div className="rounded-3xl bg-white p-5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Despesas a reembolsar</p>
+                <p className="mt-2 text-2xl font-black text-red-700">{formatCurrency(reimbursableExpenses)}</p>
+                <p className="mt-1 text-xs text-slate-500">Valores pagos pela gestão</p>
               </div>
 
               <div className="rounded-3xl bg-blue-950 p-5 text-white shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-wide text-blue-200">Repasse líquido</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-blue-200">Total devido à gestão</p>
+                <p className="mt-2 text-2xl font-black">{formatCurrency(amountDueToManager)}</p>
+                <p className="mt-1 text-xs text-blue-200">Comissão + despesas reembolsáveis</p>
+              </div>
+
+              <div className="rounded-3xl bg-emerald-800 p-5 text-white shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-100">Resultado líquido do proprietário</p>
                 <p className="mt-2 text-2xl font-black">{formatCurrency(netOwnerAmount)}</p>
-                <p className="mt-1 text-xs text-blue-200">Receitas − despesas descontáveis</p>
-              </div>
-
-              <div className="rounded-3xl bg-amber-50 p-5 shadow-sm ring-1 ring-amber-200">
-                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Integração pendente</p>
-                <p className="mt-2 text-2xl font-black text-amber-900">{formatCurrency(pendingMaintenanceTotal)}</p>
-                <p className="mt-1 text-xs text-amber-700">Chamados que precisam de sincronização</p>
-              </div>
-
-              <div className="rounded-3xl bg-slate-800 p-5 text-white shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Repasse projetado</p>
-                <p className="mt-2 text-2xl font-black">{formatCurrency(projectedNetOwnerAmount)}</p>
-                <p className="mt-1 text-xs text-slate-300">Considerando manutenção pendente</p>
+                <p className="mt-1 text-xs text-emerald-100">Receitas − todas as despesas − comissão</p>
               </div>
             </section>
 
@@ -612,6 +699,57 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       defaultValue={owner?.whatsapp ?? ""}
                       className="min-h-12 rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-700"
                       placeholder="Ex.: +55 22 99999-9999"
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                    Plano de serviço *
+                    <select
+                      name="servicePlan"
+                      required
+                      defaultValue={servicePlan}
+                      className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 outline-none focus:border-blue-700"
+                    >
+                      <option value="full">Gerenciamento completo — 20%</option>
+                      <option value="basic">Gerenciamento básico — 15%</option>
+                      <option value="referral">Indicação de cliente — 10%</option>
+                      <option value="custom">Plano personalizado</option>
+                    </select>
+                  </label>
+
+                  <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                    Comissão (%) *
+                    <input
+                      name="commissionPercentage"
+                      required
+                      inputMode="decimal"
+                      defaultValue={commissionPercentage}
+                      placeholder="Ex.: 20"
+                      className="min-h-12 rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-700"
+                    />
+                  </label>
+
+                  <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-900 sm:col-span-2">
+                    Os planos completo, básico e indicação usam automaticamente 20%, 15% e 10%. O percentual informado é utilizado somente no plano personalizado.
+                  </p>
+
+                  <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                    Início do contrato
+                    <input
+                      type="date"
+                      name="contractStartDate"
+                      defaultValue={ownerLink?.contract_start_date ?? ""}
+                      className="min-h-12 rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-700"
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                    Observações do contrato
+                    <input
+                      name="contractNotes"
+                      defaultValue={ownerLink?.contract_notes ?? ""}
+                      placeholder="Condições ou exceções"
+                      className="min-h-12 rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-700"
                     />
                   </label>
 
@@ -673,7 +811,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     <input
                       name="category"
                       required
-                      placeholder="Ex.: Reserva, Comissão, Luz, Faxina"
+                      placeholder="Ex.: Reserva, Manutenção, Luz ou Faxina"
                       className="min-h-12 rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-700"
                     />
                   </label>
@@ -720,7 +858,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                   <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 sm:col-span-2">
                     <input type="checkbox" name="deductFromOwner" className="mt-1 h-4 w-4" />
                     <span>
-                      Descontar do repasse do proprietário. Use esta opção apenas para despesas que realmente reduzem o valor a repassar.
+                      Esta despesa foi paga por mim e deverá ser reembolsada pelo proprietário. Não marque para faxinas ou despesas que o proprietário pagou diretamente.
                     </span>
                   </label>
 
@@ -831,9 +969,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       ))
                   )}
                 </div>
-                {nonDeductibleExpenses > 0 && (
+                {ownerPaidExpenses > 0 && (
                   <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                    Despesas informativas que não reduzem o repasse: {formatCurrency(nonDeductibleExpenses)}
+                    Despesas pagas diretamente pelo proprietário: {formatCurrency(ownerPaidExpenses)}
                   </p>
                 )}
               </div>
@@ -865,7 +1003,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                         <th className="px-3 py-3">Canal / referência</th>
                         <th className="px-3 py-3">Descrição</th>
                         <th className="px-3 py-3 text-right">Valor</th>
-                        <th className="px-3 py-3">Repasse</th>
+                        <th className="px-3 py-3">Pagamento</th>
                         <th className="px-3 py-3 text-right">Ação</th>
                       </tr>
                     </thead>
@@ -907,9 +1045,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                           <td className="px-3 py-4 text-slate-600">
                             {entry.entry_type === "expense"
                               ? entry.deduct_from_owner
-                                ? "Desconta"
-                                : "Informativa"
-                              : "Soma"}
+                                ? "Reembolsar gestão"
+                                : "Pago pelo proprietário"
+                              : "Recebido pelo proprietário"}
                           </td>
                           <td className="px-3 py-4 text-right">
                             <form action={deleteFinancialEntry}>
@@ -937,6 +1075,29 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 <p className="mt-2 text-sm text-blue-100">
                   Grave um snapshot dos valores atuais e gere a prestação de contas em formato pronto para PDF.
                 </p>
+
+                <div className="mt-5 grid gap-2 rounded-2xl bg-white/10 p-4 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <span className="text-blue-100">Plano</span>
+                    <strong className="text-right">{getServicePlanLabel(servicePlan)} — {financial.commissionPercentage.toLocaleString("pt-BR")}%</strong>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-blue-100">Base da comissão</span>
+                    <strong>{formatCurrency(commissionBase)}</strong>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-blue-100">Comissão</span>
+                    <strong>{formatCurrency(commissionAmount)}</strong>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-blue-100">Despesas a reembolsar</span>
+                    <strong>{formatCurrency(reimbursableExpenses)}</strong>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-white/20 pt-2 text-base">
+                    <span className="font-bold text-white">Total devido à gestão</span>
+                    <strong>{formatCurrency(amountDueToManager)}</strong>
+                  </div>
+                </div>
 
                 {owner && selectedProperty && (
                   <Link
@@ -1014,9 +1175,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                               <span className={`rounded-full px-3 py-1 text-xs font-black ${getStatusClass(report.status)}`}>
                                 {getStatusLabel(report.status)}
                               </span>
+                              <span className={`rounded-full px-3 py-1 text-xs font-black ${getPaymentStatusClass(report.payment_status)}`}>
+                                {getPaymentStatusLabel(report.payment_status)}
+                              </span>
                             </div>
                             <p className="mt-2 text-sm text-slate-600">
-                              Receita {formatCurrency(report.gross_revenue)} • Despesas {formatCurrency(report.deductible_expenses)} • Repasse {formatCurrency(report.net_owner_amount)}
+                              Receita {formatCurrency(report.gross_revenue)} • Faxinas {formatCurrency(report.cleaning_total)} • Comissão {formatCurrency(report.commission_amount)}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-700">
+                              Reembolso {formatCurrency(report.reimbursable_expenses)} • Total devido à gestão {formatCurrency(report.amount_due_to_manager)}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Resultado líquido do proprietário: {formatCurrency(report.net_owner_amount)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
                               Criado em {formatDateTime(report.created_at)}

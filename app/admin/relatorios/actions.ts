@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { syncMaintenanceFinancialEntry } from "@/lib/maintenanceFinancial";
+import {
+  calculateOwnerReportFinancial,
+  isServicePlan,
+  resolveCommissionPercentage,
+} from "@/lib/ownerReportFinancial";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -132,10 +137,27 @@ export async function savePropertyOwner(formData: FormData): Promise<void> {
   const phone = getTextValue(formData, "phone");
   const whatsapp = getTextValue(formData, "whatsapp");
   const notes = getTextValue(formData, "notes");
+  const servicePlan = getTextValue(formData, "servicePlan");
+  const commissionPercentageInput = parseMoney(
+    getTextValue(formData, "commissionPercentage")
+  );
+  const contractStartDate = getTextValue(formData, "contractStartDate");
+  const contractNotes = getTextValue(formData, "contractNotes");
 
-  if (!context.propertyId || !fullName) {
+  if (
+    !context.propertyId ||
+    !fullName ||
+    !isServicePlan(servicePlan) ||
+    (servicePlan === "custom" && commissionPercentageInput === null) ||
+    (contractStartDate && !isDateOnly(contractStartDate))
+  ) {
     redirect(buildReturnPath(context, { erro: "proprietario-campos" }));
   }
+
+  const commissionPercentage = resolveCommissionPercentage(
+    servicePlan,
+    commissionPercentageInput
+  );
 
   const { adminSupabase } = await requireAdmin();
 
@@ -197,6 +219,10 @@ export async function savePropertyOwner(formData: FormData): Promise<void> {
       owner_id: savedOwnerId,
       ownership_percentage: 100,
       is_primary: true,
+      service_plan: servicePlan,
+      commission_percentage: commissionPercentage,
+      contract_start_date: contractStartDate || null,
+      contract_notes: contractNotes || null,
     });
 
   if (linkError) {
@@ -244,6 +270,8 @@ export async function createFinancialEntry(formData: FormData): Promise<void> {
       amount,
       deduct_from_owner: entryType === "expense" ? deductFromOwner : false,
       reservation_reference: reservationReference || null,
+      entry_source: "manual",
+      receipt_status: entryType === "expense" ? "pending" : "not_required",
       created_by: user.id,
     });
 
@@ -375,7 +403,7 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
 
   const { data: ownerLink, error: ownerLinkError } = await adminSupabase
     .from("property_owner_links")
-    .select("owner_id")
+    .select("owner_id, service_plan, commission_percentage")
     .eq("property_id", context.propertyId)
     .eq("is_primary", true)
     .maybeSingle();
@@ -386,7 +414,7 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
 
   const { data: entries, error: entriesError } = await adminSupabase
     .from("property_financial_entries")
-    .select("entry_type, amount, deduct_from_owner")
+    .select("entry_type, category, amount, deduct_from_owner")
     .eq("property_id", context.propertyId)
     .gte("entry_date", context.periodStart)
     .lte("entry_date", context.periodEnd);
@@ -396,28 +424,37 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
     redirect(buildReturnPath(context, { erro: "relatorio-salvar" }));
   }
 
-  const grossRevenue = (entries ?? [])
-    .filter((entry) => entry.entry_type === "revenue")
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const servicePlan = isServicePlan(ownerLink.service_plan)
+    ? ownerLink.service_plan
+    : "custom";
 
-  const deductibleExpenses = (entries ?? [])
-    .filter(
-      (entry) => entry.entry_type === "expense" && entry.deduct_from_owner
-    )
-    .reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
+  const commissionPercentage = resolveCommissionPercentage(
+    servicePlan,
+    ownerLink.commission_percentage
+  );
 
-  const netOwnerAmount = grossRevenue - deductibleExpenses;
+  const financial = calculateOwnerReportFinancial(
+    entries ?? [],
+    commissionPercentage
+  );
   const now = new Date().toISOString();
 
-  const reportSnapshot = {
+  const baseReportSnapshot = {
     property_id: context.propertyId,
     owner_id: ownerLink.owner_id,
     period_start: context.periodStart,
     period_end: context.periodEnd,
     status,
-    gross_revenue: Math.round(grossRevenue * 100) / 100,
-    deductible_expenses: Math.round(deductibleExpenses * 100) / 100,
-    net_owner_amount: Math.round(netOwnerAmount * 100) / 100,
+    service_plan: servicePlan,
+    commission_percentage: financial.commissionPercentage,
+    gross_revenue: financial.grossRevenue,
+    cleaning_total: financial.cleaningTotal,
+    commission_base: financial.commissionBase,
+    commission_amount: financial.commissionAmount,
+    deductible_expenses: financial.reimbursableExpenses,
+    reimbursable_expenses: financial.reimbursableExpenses,
+    amount_due_to_manager: financial.amountDueToManager,
+    net_owner_amount: financial.netOwnerAmount,
     notes: notes || null,
     generated_at: status === "draft" ? null : now,
     sent_at: status === "sent" ? now : null,
@@ -431,7 +468,7 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
   const { data: existingReports, error: existingReportsError } =
     await adminSupabase
       .from("owner_reports")
-      .select("id, status, created_at, updated_at")
+      .select("id, status, payment_status, created_at, updated_at")
       .eq("property_id", context.propertyId)
       .eq("period_start", context.periodStart)
       .eq("period_end", context.periodEnd)
@@ -447,6 +484,18 @@ export async function createOwnerReportSnapshot(formData: FormData): Promise<voi
   }
 
   const primaryReportId = existingReports?.[0]?.id ?? null;
+  const previousPaymentStatus = existingReports?.[0]?.payment_status;
+  const paymentStatus =
+    previousPaymentStatus === "paid" || previousPaymentStatus === "partial"
+      ? previousPaymentStatus
+      : financial.amountDueToManager <= 0 || status === "draft"
+        ? "not_due"
+        : "pending";
+
+  const reportSnapshot = {
+    ...baseReportSnapshot,
+    payment_status: paymentStatus,
+  };
 
   if (primaryReportId) {
     const { error } = await adminSupabase
@@ -504,9 +553,39 @@ export async function setOwnerReportStatus(formData: FormData): Promise<void> {
   const { adminSupabase } = await requireAdmin();
   const now = new Date().toISOString();
 
+  const { data: currentReport, error: currentReportError } =
+    await adminSupabase
+      .from("owner_reports")
+      .select("payment_status, amount_due_to_manager")
+      .eq("id", reportId)
+      .maybeSingle();
+
+  if (currentReportError || !currentReport) {
+    console.error(
+      "Erro ao localizar relatório antes de atualizar o status:",
+      currentReportError
+    );
+    redirect(buildReturnPath(context, { erro: "relatorio-status" }));
+  }
+
   const updates: Record<string, string | null> = {
     status,
   };
+
+  const preservesPaymentStatus =
+    currentReport.payment_status === "paid" ||
+    currentReport.payment_status === "partial";
+
+  if (!preservesPaymentStatus) {
+    const amountDueToManager = Number(
+      currentReport.amount_due_to_manager ?? 0
+    );
+
+    updates.payment_status =
+      status === "draft" || amountDueToManager <= 0
+        ? "not_due"
+        : "pending";
+  }
 
   if (status === "closed") {
     updates.generated_at = now;

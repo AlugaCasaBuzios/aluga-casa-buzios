@@ -60,6 +60,18 @@ type PropertyCatalogRow = {
   display_order: number;
 };
 
+type PendingReportRow = {
+  id: string;
+  amount_due_to_manager:
+    | number
+    | string;
+};
+
+type ReportPaymentRow = {
+  report_id: string;
+  amount: number | string;
+};
+
 function formatCurrency(
   value: number | null
 ): string {
@@ -131,6 +143,7 @@ export default async function AdminPage({
     catalogResult,
     newProposalsResult,
     archivedProposalsResult,
+    pendingReportsResult,
   ] = await Promise.all([
     supabase
       .from("property_pricing")
@@ -193,6 +206,21 @@ export default async function AdminPage({
         "is",
         null
       ),
+
+    adminSupabase
+      .from("owner_reports")
+      .select(`
+        id,
+        amount_due_to_manager
+      `)
+      .in("status", [
+        "closed",
+        "sent",
+      ])
+      .in("payment_status", [
+        "pending",
+        "partial",
+      ]),
   ]);
 
   const {
@@ -214,6 +242,14 @@ export default async function AdminPage({
     count: archivedProposalsCount,
     error: archivedProposalsCountError,
   } = archivedProposalsResult;
+
+  const {
+    data: pendingReportsData,
+    error: pendingReportsError,
+  } = pendingReportsResult;
+
+  let pendingSummaryError =
+    Boolean(pendingReportsError);
 
   if (catalogError) {
     console.error(
@@ -238,11 +274,114 @@ export default async function AdminPage({
     );
   }
 
+  if (pendingReportsError) {
+    console.error(
+      "Erro ao carregar cobranças pendentes:",
+      pendingReportsError
+    );
+  }
+
   const newProposals =
     newProposalsCount ?? 0;
 
   const archivedProposals =
     archivedProposalsCount ?? 0;
+
+  const pendingReportRows =
+    (pendingReportsData ?? []) as
+      PendingReportRow[];
+
+  const pendingReportIds =
+    pendingReportRows.map(
+      (report) => report.id
+    );
+
+  let reportPayments:
+    ReportPaymentRow[] = [];
+
+  if (
+    pendingReportIds.length > 0
+  ) {
+    const {
+      data: paymentsData,
+      error: paymentsError,
+    } = await adminSupabase
+      .from(
+        "owner_report_payments"
+      )
+      .select("report_id, amount")
+      .in(
+        "report_id",
+        pendingReportIds
+      );
+
+    if (paymentsError) {
+      pendingSummaryError = true;
+
+      console.error(
+        "Erro ao calcular pagamentos pendentes:",
+        paymentsError
+      );
+    } else {
+      reportPayments =
+        (paymentsData ?? []) as
+          ReportPaymentRow[];
+    }
+  }
+
+  const amountPaidByReport =
+    new Map<string, number>();
+
+  for (
+    const payment of
+    reportPayments
+  ) {
+    const currentAmount =
+      amountPaidByReport.get(
+        payment.report_id
+      ) ?? 0;
+
+    amountPaidByReport.set(
+      payment.report_id,
+      currentAmount +
+        Number(payment.amount ?? 0)
+    );
+  }
+
+  const pendingBalances =
+    pendingReportRows
+      .map((report) => {
+        const amountDue =
+          Number(
+            report.amount_due_to_manager ??
+              0
+          );
+
+        const amountPaid =
+          amountPaidByReport.get(
+            report.id
+          ) ?? 0;
+
+        return Math.max(
+          0,
+          amountDue - amountPaid
+        );
+      })
+      .filter(
+        (balance) => balance > 0
+      );
+
+  const pendingReportsCount =
+    pendingBalances.length;
+
+  const pendingReportsTotal =
+    Math.round(
+      pendingBalances.reduce(
+        (total, balance) =>
+          total + balance,
+        0
+      ) * 100
+    ) / 100;
 
   if (error) {
     console.error(
@@ -515,6 +654,87 @@ export default async function AdminPage({
             </div>
           </div>
         </header>
+
+        <section
+          className={`mb-8 rounded-3xl border p-6 shadow-sm ${
+            pendingSummaryError
+              ? "border-amber-200 bg-amber-50"
+              : pendingReportsCount > 0
+              ? "border-red-200 bg-red-50"
+              : "border-emerald-200 bg-emerald-50"
+          }`}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p
+                className={`text-sm font-bold uppercase tracking-widest ${
+                  pendingSummaryError
+                    ? "text-amber-800"
+                    : pendingReportsCount > 0
+                    ? "text-red-700"
+                    : "text-emerald-700"
+                }`}
+              >
+                Financeiro dos proprietários
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-slate-950">
+                {pendingSummaryError
+                  ? "Resumo financeiro indisponível"
+                  : pendingReportsCount > 0
+                  ? `${pendingReportsCount} ${
+                      pendingReportsCount ===
+                      1
+                        ? "cobrança pendente"
+                        : "cobranças pendentes"
+                    }`
+                  : "Nenhuma cobrança pendente"}
+              </h2>
+
+              <p className="mt-2 text-slate-700">
+                {pendingSummaryError
+                  ? "Abra a tela de cobranças e atualize a página antes de usar os valores."
+                  : pendingReportsCount > 0
+                  ? "Comissões e despesas aguardando pagamento dos proprietários."
+                  : "Todos os relatórios fechados estão pagos."}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="rounded-2xl bg-white px-6 py-4 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Saldo pendente
+                </p>
+
+                <p
+                  className={`mt-1 text-2xl font-black ${
+                    pendingSummaryError
+                      ? "text-amber-800"
+                      : pendingReportsCount > 0
+                      ? "text-red-700"
+                      : "text-emerald-700"
+                  }`}
+                >
+                  {pendingSummaryError
+                    ? "—"
+                    : formatCurrency(
+                        pendingReportsTotal
+                      )}
+                </p>
+              </div>
+
+              <Link
+                href="/admin/relatorios/pendencias"
+                style={{
+                  color: "#ffffff",
+                }}
+                className="inline-flex min-h-14 items-center justify-center rounded-xl bg-blue-950 px-6 py-4 text-center font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-900"
+              >
+                Ver cobranças
+              </Link>
+            </div>
+          </div>
+        </section>
 
         {salvo === "1" && (
           <div

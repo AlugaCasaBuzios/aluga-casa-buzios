@@ -271,6 +271,82 @@ function formatDateTime(value: string | null): string {
   }).format(new Date(value));
 }
 
+type ReportWhatsAppInput = {
+  whatsapp: string;
+  ownerName: string;
+  propertyName: string;
+  periodStart: string;
+  periodEnd: string;
+  grossRevenue: number;
+  cleaningTotal: number;
+  commissionAmount: number;
+  reimbursableExpenses: number;
+  amountDue: number;
+  amountPaid: number;
+  remainingAmount: number;
+};
+
+function buildReportWhatsAppUrl({
+  whatsapp,
+  ownerName,
+  propertyName,
+  periodStart,
+  periodEnd,
+  grossRevenue,
+  cleaningTotal,
+  commissionAmount,
+  reimbursableExpenses,
+  amountDue,
+  amountPaid,
+  remainingAmount,
+}: ReportWhatsAppInput): string | null {
+  const digits =
+    whatsapp.replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  const phoneNumber =
+    digits.startsWith("55")
+      ? digits
+      : digits.length === 10 ||
+          digits.length === 11
+        ? `55${digits}`
+        : digits;
+
+  if (phoneNumber.length < 10) {
+    return null;
+  }
+
+  const paymentSituation =
+    remainingAmount > 0
+      ? `*Saldo pendente: ${formatCurrency(remainingAmount)}*`
+      : "*Situação: pagamento quitado*";
+
+  const message = [
+    `Olá, ${ownerName}!`,
+    "",
+    `Segue o resumo da prestação de contas do imóvel *${propertyName}*, referente ao período de *${formatDate(periodStart)} a ${formatDate(periodEnd)}*.`,
+    "",
+    "*Resumo financeiro*",
+    `Receita recebida pelo proprietário: ${formatCurrency(grossRevenue)}`,
+    `Faxinas pagas diretamente: ${formatCurrency(cleaningTotal)}`,
+    `Comissão da gestão: ${formatCurrency(commissionAmount)}`,
+    `Despesas a reembolsar: ${formatCurrency(reimbursableExpenses)}`,
+    `Total devido à gestão: ${formatCurrency(amountDue)}`,
+    `Total já pago: ${formatCurrency(amountPaid)}`,
+    paymentSituation,
+    "",
+    "Estou enviando também o PDF da prestação de contas para conferência.",
+    "",
+    "Atenciosamente,",
+    "*Aluga Casa Búzios*",
+  ].join("\n");
+
+  return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+}
+
 function getStatusLabel(status: OwnerReport["status"]): string {
   switch (status) {
     case "draft":
@@ -1582,6 +1658,45 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                         Math.round((amountDue - amountPaid) * 100) / 100
                       );
 
+                      const reportWhatsAppUrl =
+                        owner?.whatsapp
+                          ? buildReportWhatsAppUrl({
+                              whatsapp:
+                                owner.whatsapp,
+                              ownerName:
+                                owner.full_name,
+                              propertyName:
+                                selectedProperty.title,
+                              periodStart:
+                                report.period_start,
+                              periodEnd:
+                                report.period_end,
+                              grossRevenue:
+                                Number(
+                                  report.gross_revenue ??
+                                    0
+                                ),
+                              cleaningTotal:
+                                Number(
+                                  report.cleaning_total ??
+                                    0
+                                ),
+                              commissionAmount:
+                                Number(
+                                  report.commission_amount ??
+                                    0
+                                ),
+                              reimbursableExpenses:
+                                Number(
+                                  report.reimbursable_expenses ??
+                                    0
+                                ),
+                              amountDue,
+                              amountPaid,
+                              remainingAmount,
+                            })
+                          : null;
+
                       return (
                       <article key={report.id} className="rounded-2xl border border-slate-200 p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1625,6 +1740,20 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                             >
                               PDF
                             </Link>
+
+                            {reportWhatsAppUrl && (
+                              <a
+                                href={reportWhatsAppUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Depois de abrir a conversa, anexe o PDF deste relatório."
+                                className="rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-green-700"
+                              >
+                                {remainingAmount > 0
+                                  ? "Enviar cobrança pelo WhatsApp"
+                                  : "Enviar prestação pelo WhatsApp"}
+                              </a>
+                            )}
 
                             {report.status !== "closed" && (
                               <form action={setOwnerReportStatus}>

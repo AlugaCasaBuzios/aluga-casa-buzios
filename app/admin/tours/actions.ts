@@ -340,6 +340,312 @@ export async function setStartScene(
   );
 }
 
+export async function updateVirtualTourScene(
+  formData: FormData
+) {
+  await requireAdminUser();
+
+  const tourId =
+    getFormText(
+      formData,
+      "tour_id"
+    );
+
+  const sceneId =
+    getFormText(
+      formData,
+      "scene_id"
+    );
+
+  const name =
+    getFormText(
+      formData,
+      "name"
+    ).slice(0, 100);
+
+  if (
+    !isValidUuid(tourId) ||
+    !isValidUuid(sceneId)
+  ) {
+    throw new Error(
+      "Identificador do ambiente inválido."
+    );
+  }
+
+  if (name.length < 2) {
+    throw new Error(
+      "Informe um nome válido para o ambiente."
+    );
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const {
+    data: tour,
+    error: tourError,
+  } = await supabase
+    .from("virtual_tours")
+    .select("id, slug")
+    .eq("id", tourId)
+    .maybeSingle();
+
+  if (tourError || !tour) {
+    throw new Error(
+      "O passeio virtual não foi encontrado."
+    );
+  }
+
+  const {
+    data: scene,
+    error: sceneError,
+  } = await supabase
+    .from("virtual_tour_scenes")
+    .select("id")
+    .eq("id", sceneId)
+    .eq("tour_id", tourId)
+    .maybeSingle();
+
+  if (sceneError || !scene) {
+    throw new Error(
+      "O ambiente não foi encontrado."
+    );
+  }
+
+  const {
+    error: updateError,
+  } = await supabase
+    .from("virtual_tour_scenes")
+    .update({
+      name,
+      caption: name,
+    })
+    .eq("id", sceneId)
+    .eq("tour_id", tourId);
+
+  if (updateError) {
+    console.error(
+      "Erro ao renomear ambiente 360°:",
+      updateError
+    );
+
+    throw new Error(
+      "Não foi possível renomear o ambiente."
+    );
+  }
+
+  revalidatePath(
+    `/admin/tours/${tourId}`
+  );
+
+  revalidatePath(
+    `/tour/${tour.slug}`
+  );
+
+  redirect(
+    `/admin/tours/${tourId}?ambiente_atualizado=1`
+  );
+}
+
+export async function moveVirtualTourScene(
+  formData: FormData
+) {
+  await requireAdminUser();
+
+  const tourId =
+    getFormText(
+      formData,
+      "tour_id"
+    );
+
+  const sceneId =
+    getFormText(
+      formData,
+      "scene_id"
+    );
+
+  const direction =
+    getFormText(
+      formData,
+      "direction"
+    );
+
+  if (
+    !isValidUuid(tourId) ||
+    !isValidUuid(sceneId) ||
+    ![
+      "up",
+      "down",
+    ].includes(direction)
+  ) {
+    throw new Error(
+      "Não foi possível identificar a alteração de ordem."
+    );
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const [
+    tourResult,
+    scenesResult,
+  ] = await Promise.all([
+    supabase
+      .from("virtual_tours")
+      .select("id, slug")
+      .eq("id", tourId)
+      .maybeSingle(),
+
+    supabase
+      .from("virtual_tour_scenes")
+      .select(`
+        id,
+        sort_order,
+        created_at
+      `)
+      .eq("tour_id", tourId)
+      .order("sort_order", {
+        ascending: true,
+      })
+      .order("created_at", {
+        ascending: true,
+      }),
+  ]);
+
+  if (
+    tourResult.error ||
+    !tourResult.data
+  ) {
+    throw new Error(
+      "O passeio virtual não foi encontrado."
+    );
+  }
+
+  if (scenesResult.error) {
+    throw new Error(
+      "Não foi possível carregar a ordem dos ambientes."
+    );
+  }
+
+  const orderedScenes = [
+    ...(scenesResult.data ?? []),
+  ];
+
+  const currentIndex =
+    orderedScenes.findIndex(
+      (scene) =>
+        scene.id === sceneId
+    );
+
+  if (currentIndex < 0) {
+    throw new Error(
+      "O ambiente não foi encontrado."
+    );
+  }
+
+  const targetIndex =
+    direction === "up"
+      ? currentIndex - 1
+      : currentIndex + 1;
+
+  if (
+    targetIndex < 0 ||
+    targetIndex >=
+      orderedScenes.length
+  ) {
+    redirect(
+      `/admin/tours/${tourId}?ordenado=1`
+    );
+  }
+
+  [
+    orderedScenes[currentIndex],
+    orderedScenes[targetIndex],
+  ] = [
+    orderedScenes[targetIndex],
+    orderedScenes[currentIndex],
+  ];
+
+  const temporaryBase =
+    Math.max(
+      0,
+      ...orderedScenes.map(
+        (scene) =>
+          Number(
+            scene.sort_order
+          ) || 0
+      )
+    ) +
+    orderedScenes.length +
+    1000;
+
+  const temporaryUpdates =
+    await Promise.all(
+      orderedScenes.map(
+        (scene, index) =>
+          supabase
+            .from(
+              "virtual_tour_scenes"
+            )
+            .update({
+              sort_order:
+                temporaryBase +
+                index,
+            })
+            .eq("id", scene.id)
+            .eq("tour_id", tourId)
+      )
+    );
+
+  if (
+    temporaryUpdates.some(
+      (result) => result.error
+    )
+  ) {
+    throw new Error(
+      "Não foi possível preparar a nova ordem dos ambientes."
+    );
+  }
+
+  const finalUpdates =
+    await Promise.all(
+      orderedScenes.map(
+        (scene, index) =>
+          supabase
+            .from(
+              "virtual_tour_scenes"
+            )
+            .update({
+              sort_order: index,
+            })
+            .eq("id", scene.id)
+            .eq("tour_id", tourId)
+      )
+    );
+
+  if (
+    finalUpdates.some(
+      (result) => result.error
+    )
+  ) {
+    throw new Error(
+      "Não foi possível salvar a nova ordem dos ambientes."
+    );
+  }
+
+  revalidatePath(
+    `/admin/tours/${tourId}`
+  );
+
+  revalidatePath(
+    `/tour/${tourResult.data.slug}`
+  );
+
+  redirect(
+    `/admin/tours/${tourId}?ordenado=1`
+  );
+}
+
 export async function deleteVirtualTourScene(
   formData: FormData
 ) {

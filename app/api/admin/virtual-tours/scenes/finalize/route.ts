@@ -4,6 +4,10 @@ import {
 } from "next/server";
 
 import {
+  revalidatePath,
+} from "next/cache";
+
+import {
   createSupabaseAdminClient,
 } from "@/lib/supabaseAdmin";
 
@@ -27,6 +31,7 @@ const ALLOWED_TYPES =
 
 type FinalizeRequest = {
   tourId?: unknown;
+  sceneId?: unknown;
   name?: unknown;
   path?: unknown;
   originalName?: unknown;
@@ -110,6 +115,9 @@ export async function POST(
     const tourId =
       getText(body.tourId, 100);
 
+    const sceneId =
+      getText(body.sceneId, 100);
+
     const name =
       getText(body.name, 100);
 
@@ -153,7 +161,26 @@ export async function POST(
       );
     }
 
-    if (name.length < 2) {
+    if (
+      sceneId &&
+      !isValidUuid(sceneId)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Identificador do ambiente inválido.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (
+      !sceneId &&
+      name.length < 2
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -233,6 +260,7 @@ export async function POST(
       .from("virtual_tours")
       .select(`
         id,
+        slug,
         cover_image_path
       `)
       .eq("id", tourId)
@@ -267,7 +295,9 @@ export async function POST(
     if (
       listError ||
       !(storedFiles ?? []).some(
-        (storedFile) =>
+        (storedFile: {
+          name: string;
+        }) =>
           storedFile.name ===
           fileName
       )
@@ -282,6 +312,184 @@ export async function POST(
           status: 400,
         }
       );
+    }
+
+    if (sceneId) {
+      const {
+        data: currentScene,
+        error: currentSceneError,
+      } = await supabase
+        .from(
+          "virtual_tour_scenes"
+        )
+        .select(`
+          id,
+          panorama_path,
+          thumbnail_path
+        `)
+        .eq("id", sceneId)
+        .eq("tour_id", tourId)
+        .maybeSingle();
+
+      if (
+        currentSceneError ||
+        !currentScene
+      ) {
+        await supabase.storage
+          .from(STORAGE_BUCKET)
+          .remove([
+            storagePath,
+          ]);
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "O ambiente que receberia a nova imagem não foi encontrado.",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      const {
+        error: replaceError,
+      } = await supabase
+        .from(
+          "virtual_tour_scenes"
+        )
+        .update({
+          panorama_path:
+            storagePath,
+          thumbnail_path:
+            storagePath,
+        })
+        .eq("id", sceneId)
+        .eq("tour_id", tourId);
+
+      if (replaceError) {
+        console.error(
+          "Erro ao substituir imagem do ambiente 360°:",
+          replaceError
+        );
+
+        await supabase.storage
+          .from(STORAGE_BUCKET)
+          .remove([
+            storagePath,
+          ]);
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "A nova imagem foi enviada, mas não pôde ser vinculada ao ambiente.",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      if (
+        tour.cover_image_path ===
+        currentScene.panorama_path
+      ) {
+        const {
+          error: coverError,
+        } = await supabase
+          .from("virtual_tours")
+          .update({
+            cover_image_path:
+              storagePath,
+          })
+          .eq("id", tourId);
+
+        if (coverError) {
+          console.error(
+            "Erro ao atualizar capa após substituir ambiente 360°:",
+            coverError
+          );
+
+          await supabase
+            .from(
+              "virtual_tour_scenes"
+            )
+            .update({
+              panorama_path:
+                currentScene.panorama_path,
+              thumbnail_path:
+                currentScene.thumbnail_path ||
+                currentScene.panorama_path,
+            })
+            .eq("id", sceneId)
+            .eq(
+              "tour_id",
+              tourId
+            );
+
+          await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove([
+              storagePath,
+            ]);
+
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Não foi possível atualizar a imagem principal do passeio.",
+            },
+            {
+              status: 500,
+            }
+          );
+        }
+      }
+
+      const oldPaths =
+        Array.from(
+          new Set(
+            [
+              currentScene.panorama_path,
+              currentScene.thumbnail_path,
+            ].filter(
+              (path): path is string =>
+                Boolean(path) &&
+                path !== storagePath
+            )
+          )
+        );
+
+      if (oldPaths.length > 0) {
+        const {
+          error: removeOldError,
+        } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .remove(oldPaths);
+
+        if (removeOldError) {
+          console.error(
+            "A imagem antiga do ambiente 360° não pôde ser removida:",
+            removeOldError
+          );
+        }
+      }
+
+      revalidatePath(
+        `/admin/tours/${tourId}`
+      );
+
+      revalidatePath(
+        `/tour/${tour.slug}`
+      );
+
+      return NextResponse.json({
+        success: true,
+        sceneId,
+        replaced: true,
+      });
     }
 
     const {
@@ -361,6 +569,14 @@ export async function POST(
         })
         .eq("id", tourId);
     }
+
+    revalidatePath(
+      `/admin/tours/${tourId}`
+    );
+
+    revalidatePath(
+      `/tour/${tour.slug}`
+    );
 
     return NextResponse.json({
       success: true,

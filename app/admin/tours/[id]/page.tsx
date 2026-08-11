@@ -19,6 +19,8 @@ import CopyPublicTourLinkButton from "@/components/virtual-tour/CopyPublicTourLi
 
 import VirtualTourHotspotEditor from "@/components/virtual-tour/VirtualTourHotspotEditor";
 
+import VirtualTourSceneImageReplacer from "@/components/virtual-tour/VirtualTourSceneImageReplacer";
+
 import {
   deleteVirtualTourLink,
   deleteVirtualTourScene,
@@ -26,6 +28,8 @@ import {
   saveVirtualTourLink,
   setStartScene,
   unpublishVirtualTour,
+  updateVirtualTourScene,
+  moveVirtualTourScene,
 } from "../actions";
 
 export const dynamic =
@@ -44,6 +48,8 @@ type TourDetailPageProps = {
     erro?: string;
     conexao?: string;
     conexao_excluida?: string;
+    ambiente_atualizado?: string;
+    ordenado?: string;
   }>;
 };
 
@@ -102,6 +108,8 @@ export default async function TourDetailPage({
     erro,
     conexao,
     conexao_excluida,
+    ambiente_atualizado,
+    ordenado,
   } = await searchParams;
 
   if (!isValidUuid(id)) {
@@ -330,6 +338,18 @@ export default async function TourDetailPage({
           </div>
         )}
 
+        {ambiente_atualizado === "1" && (
+          <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
+            Nome do ambiente atualizado com sucesso.
+          </div>
+        )}
+
+        {ordenado === "1" && (
+          <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
+            Ordem dos ambientes atualizada com sucesso.
+          </div>
+        )}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-3xl bg-white p-6 shadow-lg">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -365,7 +385,7 @@ export default async function TourDetailPage({
             ) : (
               <div className="mt-6 grid gap-5">
                 {scenesWithUrls.map(
-                  (scene) => {
+                  (scene, sceneIndex) => {
                     const outgoingLinks =
                       sceneLinks.filter(
                         (link) =>
@@ -399,6 +419,155 @@ export default async function TourDetailPage({
                             </span>
                           )}
                         </div>
+
+                        <details className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                          <summary className="cursor-pointer font-black text-blue-950">
+                            Gerenciar ambiente
+                          </summary>
+
+                          <div className="mt-4 space-y-4">
+                            <form
+                              action={updateVirtualTourScene}
+                              className="space-y-3 rounded-xl border border-amber-200 bg-white p-4"
+                            >
+                              <input
+                                type="hidden"
+                                name="tour_id"
+                                value={tour.id}
+                              />
+
+                              <input
+                                type="hidden"
+                                name="scene_id"
+                                value={scene.id}
+                              />
+
+                              <div>
+                                <label
+                                  htmlFor={`scene-name-${scene.id}`}
+                                  className="text-sm font-black text-blue-950"
+                                >
+                                  Nome do ambiente
+                                </label>
+
+                                <input
+                                  id={`scene-name-${scene.id}`}
+                                  name="name"
+                                  type="text"
+                                  required
+                                  minLength={2}
+                                  maxLength={100}
+                                  defaultValue={scene.name}
+                                  className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                                />
+                              </div>
+
+                              <button
+                                type="submit"
+                                style={{
+                                  color: "#ffffff",
+                                }}
+                                className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-sky-700 px-4 py-2 text-sm font-black text-white transition hover:bg-sky-800"
+                              >
+                                Salvar novo nome
+                              </button>
+                            </form>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <h4 className="text-sm font-black text-blue-950">
+                                    Ordem no passeio
+                                  </h4>
+
+                                  <p className="mt-1 text-xs text-slate-600">
+                                    Posição atual: {sceneIndex + 1} de {scenesWithUrls.length}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <form action={moveVirtualTourScene}>
+                                  <input
+                                    type="hidden"
+                                    name="tour_id"
+                                    value={tour.id}
+                                  />
+
+                                  <input
+                                    type="hidden"
+                                    name="scene_id"
+                                    value={scene.id}
+                                  />
+
+                                  <input
+                                    type="hidden"
+                                    name="direction"
+                                    value="up"
+                                  />
+
+                                  <button
+                                    type="submit"
+                                    disabled={sceneIndex === 0}
+                                    style={{
+                                      color:
+                                        sceneIndex === 0
+                                          ? "#64748b"
+                                          : "#172554",
+                                    }}
+                                    className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-blue-950 bg-white px-3 py-2 text-sm font-black text-blue-950 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100"
+                                  >
+                                    ↑ Subir
+                                  </button>
+                                </form>
+
+                                <form action={moveVirtualTourScene}>
+                                  <input
+                                    type="hidden"
+                                    name="tour_id"
+                                    value={tour.id}
+                                  />
+
+                                  <input
+                                    type="hidden"
+                                    name="scene_id"
+                                    value={scene.id}
+                                  />
+
+                                  <input
+                                    type="hidden"
+                                    name="direction"
+                                    value="down"
+                                  />
+
+                                  <button
+                                    type="submit"
+                                    disabled={
+                                      sceneIndex ===
+                                      scenesWithUrls.length - 1
+                                    }
+                                    style={{
+                                      color:
+                                        sceneIndex ===
+                                        scenesWithUrls.length - 1
+                                          ? "#64748b"
+                                          : "#172554",
+                                    }}
+                                    className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-blue-950 bg-white px-3 py-2 text-sm font-black text-blue-950 transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100"
+                                  >
+                                    ↓ Descer
+                                  </button>
+                                </form>
+                              </div>
+                            </div>
+
+                            <VirtualTourSceneImageReplacer
+                              tourId={tour.id}
+                              sceneId={scene.id}
+                              sceneName={scene.name}
+                            />
+                          </div>
+                        </details>
 
                         <details className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-3">
                           <summary className="cursor-pointer font-black text-blue-950">

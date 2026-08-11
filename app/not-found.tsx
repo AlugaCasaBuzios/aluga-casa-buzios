@@ -29,6 +29,9 @@ export default function NotFound() {
               <div className="mt-9 flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/"
+                  style={{
+                    color: "#ffffff",
+                  }}
                   className="inline-flex items-center justify-center rounded-full bg-blue-950 px-7 py-4 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-blue-900"
                 >
                   Voltar ao início

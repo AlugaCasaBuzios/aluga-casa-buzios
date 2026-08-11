@@ -940,13 +940,22 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </p>
             </div>
 
-            <Link
-              href="/admin"
-              style={{ color: "#172554" }}
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-5 py-3 font-bold text-blue-950 transition hover:bg-blue-100"
-            >
-              Voltar ao painel
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/admin/relatorios/pendencias"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-sky-200 px-5 py-3 font-bold text-blue-950 transition hover:bg-sky-100"
+              >
+                Cobranças pendentes
+              </Link>
+
+              <Link
+                href="/admin"
+                style={{ color: "#172554" }}
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-5 py-3 font-bold text-blue-950 transition hover:bg-blue-100"
+              >
+                Voltar ao painel
+              </Link>
+            </div>
           </div>
         </header>
 

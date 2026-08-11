@@ -43,6 +43,20 @@ function normalizeSlug(
     .slice(0, 100);
 }
 
+function normalizeHexColor(
+  value: string,
+  fallback: string
+): string {
+  const normalized =
+    value.trim().toUpperCase();
+
+  return /^#[0-9A-F]{6}$/.test(
+    normalized
+  )
+    ? normalized
+    : fallback;
+}
+
 function redirectWithError(
   message: string
 ): never {
@@ -134,6 +148,37 @@ export async function createVirtualTour(
       .replace(/\D/g, "")
       .slice(0, 20);
 
+  const contactPhone =
+    getFormText(
+      formData,
+      "contact_phone"
+    )
+      .replace(/\D/g, "")
+      .slice(0, 20);
+
+  const primaryColor =
+    normalizeHexColor(
+      getFormText(
+        formData,
+        "primary_color"
+      ),
+      "#172554"
+    );
+
+  const accentColor =
+    normalizeHexColor(
+      getFormText(
+        formData,
+        "accent_color"
+      ),
+      "#38BDF8"
+    );
+
+  const whiteLabel =
+    formData.get(
+      "white_label"
+    ) === "on";
+
   if (title.length < 2) {
     redirectWithError(
       "Informe o título do passeio."
@@ -169,6 +214,14 @@ export async function createVirtualTour(
         contactName || null,
       contact_whatsapp:
         contactWhatsApp || null,
+      contact_phone:
+        contactPhone || null,
+      primary_color:
+        primaryColor,
+      accent_color:
+        accentColor,
+      white_label:
+        whiteLabel,
       created_by: user.id,
     })
     .select("id")
@@ -643,6 +696,312 @@ export async function moveVirtualTourScene(
 
   redirect(
     `/admin/tours/${tourId}?ordenado=1`
+  );
+}
+
+export async function updateVirtualTourBranding(
+  formData: FormData
+) {
+  await requireAdminUser();
+
+  const tourId =
+    getFormText(
+      formData,
+      "tour_id"
+    );
+
+  if (!isValidUuid(tourId)) {
+    throw new Error(
+      "Identificador do passeio inválido."
+    );
+  }
+
+  const brandName =
+    getFormText(
+      formData,
+      "brand_name"
+    ).slice(0, 120) ||
+    "Aluga Casa Búzios";
+
+  const contactName =
+    getFormText(
+      formData,
+      "contact_name"
+    ).slice(0, 120);
+
+  const contactWhatsApp =
+    getFormText(
+      formData,
+      "contact_whatsapp"
+    )
+      .replace(/\D/g, "")
+      .slice(0, 20);
+
+  const contactPhone =
+    getFormText(
+      formData,
+      "contact_phone"
+    )
+      .replace(/\D/g, "")
+      .slice(0, 20);
+
+  const primaryColor =
+    normalizeHexColor(
+      getFormText(
+        formData,
+        "primary_color"
+      ),
+      "#172554"
+    );
+
+  const accentColor =
+    normalizeHexColor(
+      getFormText(
+        formData,
+        "accent_color"
+      ),
+      "#38BDF8"
+    );
+
+  const whiteLabel =
+    formData.get(
+      "white_label"
+    ) === "on";
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const {
+    data: tour,
+    error: tourError,
+  } = await supabase
+    .from("virtual_tours")
+    .select("id, slug")
+    .eq("id", tourId)
+    .maybeSingle();
+
+  if (tourError || !tour) {
+    throw new Error(
+      "O passeio virtual não foi encontrado."
+    );
+  }
+
+  const {
+    error: updateError,
+  } = await supabase
+    .from("virtual_tours")
+    .update({
+      brand_name: brandName,
+      contact_name:
+        contactName || null,
+      contact_whatsapp:
+        contactWhatsApp || null,
+      contact_phone:
+        contactPhone || null,
+      primary_color:
+        primaryColor,
+      accent_color:
+        accentColor,
+      white_label:
+        whiteLabel,
+    })
+    .eq("id", tourId);
+
+  if (updateError) {
+    console.error(
+      "Erro ao personalizar passeio virtual:",
+      updateError
+    );
+
+    throw new Error(
+      "Não foi possível salvar a personalização do passeio."
+    );
+  }
+
+  revalidatePath(
+    `/admin/tours/${tourId}`
+  );
+
+  revalidatePath(
+    `/tour/${tour.slug}`
+  );
+
+  redirect(
+    `/admin/tours/${tourId}?personalizacao=1`
+  );
+}
+
+export async function setVirtualTourCover(
+  formData: FormData
+) {
+  await requireAdminUser();
+
+  const tourId =
+    getFormText(
+      formData,
+      "tour_id"
+    );
+
+  const sceneId =
+    getFormText(
+      formData,
+      "scene_id"
+    );
+
+  if (
+    !isValidUuid(tourId) ||
+    !isValidUuid(sceneId)
+  ) {
+    throw new Error(
+      "Identificador da capa inválido."
+    );
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const [
+    tourResult,
+    sceneResult,
+  ] = await Promise.all([
+    supabase
+      .from("virtual_tours")
+      .select("id, slug")
+      .eq("id", tourId)
+      .maybeSingle(),
+
+    supabase
+      .from("virtual_tour_scenes")
+      .select("id, panorama_path")
+      .eq("id", sceneId)
+      .eq("tour_id", tourId)
+      .maybeSingle(),
+  ]);
+
+  if (
+    tourResult.error ||
+    !tourResult.data
+  ) {
+    throw new Error(
+      "O passeio virtual não foi encontrado."
+    );
+  }
+
+  if (
+    sceneResult.error ||
+    !sceneResult.data
+  ) {
+    throw new Error(
+      "O ambiente escolhido para a capa não foi encontrado."
+    );
+  }
+
+  const {
+    error: updateError,
+  } = await supabase
+    .from("virtual_tours")
+    .update({
+      cover_image_path:
+        sceneResult.data.panorama_path,
+    })
+    .eq("id", tourId);
+
+  if (updateError) {
+    throw new Error(
+      "Não foi possível definir a capa do passeio."
+    );
+  }
+
+  revalidatePath(
+    `/admin/tours/${tourId}`
+  );
+
+  revalidatePath(
+    `/tour/${tourResult.data.slug}`
+  );
+
+  redirect(
+    `/admin/tours/${tourId}?capa=1`
+  );
+}
+
+export async function removeVirtualTourLogo(
+  formData: FormData
+) {
+  await requireAdminUser();
+
+  const tourId =
+    getFormText(
+      formData,
+      "tour_id"
+    );
+
+  if (!isValidUuid(tourId)) {
+    throw new Error(
+      "Identificador do passeio inválido."
+    );
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const {
+    data: tour,
+    error: tourError,
+  } = await supabase
+    .from("virtual_tours")
+    .select("id, slug, logo_path")
+    .eq("id", tourId)
+    .maybeSingle();
+
+  if (tourError || !tour) {
+    throw new Error(
+      "O passeio virtual não foi encontrado."
+    );
+  }
+
+  const {
+    error: updateError,
+  } = await supabase
+    .from("virtual_tours")
+    .update({
+      logo_path: null,
+    })
+    .eq("id", tourId);
+
+  if (updateError) {
+    throw new Error(
+      "Não foi possível remover o logotipo."
+    );
+  }
+
+  if (tour.logo_path) {
+    const {
+      error: storageError,
+    } = await supabase.storage
+      .from("virtual-tour-images")
+      .remove([
+        tour.logo_path,
+      ]);
+
+    if (storageError) {
+      console.error(
+        "Logotipo removido do passeio, mas o arquivo antigo não pôde ser apagado:",
+        storageError
+      );
+    }
+  }
+
+  revalidatePath(
+    `/admin/tours/${tourId}`
+  );
+
+  revalidatePath(
+    `/tour/${tour.slug}`
+  );
+
+  redirect(
+    `/admin/tours/${tourId}?logo_removido=1`
   );
 }
 

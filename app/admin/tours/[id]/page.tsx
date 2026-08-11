@@ -21,6 +21,8 @@ import VirtualTourHotspotEditor from "@/components/virtual-tour/VirtualTourHotsp
 
 import VirtualTourSceneImageReplacer from "@/components/virtual-tour/VirtualTourSceneImageReplacer";
 
+import VirtualTourLogoUploader from "@/components/virtual-tour/VirtualTourLogoUploader";
+
 import {
   deleteVirtualTourLink,
   deleteVirtualTourScene,
@@ -30,6 +32,9 @@ import {
   unpublishVirtualTour,
   updateVirtualTourScene,
   moveVirtualTourScene,
+  removeVirtualTourLogo,
+  setVirtualTourCover,
+  updateVirtualTourBranding,
 } from "../actions";
 
 export const dynamic =
@@ -50,6 +55,9 @@ type TourDetailPageProps = {
     conexao_excluida?: string;
     ambiente_atualizado?: string;
     ordenado?: string;
+    personalizacao?: string;
+    capa?: string;
+    logo_removido?: string;
   }>;
 };
 
@@ -63,7 +71,12 @@ type TourRecord = {
   brand_name: string | null;
   contact_name: string | null;
   contact_whatsapp: string | null;
+  contact_phone: string | null;
   cover_image_path: string | null;
+  logo_path: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+  white_label: boolean | null;
 };
 
 type SceneRecord = {
@@ -110,6 +123,9 @@ export default async function TourDetailPage({
     conexao_excluida,
     ambiente_atualizado,
     ordenado,
+    personalizacao,
+    capa,
+    logo_removido,
   } = await searchParams;
 
   if (!isValidUuid(id)) {
@@ -160,7 +176,12 @@ export default async function TourDetailPage({
         brand_name,
         contact_name,
         contact_whatsapp,
-        cover_image_path
+        contact_phone,
+        cover_image_path,
+        logo_path,
+        primary_color,
+        accent_color,
+        white_label
       `)
       .eq("id", id)
       .maybeSingle(),
@@ -265,6 +286,17 @@ export default async function TourDetailPage({
           ).data.publicUrl,
     }));
 
+  const logoPublicUrl =
+    tour.logo_path
+      ? supabase.storage
+          .from(
+            "virtual-tour-images"
+          )
+          .getPublicUrl(
+            tour.logo_path
+          ).data.publicUrl
+      : null;
+
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl">
@@ -350,6 +382,24 @@ export default async function TourDetailPage({
           </div>
         )}
 
+        {personalizacao === "1" && (
+          <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
+            Personalização comercial atualizada com sucesso.
+          </div>
+        )}
+
+        {capa === "1" && (
+          <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
+            Capa do passeio atualizada com sucesso.
+          </div>
+        )}
+
+        {logo_removido === "1" && (
+          <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
+            Logotipo removido com sucesso.
+          </div>
+        )}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-3xl bg-white p-6 shadow-lg">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -416,6 +466,13 @@ export default async function TourDetailPage({
                           {scene.is_start && (
                             <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-900">
                               Ambiente inicial
+                            </span>
+                          )}
+
+                          {tour.cover_image_path ===
+                            scene.panorama_path && (
+                            <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-900">
+                              Capa do passeio
                             </span>
                           )}
                         </div>
@@ -724,6 +781,33 @@ export default async function TourDetailPage({
                         </details>
 
                         <div className="mt-4 flex flex-col gap-2">
+                          {tour.cover_image_path !==
+                            scene.panorama_path && (
+                            <form action={setVirtualTourCover}>
+                              <input
+                                type="hidden"
+                                name="tour_id"
+                                value={tour.id}
+                              />
+
+                              <input
+                                type="hidden"
+                                name="scene_id"
+                                value={scene.id}
+                              />
+
+                              <button
+                                type="submit"
+                                style={{
+                                  color: "#5b21b6",
+                                }}
+                                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 font-bold text-violet-800 transition hover:bg-violet-100"
+                              >
+                                Usar como capa do passeio
+                              </button>
+                            </form>
+                          )}
+
                           {!scene.is_start && (
                             <form action={setStartScene}>
                               <input
@@ -788,6 +872,225 @@ export default async function TourDetailPage({
               tourId={tour.id}
               nextPosition={scenes.length}
             />
+
+            <section className="rounded-3xl bg-white p-6 shadow-lg">
+              <h2 className="text-lg font-black text-blue-950">
+                Personalização comercial
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Configure a identidade que o cliente verá no link público.
+              </p>
+
+              <form
+                action={updateVirtualTourBranding}
+                className="mt-5 space-y-4"
+              >
+                <input
+                  type="hidden"
+                  name="tour_id"
+                  value={tour.id}
+                />
+
+                <div>
+                  <label
+                    htmlFor="tour-brand-name"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    Marca exibida
+                  </label>
+
+                  <input
+                    id="tour-brand-name"
+                    name="brand_name"
+                    type="text"
+                    required
+                    maxLength={120}
+                    defaultValue={
+                      tour.brand_name ??
+                      "Aluga Casa Búzios"
+                    }
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tour-contact-name"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    Nome do contato
+                  </label>
+
+                  <input
+                    id="tour-contact-name"
+                    name="contact_name"
+                    type="text"
+                    maxLength={120}
+                    autoComplete="name"
+                    defaultValue={
+                      tour.contact_name ??
+                      ""
+                    }
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tour-contact-whatsapp"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    WhatsApp
+                  </label>
+
+                  <input
+                    id="tour-contact-whatsapp"
+                    name="contact_whatsapp"
+                    type="tel"
+                    inputMode="tel"
+                    maxLength={25}
+                    autoComplete="tel"
+                    placeholder="5524999999999"
+                    defaultValue={
+                      tour.contact_whatsapp ??
+                      ""
+                    }
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tour-contact-phone"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    Telefone
+                  </label>
+
+                  <input
+                    id="tour-contact-phone"
+                    name="contact_phone"
+                    type="tel"
+                    inputMode="tel"
+                    maxLength={25}
+                    autoComplete="tel"
+                    placeholder="552426230000"
+                    defaultValue={
+                      tour.contact_phone ??
+                      ""
+                    }
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="tour-primary-color"
+                      className="text-sm font-black text-slate-800"
+                    >
+                      Cor principal
+                    </label>
+
+                    <input
+                      id="tour-primary-color"
+                      name="primary_color"
+                      type="color"
+                      defaultValue={
+                        tour.primary_color ??
+                        "#172554"
+                      }
+                      className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-white p-1"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="tour-accent-color"
+                      className="text-sm font-black text-slate-800"
+                    >
+                      Destaque
+                    </label>
+
+                    <input
+                      id="tour-accent-color"
+                      name="accent_color"
+                      type="color"
+                      defaultValue={
+                        tour.accent_color ??
+                        "#38BDF8"
+                      }
+                      className="mt-2 h-11 w-full cursor-pointer rounded-lg border border-slate-300 bg-white p-1"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <input
+                    name="white_label"
+                    type="checkbox"
+                    defaultChecked={
+                      tour.white_label ===
+                      true
+                    }
+                    className="mt-1 h-5 w-5 rounded border-slate-300"
+                  />
+
+                  <span>
+                    <span className="block text-sm font-black text-blue-950">
+                      Marca branca
+                    </span>
+
+                    <span className="mt-1 block text-xs leading-5 text-slate-600">
+                      Oculta a identificação da Aluga Casa Búzios no rodapé público.
+                    </span>
+                  </span>
+                </label>
+
+                <button
+                  type="submit"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-950 px-5 py-3 font-black text-white shadow-md transition hover:bg-blue-900"
+                >
+                  Salvar personalização
+                </button>
+              </form>
+
+              <div className="mt-6 border-t border-slate-200 pt-5">
+                <VirtualTourLogoUploader
+                  tourId={tour.id}
+                  currentLogoUrl={
+                    logoPublicUrl
+                  }
+                />
+
+                {tour.logo_path && (
+                  <form
+                    action={removeVirtualTourLogo}
+                    className="mt-3"
+                  >
+                    <input
+                      type="hidden"
+                      name="tour_id"
+                      value={tour.id}
+                    />
+
+                    <button
+                      type="submit"
+                      style={{
+                        color: "#b91c1c",
+                      }}
+                      className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-black text-red-700 transition hover:bg-red-50"
+                    >
+                      Remover logotipo
+                    </button>
+                  </form>
+                )}
+              </div>
+            </section>
 
             <section className="rounded-3xl bg-white p-6 shadow-lg">
               <h2 className="text-lg font-black text-blue-950">

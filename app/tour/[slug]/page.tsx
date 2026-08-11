@@ -38,6 +38,12 @@ type PublicTourRecord = {
   brand_name: string | null;
   contact_name: string | null;
   contact_whatsapp: string | null;
+  contact_phone: string | null;
+  cover_image_path: string | null;
+  logo_path: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+  white_label: boolean | null;
 };
 
 type PublicSceneRecord = {
@@ -66,6 +72,50 @@ function getSafeSlug(
     .slice(0, 100);
 }
 
+function getSafeColor(
+  value: string | null,
+  fallback: string
+): string {
+  return value &&
+    /^#[0-9A-F]{6}$/i.test(
+      value
+    )
+    ? value.toUpperCase()
+    : fallback;
+}
+
+function getContrastColor(
+  background: string
+): "#0F172A" | "#FFFFFF" {
+  const red =
+    Number.parseInt(
+      background.slice(1, 3),
+      16
+    );
+
+  const green =
+    Number.parseInt(
+      background.slice(3, 5),
+      16
+    );
+
+  const blue =
+    Number.parseInt(
+      background.slice(5, 7),
+      16
+    );
+
+  const luminance =
+    (red * 299 +
+      green * 587 +
+      blue * 114) /
+    1000;
+
+  return luminance > 155
+    ? "#0F172A"
+    : "#FFFFFF";
+}
+
 async function getPublishedTour(
   slug: string
 ): Promise<PublicTourRecord | null> {
@@ -91,7 +141,13 @@ async function getPublishedTour(
       description,
       brand_name,
       contact_name,
-      contact_whatsapp
+      contact_whatsapp,
+      contact_phone,
+      cover_image_path,
+      logo_path,
+      primary_color,
+      accent_color,
+      white_label
     `)
     .eq("slug", safeSlug)
     .eq("status", "published")
@@ -141,6 +197,17 @@ export async function generateMetadata({
     tour.description ||
     "Conheça todos os ambientes por meio de um passeio virtual em 360 graus.";
 
+  const coverUrl =
+    tour.cover_image_path
+      ? createSupabaseAdminClient()
+          .storage.from(
+            STORAGE_BUCKET
+          )
+          .getPublicUrl(
+            tour.cover_image_path
+          ).data.publicUrl
+      : null;
+
   return {
     title: `${tour.title} | ${brand}`,
     description,
@@ -152,6 +219,11 @@ export async function generateMetadata({
       title: tour.title,
       description,
       type: "website",
+      images: coverUrl
+        ? [
+            coverUrl,
+          ]
+        : undefined,
     },
   };
 }
@@ -309,57 +381,209 @@ export default async function PublicTourPage({
     tour.brand_name ||
     "Aluga Casa Búzios";
 
+  const primaryColor =
+    getSafeColor(
+      tour.primary_color,
+      "#172554"
+    );
+
+  const accentColor =
+    getSafeColor(
+      tour.accent_color,
+      "#38BDF8"
+    );
+
+  const primaryTextColor =
+    getContrastColor(
+      primaryColor
+    );
+
+  const accentTextColor =
+    getContrastColor(
+      accentColor
+    );
+
+  const coverUrl =
+    tour.cover_image_path
+      ? getPublicUrl(
+          tour.cover_image_path
+        )
+      : null;
+
+  const logoUrl =
+    tour.logo_path
+      ? getPublicUrl(
+          tour.logo_path
+        )
+      : null;
+
   const whatsapp =
     (
       tour.contact_whatsapp ||
-      "5524998288846"
+      (tour.white_label
+        ? ""
+        : "5524998288846")
+    ).replace(/\D/g, "");
+
+  const phone =
+    (
+      tour.contact_phone ||
+      ""
     ).replace(/\D/g, "");
 
   const whatsappMessage =
     `Olá! Vi o passeio virtual 360° de ${tour.title} e gostaria de receber mais informações.`;
 
   const whatsappUrl =
-    `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-      whatsappMessage
-    )}`;
+    whatsapp
+      ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(
+          whatsappMessage
+        )}`
+      : null;
+
+  const phoneUrl =
+    phone
+      ? `tel:+${phone}`
+      : null;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
-      <header className="border-b border-white/10 bg-blue-950 shadow-xl">
+      <header
+        style={{
+          backgroundColor:
+            primaryColor,
+          borderBottomColor:
+            accentColor,
+          color:
+            primaryTextColor,
+        }}
+        className="border-b-4 shadow-xl"
+      >
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-6 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-sky-300">
-              {brand}
-            </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            {logoUrl && (
+              <div className="flex min-h-20 min-w-28 items-center justify-center rounded-2xl bg-white p-3 shadow-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logoUrl}
+                  alt={`Logotipo ${brand}`}
+                  className="max-h-16 max-w-44 object-contain"
+                />
+              </div>
+            )}
 
-            <h1 className="mt-2 text-3xl font-black sm:text-4xl">
-              {tour.title}
-            </h1>
+            <div>
+              <p
+                style={{
+                  color:
+                    accentColor,
+                }}
+                className="text-sm font-black uppercase tracking-[0.2em]"
+              >
+                {brand}
+              </p>
 
-            <p className="mt-2 text-blue-100">
-              Passeio virtual 360° · {scenes.length} ambiente(s)
-            </p>
+              <h1 className="mt-2 text-3xl font-black sm:text-4xl">
+                {tour.title}
+              </h1>
+
+              <p
+                className="mt-2 font-semibold opacity-80"
+              >
+                Passeio virtual 360° · {scenes.length} ambiente(s)
+              </p>
+            </div>
           </div>
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: "#ffffff",
-            }}
-            className="inline-flex min-h-12 items-center justify-center rounded-full bg-green-600 px-6 py-3 text-center font-black text-white shadow-lg transition hover:bg-green-700"
-          >
-            Solicitar informações
-          </a>
+          {(whatsappUrl ||
+            phoneUrl) && (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {phoneUrl && (
+                <a
+                  href={phoneUrl}
+                  style={{
+                    backgroundColor:
+                      accentColor,
+                    color:
+                      accentTextColor,
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center rounded-full px-6 py-3 text-center font-black shadow-lg transition hover:brightness-110"
+                >
+                  Ligar
+                </a>
+              )}
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-green-600 px-6 py-3 text-center font-black text-white shadow-lg transition hover:bg-green-700"
+                >
+                  Solicitar informações
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10">
+        {coverUrl && (
+          <div className="relative mb-6 overflow-hidden rounded-3xl border border-white/10 bg-zinc-900 shadow-2xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverUrl}
+              alt={`Capa do passeio virtual ${tour.title}`}
+              className="aspect-[2/1] max-h-[560px] w-full object-cover"
+            />
+
+            <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/90 via-black/20 to-transparent p-5 sm:p-8">
+              <div className="max-w-3xl">
+                <p
+                  style={{
+                    color:
+                      accentColor,
+                  }}
+                  className="text-sm font-black uppercase tracking-[0.18em]"
+                >
+                  Visita virtual
+                </p>
+
+                <h2 className="mt-2 text-2xl font-black text-white sm:text-4xl">
+                  {tour.title}
+                </h2>
+
+                <a
+                  href="#passeio-360"
+                  style={{
+                    backgroundColor:
+                      accentColor,
+                    color:
+                      accentTextColor,
+                  }}
+                  className="mt-5 inline-flex min-h-12 items-center justify-center rounded-full px-6 py-3 font-black shadow-lg transition hover:brightness-110"
+                >
+                  Iniciar passeio 360°
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-lg sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-sky-300">
+              <p
+                style={{
+                  color:
+                    accentColor,
+                }}
+                className="text-sm font-bold uppercase tracking-[0.18em]"
+              >
                 Visita imersiva
               </p>
 
@@ -379,12 +603,17 @@ export default async function PublicTourPage({
           </div>
         </div>
 
-        <VirtualTourViewer
-          title={`${tour.title} — Passeio virtual 360°`}
-          startSceneId={startSceneId}
-          scenes={scenes}
-          height="75vh"
-        />
+        <div
+          id="passeio-360"
+          className="scroll-mt-5"
+        >
+          <VirtualTourViewer
+            title={`${tour.title} — Passeio virtual 360°`}
+            startSceneId={startSceneId}
+            scenes={scenes}
+            height="75vh"
+          />
+        </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <article className="rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -418,44 +647,80 @@ export default async function PublicTourPage({
           </article>
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-5 rounded-3xl bg-blue-950 p-6 shadow-xl sm:flex-row">
+        <div
+          style={{
+            backgroundColor:
+              primaryColor,
+            color:
+              primaryTextColor,
+          }}
+          className="mt-8 flex flex-col items-center justify-between gap-5 rounded-3xl p-6 shadow-xl sm:flex-row"
+        >
           <div>
             <h2 className="text-xl font-black">
               Gostou do passeio?
             </h2>
 
-            <p className="mt-1 text-blue-100">
+            <p className="mt-1 font-semibold opacity-80">
               {tour.contact_name
                 ? `Fale com ${tour.contact_name} para receber mais informações.`
                 : "Entre em contato para receber mais informações."}
             </p>
           </div>
 
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: "#ffffff",
-            }}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-green-600 px-6 py-3 text-center font-black text-white shadow-lg transition hover:bg-green-700 sm:w-auto"
-          >
-            Falar pelo WhatsApp
-          </a>
+          {(whatsappUrl ||
+            phoneUrl) && (
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              {phoneUrl && (
+                <a
+                  href={phoneUrl}
+                  style={{
+                    backgroundColor:
+                      accentColor,
+                    color:
+                      accentTextColor,
+                  }}
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-full px-6 py-3 text-center font-black shadow-lg transition hover:brightness-110 sm:w-auto"
+                >
+                  Ligar agora
+                </a>
+              )}
+
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-green-600 px-6 py-3 text-center font-black text-white shadow-lg transition hover:bg-green-700 sm:w-auto"
+                >
+                  Falar pelo WhatsApp
+                </a>
+              )}
+            </div>
+          )}
         </div>
 
-        <footer className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/10 py-6 text-sm text-zinc-400 sm:flex-row">
-          <p>
-            Passeio virtual produzido por {brand}
-          </p>
+        {!tour.white_label && (
+          <footer className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/10 py-6 text-sm text-zinc-400 sm:flex-row">
+            <p>
+              Tecnologia de passeio virtual por Aluga Casa Búzios
+            </p>
 
-          <Link
-            href="/"
-            className="font-bold text-sky-300 transition hover:text-white"
-          >
-            Conhecer o site
-          </Link>
-        </footer>
+            <Link
+              href="/"
+              style={{
+                color:
+                  accentColor,
+              }}
+              className="font-bold transition hover:brightness-125"
+            >
+              Conhecer a plataforma
+            </Link>
+          </footer>
+        )}
       </section>
     </main>
   );

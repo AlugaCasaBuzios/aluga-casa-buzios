@@ -19,9 +19,19 @@ const STORAGE_BUCKET =
 const MAX_FILE_SIZE =
   25 * 1024 * 1024;
 
+const MAX_LOGO_SIZE =
+  5 * 1024 * 1024;
+
 const ALLOWED_TYPES =
   new Set([
     "image/jpeg",
+    "image/webp",
+  ]);
+
+const ALLOWED_LOGO_TYPES =
+  new Set([
+    "image/jpeg",
+    "image/png",
     "image/webp",
   ]);
 
@@ -30,6 +40,7 @@ type UploadRequest = {
   fileName?: unknown;
   mimeType?: unknown;
   size?: unknown;
+  purpose?: unknown;
 };
 
 function isValidUuid(
@@ -43,6 +54,10 @@ function isValidUuid(
 function getExtension(
   mimeType: string
 ): string {
+  if (mimeType === "image/png") {
+    return "png";
+  }
+
   return mimeType === "image/webp"
     ? "webp"
     : "jpg";
@@ -114,6 +129,21 @@ export async function POST(
     const size =
       Number(body.size);
 
+    const purpose =
+      body.purpose === "logo"
+        ? "logo"
+        : "scene";
+
+    const allowedTypes =
+      purpose === "logo"
+        ? ALLOWED_LOGO_TYPES
+        : ALLOWED_TYPES;
+
+    const maximumSize =
+      purpose === "logo"
+        ? MAX_LOGO_SIZE
+        : MAX_FILE_SIZE;
+
     if (!isValidUuid(tourId)) {
       return NextResponse.json(
         {
@@ -127,12 +157,14 @@ export async function POST(
       );
     }
 
-    if (!ALLOWED_TYPES.has(mimeType)) {
+    if (!allowedTypes.has(mimeType)) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Utilize uma imagem JPG ou WebP.",
+            purpose === "logo"
+              ? "Utilize um logotipo PNG, JPG ou WebP."
+              : "Utilize uma imagem JPG ou WebP.",
         },
         {
           status: 400,
@@ -143,13 +175,15 @@ export async function POST(
     if (
       !Number.isFinite(size) ||
       size <= 0 ||
-      size > MAX_FILE_SIZE
+      size > maximumSize
     ) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "A imagem possui um tamanho inválido.",
+            purpose === "logo"
+              ? "O logotipo deve possuir no máximo 5 MB."
+              : "A imagem possui um tamanho inválido.",
         },
         {
           status: 400,
@@ -186,7 +220,9 @@ export async function POST(
       getExtension(mimeType);
 
     const storagePath =
-      `${tourId}/${crypto.randomUUID()}.${extension}`;
+      purpose === "logo"
+        ? `${tourId}/branding/${crypto.randomUUID()}.${extension}`
+        : `${tourId}/${crypto.randomUUID()}.${extension}`;
 
     const {
       data: upload,

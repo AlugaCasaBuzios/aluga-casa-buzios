@@ -212,7 +212,7 @@ export default async function NewTourPage({
             />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             <div>
               <label
                 htmlFor="brand_name"
@@ -266,7 +266,89 @@ export default async function NewTourPage({
                 className={inputClassName}
               />
             </div>
+
+            <div>
+              <label
+                htmlFor="contact_phone"
+                className="font-bold text-slate-900"
+              >
+                Telefone
+              </label>
+
+              <input
+                id="contact_phone"
+                name="contact_phone"
+                type="tel"
+                maxLength={25}
+                placeholder="552426230000"
+                className={inputClassName}
+              />
+            </div>
           </div>
+
+          <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5">
+            <h2 className="font-black text-blue-950">
+              Identidade visual
+            </h2>
+
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              O logotipo poderá ser enviado depois que o passeio for cadastrado.
+            </p>
+
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="primary_color"
+                  className="font-bold text-slate-900"
+                >
+                  Cor principal
+                </label>
+
+                <input
+                  id="primary_color"
+                  name="primary_color"
+                  type="color"
+                  defaultValue="#172554"
+                  className="mt-2 h-12 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-2"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="accent_color"
+                  className="font-bold text-slate-900"
+                >
+                  Cor de destaque
+                </label>
+
+                <input
+                  id="accent_color"
+                  name="accent_color"
+                  type="color"
+                  defaultValue="#38BDF8"
+                  className="mt-2 h-12 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-2"
+                />
+              </div>
+            </div>
+
+            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-sky-200 bg-white p-4">
+              <input
+                name="white_label"
+                type="checkbox"
+                className="mt-1 h-5 w-5 rounded border-slate-300"
+              />
+
+              <span>
+                <span className="block font-black text-blue-950">
+                  Ativar marca branca
+                </span>
+
+                <span className="mt-1 block text-sm leading-6 text-slate-600">
+                  Oculta a identificação da Aluga Casa Búzios no rodapé do passeio público.
+                </span>
+              </span>
+            </label>
+          </section>
 
           <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:justify-end">
             <Link

@@ -1,6 +1,10 @@
 "use server";
 
 import {
+  randomUUID,
+} from "node:crypto";
+
+import {
   revalidatePath,
 } from "next/cache";
 
@@ -15,6 +19,10 @@ import {
 import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
+
+import {
+  hashVirtualTourPassword,
+} from "@/lib/virtualTourAccess";
 
 function getFormText(
   formData: FormData,
@@ -1302,6 +1310,182 @@ export async function unpublishVirtualTour(
 
   redirect(
     `/admin/tours/${tourId}?rascunho=1`
+  );
+}
+
+export async function updateVirtualTourAccess(
+  formData: FormData
+) {
+  await requireAdminUser();
+
+  const tourId =
+    getFormText(
+      formData,
+      "tour_id"
+    );
+
+  const accessMode =
+    getFormText(
+      formData,
+      "access_mode"
+    );
+
+  const newPassword =
+    getFormText(
+      formData,
+      "access_password"
+    ).slice(0, 128);
+
+  const expirationValue =
+    getFormText(
+      formData,
+      "access_expires_at"
+    );
+
+  if (!isValidUuid(tourId)) {
+    throw new Error(
+      "Identificador do passeio inválido."
+    );
+  }
+
+  if (
+    accessMode !== "public" &&
+    accessMode !== "password"
+  ) {
+    redirect(
+      `/admin/tours/${tourId}?erro=modo-acesso`
+    );
+  }
+
+  if (
+    newPassword &&
+    newPassword.length < 6
+  ) {
+    redirect(
+      `/admin/tours/${tourId}?erro=senha-curta`
+    );
+  }
+
+  let accessExpiresAt:
+    | string
+    | null = null;
+
+  if (expirationValue) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(
+        expirationValue
+      )
+    ) {
+      redirect(
+        `/admin/tours/${tourId}?erro=validade-acesso`
+      );
+    }
+
+    const expiration =
+      new Date(
+        `${expirationValue}:00-03:00`
+      );
+
+    if (
+      Number.isNaN(
+        expiration.getTime()
+      ) ||
+      expiration.getTime() <=
+        Date.now()
+    ) {
+      redirect(
+        `/admin/tours/${tourId}?erro=validade-acesso`
+      );
+    }
+
+    accessExpiresAt =
+      expiration.toISOString();
+  }
+
+  const supabase =
+    createSupabaseAdminClient();
+
+  const {
+    data: tour,
+    error: tourError,
+  } = await supabase
+    .from("virtual_tours")
+    .select(`
+      id,
+      slug,
+      access_password_hash
+    `)
+    .eq("id", tourId)
+    .maybeSingle();
+
+  if (tourError || !tour) {
+    throw new Error(
+      "O passeio virtual não foi encontrado."
+    );
+  }
+
+  if (
+    accessMode === "password" &&
+    !newPassword &&
+    !tour.access_password_hash
+  ) {
+    redirect(
+      `/admin/tours/${tourId}?erro=senha-obrigatoria`
+    );
+  }
+
+  const accessPasswordHash =
+    accessMode === "public"
+      ? null
+      : newPassword
+      ? hashVirtualTourPassword(
+          newPassword
+        )
+      : tour.access_password_hash;
+
+  const {
+    error: updateError,
+  } = await supabase
+    .from("virtual_tours")
+    .update({
+      access_mode:
+        accessMode,
+      access_password_hash:
+        accessPasswordHash,
+      access_expires_at:
+        accessExpiresAt,
+      access_version:
+        randomUUID(),
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq("id", tourId);
+
+  if (updateError) {
+    console.error(
+      "Erro ao atualizar acesso do passeio:",
+      updateError
+    );
+
+    throw new Error(
+      "Não foi possível atualizar o acesso do passeio."
+    );
+  }
+
+  revalidatePath(
+    "/admin/tours"
+  );
+
+  revalidatePath(
+    `/admin/tours/${tourId}`
+  );
+
+  revalidatePath(
+    `/tour/${tour.slug}`
+  );
+
+  redirect(
+    `/admin/tours/${tourId}?acesso=1`
   );
 }
 

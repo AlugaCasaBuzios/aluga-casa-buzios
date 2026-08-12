@@ -12,6 +12,8 @@ type VirtualTourSharePanelProps = {
   path: string;
   slug: string;
   title: string;
+  accessMode: string;
+  accessExpiresAt: string | null;
 };
 
 type Feedback = {
@@ -33,6 +35,8 @@ export default function VirtualTourSharePanel({
   path,
   slug,
   title,
+  accessMode,
+  accessExpiresAt,
 }: VirtualTourSharePanelProps) {
   const [origin, setOrigin] =
     useState("");
@@ -208,6 +212,26 @@ export default function VirtualTourSharePanel({
         Envie o link, baixe o QR Code ou coloque o passeio dentro de outro site.
       </p>
 
+      {accessMode === "password" && (
+        <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+          <p className="font-black">Link protegido por senha</p>
+          <p className="mt-1 leading-5">
+            Envie a senha separadamente ao cliente. O QR Code e o código de incorporação usarão esta mesma proteção.
+          </p>
+        </div>
+      )}
+
+      {accessExpiresAt && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="font-black">Validade: </span>
+          {new Intl.DateTimeFormat("pt-BR", {
+            dateStyle: "short",
+            timeStyle: "short",
+            timeZone: "America/Sao_Paulo",
+          }).format(new Date(accessExpiresAt))}
+        </div>
+      )}
+
       {feedback && (
         <div
           role="status"
@@ -242,7 +266,7 @@ export default function VirtualTourSharePanel({
           htmlFor={`public-tour-url-${slug}`}
           className="text-sm font-black text-slate-800"
         >
-          Link público
+          Link do passeio
         </label>
 
         <input
@@ -260,7 +284,7 @@ export default function VirtualTourSharePanel({
           onClick={() =>
             void copyValue(
               publicUrl,
-              "Link público copiado!"
+              "Link do passeio copiado!"
             )
           }
           style={{

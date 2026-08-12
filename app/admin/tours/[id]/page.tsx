@@ -35,6 +35,7 @@ import {
   removeVirtualTourLogo,
   setVirtualTourCover,
   updateVirtualTourBranding,
+  updateVirtualTourAccess,
 } from "../actions";
 
 export const dynamic =
@@ -58,6 +59,7 @@ type TourDetailPageProps = {
     personalizacao?: string;
     capa?: string;
     logo_removido?: string;
+    acesso?: string;
   }>;
 };
 
@@ -77,6 +79,13 @@ type TourRecord = {
   primary_color: string | null;
   accent_color: string | null;
   white_label: boolean | null;
+  access_mode: string;
+  access_password_hash: string | null;
+  access_expires_at: string | null;
+};
+
+type TourServiceRecord = {
+  service_status: string;
 };
 
 type SceneRecord = {
@@ -105,6 +114,40 @@ function isValidUuid(
   );
 }
 
+function formatAccessExpiration(
+  value: string | null
+): string {
+  if (!value) {
+    return "";
+  }
+
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone:
+          "America/Sao_Paulo",
+      }
+    ).formatToParts(
+      new Date(value)
+    );
+
+  const getPart =
+    (type: string) =>
+      parts.find(
+        (part) =>
+          part.type === type
+      )?.value ?? "";
+
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}`;
+}
+
 export default async function TourDetailPage({
   params,
   searchParams,
@@ -126,6 +169,7 @@ export default async function TourDetailPage({
     personalizacao,
     capa,
     logo_removido,
+    acesso,
   } = await searchParams;
 
   if (!isValidUuid(id)) {
@@ -163,6 +207,7 @@ export default async function TourDetailPage({
   const [
     tourResult,
     scenesResult,
+    serviceResult,
   ] = await Promise.all([
     supabase
       .from("virtual_tours")
@@ -181,7 +226,10 @@ export default async function TourDetailPage({
         logo_path,
         primary_color,
         accent_color,
-        white_label
+        white_label,
+        access_mode,
+        access_password_hash,
+        access_expires_at
       `)
       .eq("id", id)
       .maybeSingle(),
@@ -203,6 +251,12 @@ export default async function TourDetailPage({
       .order("created_at", {
         ascending: true,
       }),
+
+    supabase
+      .from("virtual_tour_services")
+      .select("service_status")
+      .eq("tour_id", id)
+      .maybeSingle(),
   ]);
 
   if (tourResult.error) {
@@ -223,6 +277,10 @@ export default async function TourDetailPage({
   const scenes =
     (scenesResult.data ?? []) as
       SceneRecord[];
+
+  const service =
+    serviceResult.data as
+      TourServiceRecord | null;
 
   const sceneIds =
     scenes.map(
@@ -397,6 +455,41 @@ export default async function TourDetailPage({
         {logo_removido === "1" && (
           <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
             Logotipo removido com sucesso.
+          </div>
+        )}
+
+        {acesso === "1" && (
+          <div className="mt-6 rounded-2xl border border-green-300 bg-green-50 px-5 py-4 font-bold text-green-900">
+            Configurações de acesso atualizadas com sucesso.
+          </div>
+        )}
+
+        {erro === "senha-obrigatoria" && (
+          <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-5 py-4 font-bold text-red-800">
+            Crie uma senha com pelo menos 6 caracteres para proteger o passeio.
+          </div>
+        )}
+
+        {erro === "senha-curta" && (
+          <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-5 py-4 font-bold text-red-800">
+            A nova senha precisa ter pelo menos 6 caracteres.
+          </div>
+        )}
+
+        {erro === "validade-acesso" && (
+          <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 px-5 py-4 font-bold text-red-800">
+            Escolha uma data de validade futura ou deixe o campo vazio.
+          </div>
+        )}
+
+        {service && service.service_status !== "active" && (
+          <div className="mt-6 rounded-2xl border border-orange-300 bg-orange-50 px-5 py-4 text-orange-900">
+            <p className="font-black">
+              O acesso público deste passeio está bloqueado.
+            </p>
+            <p className="mt-1 text-sm font-semibold">
+              O serviço comercial está {service.service_status === "suspended" ? "suspenso" : "cancelado"}. Reative-o no cadastro do cliente para liberar o link.
+            </p>
           </div>
         )}
 
@@ -1094,6 +1187,129 @@ export default async function TourDetailPage({
 
             <section className="rounded-3xl bg-white p-6 shadow-lg">
               <h2 className="text-lg font-black text-blue-950">
+                Privacidade e validade
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Defina se o link abre diretamente ou exige senha e quando ele deve expirar.
+              </p>
+
+              <form
+                action={updateVirtualTourAccess}
+                className="mt-5 space-y-4"
+              >
+                <input
+                  type="hidden"
+                  name="tour_id"
+                  value={tour.id}
+                />
+
+                <div>
+                  <label
+                    htmlFor="tour-access-mode"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    Forma de acesso
+                  </label>
+
+                  <select
+                    id="tour-access-mode"
+                    name="access_mode"
+                    defaultValue={tour.access_mode ?? "public"}
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  >
+                    <option value="public">
+                      Público — abre sem senha
+                    </option>
+                    <option value="password">
+                      Privado — exige senha
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tour-access-password"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    {tour.access_password_hash
+                      ? "Nova senha (opcional)"
+                      : "Senha do passeio"}
+                  </label>
+
+                  <input
+                    id="tour-access-password"
+                    name="access_password"
+                    type="password"
+                    minLength={6}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    placeholder={tour.access_password_hash
+                      ? "Deixe vazio para manter a senha atual"
+                      : "Mínimo de 6 caracteres"}
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  />
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    {tour.access_password_hash
+                      ? "Já existe uma senha protegida. Digite outra somente se desejar substituí-la."
+                      : "A senha será criptografada e não poderá ser visualizada depois."}
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="tour-access-expires-at"
+                    className="text-sm font-black text-slate-800"
+                  >
+                    Validade do link (opcional)
+                  </label>
+
+                  <input
+                    id="tour-access-expires-at"
+                    name="access_expires_at"
+                    type="datetime-local"
+                    defaultValue={formatAccessExpiration(tour.access_expires_at)}
+                    className="mt-2 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950"
+                  />
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Deixe vazio para o link não expirar automaticamente.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                  <p className="font-black text-slate-900">
+                    Situação atual
+                  </p>
+                  <p className="mt-1 text-slate-600">
+                    {tour.access_mode === "password"
+                      ? "Link protegido por senha"
+                      : "Link público sem senha"}
+                    {tour.access_expires_at
+                      ? ` · expira em ${new Intl.DateTimeFormat("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                          timeZone: "America/Sao_Paulo",
+                        }).format(new Date(tour.access_expires_at))}`
+                      : " · sem validade definida"}
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    color: "#ffffff",
+                  }}
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-blue-950 px-5 py-3 font-black text-white shadow-md transition hover:bg-blue-900"
+                >
+                  Salvar configurações de acesso
+                </button>
+              </form>
+            </section>
+
+            <section className="rounded-3xl bg-white p-6 shadow-lg">
+              <h2 className="text-lg font-black text-blue-950">
                 Publicação e link
               </h2>
 
@@ -1199,6 +1415,8 @@ export default async function TourDetailPage({
                 path={`/tour/${tour.slug}`}
                 slug={tour.slug}
                 title={tour.title}
+                accessMode={tour.access_mode}
+                accessExpiresAt={tour.access_expires_at}
               />
             )}
           </aside>

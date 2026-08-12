@@ -5,6 +5,10 @@ import type {
 import Link from "next/link";
 
 import {
+  cookies,
+} from "next/headers";
+
+import {
   notFound,
 } from "next/navigation";
 
@@ -15,6 +19,15 @@ import VirtualTourViewer, {
 import {
   createSupabaseAdminClient,
 } from "@/lib/supabaseAdmin";
+
+import {
+  getVirtualTourAccessCookieName,
+  isValidVirtualTourAccessCookie,
+} from "@/lib/virtualTourAccess";
+
+import {
+  unlockVirtualTour,
+} from "./actions";
 
 export const dynamic =
   "force-dynamic";
@@ -31,6 +44,7 @@ type PublicTourPageProps = {
 
   searchParams: Promise<{
     embed?: string;
+    erro?: string;
   }>;
 };
 
@@ -48,6 +62,14 @@ type PublicTourRecord = {
   primary_color: string | null;
   accent_color: string | null;
   white_label: boolean | null;
+  access_mode: string;
+  access_password_hash: string | null;
+  access_expires_at: string | null;
+  access_version: string;
+};
+
+type PublicTourServiceRecord = {
+  service_status: string;
 };
 
 type PublicSceneRecord = {
@@ -151,7 +173,11 @@ async function getPublishedTour(
       logo_path,
       primary_color,
       accent_color,
-      white_label
+      white_label,
+      access_mode,
+      access_password_hash,
+      access_expires_at,
+      access_version
     `)
     .eq("slug", safeSlug)
     .eq("status", "published")
@@ -193,6 +219,41 @@ export async function generateMetadata({
     };
   }
 
+  const metadataSupabase =
+    createSupabaseAdminClient();
+
+  const {
+    data: metadataService,
+    error: metadataServiceError,
+  } = await metadataSupabase
+    .from("virtual_tour_services")
+    .select("service_status")
+    .eq("tour_id", tour.id)
+    .maybeSingle();
+
+  const isUnavailable =
+    Boolean(
+      metadataServiceError ||
+      (metadataService &&
+        metadataService.service_status !==
+          "active") ||
+      (tour.access_expires_at &&
+        new Date(
+          tour.access_expires_at
+        ).getTime() <= Date.now())
+    );
+
+  if (isUnavailable) {
+    return {
+      title:
+        "Passeio virtual indisponível",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
   const brand =
     tour.brand_name ||
     "Aluga Casa Búzios";
@@ -200,6 +261,19 @@ export async function generateMetadata({
   const description =
     tour.description ||
     "Conheça todos os ambientes por meio de um passeio virtual em 360 graus.";
+
+  if (tour.access_mode === "password") {
+    return {
+      title:
+        "Passeio virtual protegido",
+      description:
+        "Este passeio virtual exige uma senha de acesso.",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
 
   const coverUrl =
     tour.cover_image_path
@@ -232,6 +306,148 @@ export async function generateMetadata({
   };
 }
 
+function TourAccessMessage({
+  title,
+  message,
+  embedded,
+}: {
+  title: string;
+  message: string;
+  embedded: boolean;
+}) {
+  return (
+    <main
+      className={`${
+        embedded
+          ? "h-dvh min-h-[320px]"
+          : "min-h-screen"
+      } flex items-center justify-center bg-slate-950 px-5 py-10 text-white`}
+    >
+      <section className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/5 p-7 text-center shadow-2xl backdrop-blur sm:p-10">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-400 text-2xl font-black text-blue-950">
+          360°
+        </div>
+
+        <h1 className="mt-6 text-2xl font-black sm:text-3xl">
+          {title}
+        </h1>
+
+        <p className="mt-3 leading-7 text-slate-300">
+          {message}
+        </p>
+
+        {!embedded && (
+          <Link
+            href="/"
+            style={{
+              color: "#172554",
+            }}
+            className="mt-7 inline-flex min-h-12 items-center justify-center rounded-full bg-sky-300 px-6 py-3 font-black text-blue-950 transition hover:bg-sky-200"
+          >
+            Voltar ao site
+          </Link>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function TourPasswordGate({
+  tour,
+  embedded,
+  hasError,
+}: {
+  tour: PublicTourRecord;
+  embedded: boolean;
+  hasError: boolean;
+}) {
+  return (
+    <main
+      className={`${
+        embedded
+          ? "h-dvh min-h-[320px]"
+          : "min-h-screen"
+      } flex items-center justify-center bg-slate-950 px-5 py-10 text-white`}
+    >
+      <section className="w-full max-w-lg rounded-3xl border border-white/10 bg-white/5 p-7 shadow-2xl backdrop-blur sm:p-10">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-400 text-2xl text-blue-950">
+          🔒
+        </div>
+
+        <p className="mt-6 text-center text-sm font-black uppercase tracking-[0.2em] text-sky-300">
+          Passeio virtual protegido
+        </p>
+
+        <h1 className="mt-2 text-center text-2xl font-black sm:text-3xl">
+          {tour.title}
+        </h1>
+
+        <p className="mt-3 text-center leading-7 text-slate-300">
+          Digite a senha fornecida para abrir o passeio 360°.
+        </p>
+
+        {hasError && (
+          <div
+            role="alert"
+            className="mt-5 rounded-xl border border-red-400/50 bg-red-950/50 px-4 py-3 text-center text-sm font-bold text-red-100"
+          >
+            Senha incorreta. Verifique e tente novamente.
+          </div>
+        )}
+
+        <form
+          action={unlockVirtualTour}
+          className="mt-6"
+        >
+          <input
+            type="hidden"
+            name="slug"
+            value={tour.slug}
+          />
+
+          <input
+            type="hidden"
+            name="embed"
+            value={
+              embedded
+                ? "1"
+                : "0"
+            }
+          />
+
+          <label
+            htmlFor="tour-access-password"
+            className="text-sm font-black text-white"
+          >
+            Senha de acesso
+          </label>
+
+          <input
+            id="tour-access-password"
+            name="password"
+            type="password"
+            required
+            maxLength={128}
+            autoComplete="current-password"
+            autoFocus
+            className="mt-2 min-h-13 w-full rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-lg text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30"
+          />
+
+          <button
+            type="submit"
+            style={{
+              color: "#172554",
+            }}
+            className="mt-4 min-h-13 w-full rounded-xl bg-sky-300 px-5 py-3 font-black text-blue-950 transition hover:bg-sky-200"
+          >
+            Abrir passeio 360°
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
 export default async function PublicTourPage({
   params,
   searchParams,
@@ -242,6 +458,7 @@ export default async function PublicTourPage({
 
   const {
     embed,
+    erro,
   } = await searchParams;
 
   const isEmbedded =
@@ -258,6 +475,95 @@ export default async function PublicTourPage({
 
   const supabase =
     createSupabaseAdminClient();
+
+  const {
+    data: serviceData,
+    error: serviceError,
+  } = await supabase
+    .from("virtual_tour_services")
+    .select("service_status")
+    .eq("tour_id", tour.id)
+    .maybeSingle();
+
+  const service =
+    serviceData as
+      PublicTourServiceRecord | null;
+
+  if (
+    serviceError ||
+    (service &&
+      service.service_status !==
+        "active")
+  ) {
+    return (
+      <TourAccessMessage
+        title="Passeio temporariamente indisponível"
+        message="Este passeio não está disponível no momento. Entre em contato com o responsável pelo link para mais informações."
+        embedded={isEmbedded}
+      />
+    );
+  }
+
+  if (
+    tour.access_expires_at &&
+    new Date(
+      tour.access_expires_at
+    ).getTime() <= Date.now()
+  ) {
+    return (
+      <TourAccessMessage
+        title="Este link expirou"
+        message="A validade deste passeio virtual terminou. Solicite um novo acesso ao responsável pelo link."
+        embedded={isEmbedded}
+      />
+    );
+  }
+
+  if (
+    tour.access_mode ===
+      "password"
+  ) {
+    if (
+      !tour.access_password_hash
+    ) {
+      return (
+        <TourAccessMessage
+          title="Passeio temporariamente indisponível"
+          message="A proteção deste passeio ainda não foi concluída. Entre em contato com o responsável pelo link."
+          embedded={isEmbedded}
+        />
+      );
+    }
+
+    const cookieStore =
+      await cookies();
+
+    const cookieValue =
+      cookieStore.get(
+        getVirtualTourAccessCookieName(
+          tour.id
+        )
+      )?.value;
+
+    const hasAccess =
+      isValidVirtualTourAccessCookie(
+        cookieValue,
+        tour.id,
+        tour.access_version
+      );
+
+    if (!hasAccess) {
+      return (
+        <TourPasswordGate
+          tour={tour}
+          embedded={isEmbedded}
+          hasError={
+            erro === "senha"
+          }
+        />
+      );
+    }
+  }
 
   const {
     data: sceneData,

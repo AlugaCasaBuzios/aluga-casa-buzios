@@ -27,6 +27,8 @@ type VirtualTourRecord = {
   title: string;
   slug: string;
   status: string;
+  access_mode: string;
+  access_expires_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -128,6 +130,8 @@ export default async function ToursPage({
         title,
         slug,
         status,
+        access_mode,
+        access_expires_at,
         created_at,
         updated_at
       `)
@@ -329,6 +333,32 @@ export default async function ToursPage({
                           {statusLabels[tour.status] ??
                             tour.status}
                         </span>
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            tour.access_mode === "password"
+                              ? "bg-sky-100 text-sky-900"
+                              : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {tour.access_mode === "password"
+                            ? "Protegido por senha"
+                            : "Acesso público"}
+                        </span>
+
+                        {tour.access_expires_at && (
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ${
+                              new Date(tour.access_expires_at).getTime() <= Date.now()
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-900"
+                            }`}
+                          >
+                            {new Date(tour.access_expires_at).getTime() <= Date.now()
+                              ? "Link expirado"
+                              : `Expira em ${formatDate(tour.access_expires_at)}`}
+                          </span>
+                        )}
                       </div>
 
                       <p className="mt-2 text-sm font-semibold text-slate-700">

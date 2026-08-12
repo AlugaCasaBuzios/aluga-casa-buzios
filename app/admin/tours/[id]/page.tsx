@@ -23,6 +23,8 @@ import VirtualTourSceneImageReplacer from "@/components/virtual-tour/VirtualTour
 
 import VirtualTourLogoUploader from "@/components/virtual-tour/VirtualTourLogoUploader";
 
+import VirtualTourThumbnailOptimizer from "@/components/virtual-tour/VirtualTourThumbnailOptimizer";
+
 import {
   deleteVirtualTourLink,
   deleteVirtualTourScene,
@@ -92,6 +94,7 @@ type SceneRecord = {
   id: string;
   name: string;
   panorama_path: string;
+  thumbnail_path: string | null;
   sort_order: number;
   is_start: boolean;
   created_at: string;
@@ -240,6 +243,7 @@ export default async function TourDetailPage({
         id,
         name,
         panorama_path,
+        thumbnail_path,
         sort_order,
         is_start,
         created_at
@@ -334,7 +338,7 @@ export default async function TourDetailPage({
   const scenesWithUrls =
     scenes.map((scene) => ({
       ...scene,
-      publicUrl:
+      panoramaPublicUrl:
         supabase.storage
           .from(
             "virtual-tour-images"
@@ -342,7 +346,32 @@ export default async function TourDetailPage({
           .getPublicUrl(
             scene.panorama_path
           ).data.publicUrl,
+      thumbnailPublicUrl:
+        scene.thumbnail_path &&
+        scene.thumbnail_path !==
+          scene.panorama_path
+          ? supabase.storage
+              .from(
+                "virtual-tour-images"
+              )
+              .getPublicUrl(
+                scene.thumbnail_path
+              ).data.publicUrl
+          : null,
     }));
+
+  const scenesWithoutOptimizedThumbnail =
+    scenesWithUrls
+      .filter(
+        (scene) =>
+          !scene.thumbnailPublicUrl
+      )
+      .map((scene) => ({
+        id: scene.id,
+        name: scene.name,
+        panoramaUrl:
+          scene.panoramaPublicUrl,
+      }));
 
   const logoPublicUrl =
     tour.logo_path
@@ -493,6 +522,13 @@ export default async function TourDetailPage({
           </div>
         )}
 
+        {scenesWithoutOptimizedThumbnail.length > 0 && (
+          <VirtualTourThumbnailOptimizer
+            tourId={tour.id}
+            scenes={scenesWithoutOptimizedThumbnail}
+          />
+        )}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <section className="rounded-3xl bg-white p-6 shadow-lg">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -542,12 +578,30 @@ export default async function TourDetailPage({
                       className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                     >
                       <div className="aspect-[2/1] overflow-hidden bg-slate-200">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={scene.publicUrl}
-                          alt={`Panorama 360° do ambiente ${scene.name}`}
-                          className="h-full w-full object-cover"
-                        />
+                        {scene.thumbnailPublicUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={scene.thumbnailPublicUrl}
+                            alt={`Prévia do ambiente ${scene.name}`}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-300 px-5 text-center text-blue-950">
+                            <span className="text-3xl" aria-hidden="true">
+                              360°
+                            </span>
+
+                            <p className="mt-2 text-sm font-black">
+                              Miniatura pronta para otimização
+                            </p>
+
+                            <p className="mt-1 text-xs font-semibold text-slate-600">
+                              A foto original será aberta somente quando você configurar as setas.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-4">
@@ -841,7 +895,7 @@ export default async function TourDetailPage({
                                 </div>
 
                                 <VirtualTourHotspotEditor
-                                  panorama={scene.publicUrl}
+                                  panorama={scene.panoramaPublicUrl}
                                   fieldIdPrefix={`hotspot-${scene.id}`}
                                   initialYawDegrees={0}
                                   initialPitchDegrees={-8}

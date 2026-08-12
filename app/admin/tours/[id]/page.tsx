@@ -15,7 +15,7 @@ import {
 
 import VirtualTourSceneUploader from "@/components/virtual-tour/VirtualTourSceneUploader";
 
-import CopyPublicTourLinkButton from "@/components/virtual-tour/CopyPublicTourLinkButton";
+import VirtualTourSharePanel from "@/components/virtual-tour/VirtualTourSharePanel";
 
 import VirtualTourHotspotEditor from "@/components/virtual-tour/VirtualTourHotspotEditor";
 
@@ -1147,10 +1147,6 @@ export default async function TourDetailPage({
                       Abrir passeio público
                     </a>
 
-                    <CopyPublicTourLinkButton
-                      path={`/tour/${tour.slug}`}
-                    />
-
                     <form action={unpublishVirtualTour}>
                       <input
                         type="hidden"
@@ -1197,6 +1193,14 @@ export default async function TourDetailPage({
                 )}
               </div>
             </section>
+
+            {tour.status === "published" && (
+              <VirtualTourSharePanel
+                path={`/tour/${tour.slug}`}
+                slug={tour.slug}
+                title={tour.title}
+              />
+            )}
           </aside>
         </div>
       </div>

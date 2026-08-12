@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const securityHeaders = [
+const baseSecurityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
     value: "on",
@@ -12,10 +12,6 @@ const securityHeaders = [
   {
     key: "X-Content-Type-Options",
     value: "nosniff",
-  },
-  {
-    key: "X-Frame-Options",
-    value: "SAMEORIGIN",
   },
   {
     key: "Referrer-Policy",
@@ -34,10 +30,27 @@ const securityHeaders = [
     key: "Cross-Origin-Opener-Policy",
     value: "same-origin-allow-popups",
   },
+];
+
+const standardSecurityHeaders = [
+  ...baseSecurityHeaders,
+  {
+    key: "X-Frame-Options",
+    value: "SAMEORIGIN",
+  },
   {
     key: "Content-Security-Policy",
     value:
       "frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
+  },
+];
+
+const publicTourSecurityHeaders = [
+  ...baseSecurityHeaders,
+  {
+    key: "Content-Security-Policy",
+    value:
+      "frame-ancestors https: http:; base-uri 'self'; object-src 'none'",
   },
 ];
 
@@ -61,8 +74,20 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
-        headers: securityHeaders,
+        source: "/",
+        headers:
+          standardSecurityHeaders,
+      },
+      {
+        source:
+          "/:path((?!tour/).*)",
+        headers:
+          standardSecurityHeaders,
+      },
+      {
+        source: "/tour/:path*",
+        headers:
+          publicTourSecurityHeaders,
       },
     ];
   },

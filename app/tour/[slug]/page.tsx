@@ -28,6 +28,10 @@ type PublicTourPageProps = {
   params: Promise<{
     slug: string;
   }>;
+
+  searchParams: Promise<{
+    embed?: string;
+  }>;
 };
 
 type PublicTourRecord = {
@@ -230,10 +234,18 @@ export async function generateMetadata({
 
 export default async function PublicTourPage({
   params,
+  searchParams,
 }: PublicTourPageProps) {
   const {
     slug,
   } = await params;
+
+  const {
+    embed,
+  } = await searchParams;
+
+  const isEmbedded =
+    embed === "1";
 
   const tour =
     await getPublishedTour(
@@ -376,6 +388,20 @@ export default async function PublicTourPage({
       (scene) =>
         scene.is_start
     )?.id ?? scenes[0].id;
+
+  if (isEmbedded) {
+    return (
+      <main className="h-dvh min-h-[320px] overflow-hidden bg-zinc-950">
+        <VirtualTourViewer
+          title={`${tour.title} — Passeio virtual 360°`}
+          startSceneId={startSceneId}
+          scenes={scenes}
+          height="100dvh"
+          className="!rounded-none !shadow-none"
+        />
+      </main>
+    );
+  }
 
   const brand =
     tour.brand_name ||

@@ -17,6 +17,11 @@ import VirtualTourViewer, {
 } from "@/components/virtual-tour/VirtualTourViewer";
 
 import {
+  TrackedWhatsappLink,
+  VirtualTourViewTracker,
+} from "@/components/virtual-tour/VirtualTourAnalyticsTracker";
+
+import {
   createSupabaseAdminClient,
 } from "@/lib/supabaseAdmin";
 
@@ -698,12 +703,16 @@ export default async function PublicTourPage({
   if (isEmbedded) {
     return (
       <main className="h-dvh min-h-[320px] overflow-hidden bg-zinc-950">
+        <VirtualTourViewTracker tourId={tour.id} embedded />
+
         <VirtualTourViewer
           title={`${tour.title} — Passeio virtual 360°`}
           startSceneId={startSceneId}
           scenes={scenes}
           height="100dvh"
           className="!rounded-none !shadow-none"
+          analyticsTourId={tour.id}
+          analyticsEmbedded
         />
       </main>
     );
@@ -735,10 +744,26 @@ export default async function PublicTourPage({
       accentColor
     );
 
-  const coverUrl =
+  const coverScene =
     tour.cover_image_path
+      ? sceneRecords.find(
+          (scene) =>
+            scene.panorama_path ===
+            tour.cover_image_path
+        )
+      : null;
+
+  const coverDisplayPath =
+    coverScene?.thumbnail_path &&
+    coverScene.thumbnail_path !==
+      coverScene.panorama_path
+      ? coverScene.thumbnail_path
+      : tour.cover_image_path;
+
+  const coverUrl =
+    coverDisplayPath
       ? getPublicUrl(
-          tour.cover_image_path
+          coverDisplayPath
         )
       : null;
 
@@ -780,6 +805,8 @@ export default async function PublicTourPage({
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
+      <VirtualTourViewTracker tourId={tour.id} />
+
       <header
         style={{
           backgroundColor:
@@ -846,17 +873,16 @@ export default async function PublicTourPage({
               )}
 
               {whatsappUrl && (
-                <a
+                <TrackedWhatsappLink
+                  tourId={tour.id}
                   href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   style={{
                     color: "#ffffff",
                   }}
                   className="inline-flex min-h-12 items-center justify-center rounded-full bg-green-600 px-6 py-3 text-center font-black text-white shadow-lg transition hover:bg-green-700"
                 >
                   Solicitar informações
-                </a>
+                </TrackedWhatsappLink>
               )}
             </div>
           )}
@@ -944,6 +970,7 @@ export default async function PublicTourPage({
             startSceneId={startSceneId}
             scenes={scenes}
             height="75vh"
+            analyticsTourId={tour.id}
           />
         </div>
 
@@ -1019,17 +1046,16 @@ export default async function PublicTourPage({
               )}
 
               {whatsappUrl && (
-                <a
+                <TrackedWhatsappLink
+                  tourId={tour.id}
                   href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   style={{
                     color: "#ffffff",
                   }}
                   className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-green-600 px-6 py-3 text-center font-black text-white shadow-lg transition hover:bg-green-700 sm:w-auto"
                 >
                   Falar pelo WhatsApp
-                </a>
+                </TrackedWhatsappLink>
               )}
             </div>
           )}

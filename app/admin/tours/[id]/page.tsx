@@ -25,6 +25,10 @@ import VirtualTourLogoUploader from "@/components/virtual-tour/VirtualTourLogoUp
 
 import VirtualTourThumbnailOptimizer from "@/components/virtual-tour/VirtualTourThumbnailOptimizer";
 
+import VirtualTourAnalyticsPanel, {
+  type VirtualTourAnalyticsSummary,
+} from "@/components/virtual-tour/VirtualTourAnalyticsPanel";
+
 import {
   deleteVirtualTourLink,
   deleteVirtualTourScene,
@@ -151,6 +155,55 @@ function formatAccessExpiration(
   return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}`;
 }
 
+function getNumericValue(value: unknown): number {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.max(0, numericValue) : 0;
+}
+
+function parseAnalyticsSummary(value: unknown): VirtualTourAnalyticsSummary | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const sceneRanking = Array.isArray(record.scene_ranking)
+    ? record.scene_ranking
+        .filter((scene) => Boolean(scene && typeof scene === "object" && !Array.isArray(scene)))
+        .map((scene) => {
+          const sceneRecord = scene as Record<string, unknown>;
+          return {
+            scene_id: String(sceneRecord.scene_id ?? ""),
+            scene_name: String(sceneRecord.scene_name ?? "Ambiente"),
+            views: getNumericValue(sceneRecord.views),
+          };
+        })
+        .filter((scene) => Boolean(scene.scene_id))
+    : [];
+
+  const dailyViews = Array.isArray(record.daily_views)
+    ? record.daily_views
+        .filter((day) => Boolean(day && typeof day === "object" && !Array.isArray(day)))
+        .map((day) => {
+          const dayRecord = day as Record<string, unknown>;
+          return {
+            date: String(dayRecord.date ?? ""),
+            views: getNumericValue(dayRecord.views),
+          };
+        })
+        .filter((day) => Boolean(day.date))
+    : [];
+
+  return {
+    total_views: getNumericValue(record.total_views),
+    views_last_30_days: getNumericValue(record.views_last_30_days),
+    views_last_7_days: getNumericValue(record.views_last_7_days),
+    whatsapp_clicks: getNumericValue(record.whatsapp_clicks),
+    embedded_views: getNumericValue(record.embedded_views),
+    scene_ranking: sceneRanking,
+    daily_views: dailyViews,
+  };
+}
+
 export default async function TourDetailPage({
   params,
   searchParams,
@@ -211,6 +264,7 @@ export default async function TourDetailPage({
     tourResult,
     scenesResult,
     serviceResult,
+    analyticsResult,
   ] = await Promise.all([
     supabase
       .from("virtual_tours")
@@ -261,6 +315,10 @@ export default async function TourDetailPage({
       .select("service_status")
       .eq("tour_id", id)
       .maybeSingle(),
+
+    supabase.rpc("get_virtual_tour_analytics", {
+      p_tour_id: id,
+    }),
   ]);
 
   if (tourResult.error) {
@@ -285,6 +343,12 @@ export default async function TourDetailPage({
   const service =
     serviceResult.data as
       TourServiceRecord | null;
+
+  if (analyticsResult.error) {
+    console.error("Erro ao carregar estatísticas do passeio:", analyticsResult.error);
+  }
+
+  const analyticsSummary = parseAnalyticsSummary(analyticsResult.data);
 
   const sceneIds =
     scenes.map(
@@ -521,6 +585,11 @@ export default async function TourDetailPage({
             </p>
           </div>
         )}
+
+        <VirtualTourAnalyticsPanel
+          summary={analyticsSummary}
+          hasError={Boolean(analyticsResult.error)}
+        />
 
         {scenesWithoutOptimizedThumbnail.length > 0 && (
           <VirtualTourThumbnailOptimizer

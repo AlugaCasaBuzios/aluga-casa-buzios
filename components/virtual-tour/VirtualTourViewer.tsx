@@ -24,8 +24,13 @@ import {
 
 import {
   VirtualTourPlugin,
+  events as virtualTourEvents,
   type VirtualTourNode,
 } from "@photo-sphere-viewer/virtual-tour-plugin";
+
+import {
+  trackVirtualTourEvent,
+} from "@/lib/virtualTourAnalyticsClient";
 
 import "@photo-sphere-viewer/core/index.css";
 import "@photo-sphere-viewer/gallery-plugin/index.css";
@@ -53,6 +58,8 @@ type VirtualTourViewerProps = {
   title?: string;
   height?: number | string;
   className?: string;
+  analyticsTourId?: string;
+  analyticsEmbedded?: boolean;
 };
 
 function getCssHeight(
@@ -69,6 +76,8 @@ export default function VirtualTourViewer({
   title = "Passeio virtual 360°",
   height = "70vh",
   className = "",
+  analyticsTourId,
+  analyticsEmbedded = false,
 }: VirtualTourViewerProps) {
   const containerRef =
     useRef<HTMLDivElement | null>(
@@ -201,7 +210,7 @@ export default function VirtualTourViewer({
           nodes,
           startNodeId:
             validStartSceneId,
-          preload: true,
+          preload: false,
           showLinkTooltip: true,
           transitionOptions: {
             showLoader: true,
@@ -212,6 +221,23 @@ export default function VirtualTourViewer({
         }),
       ],
     });
+
+    const virtualTourPlugin = viewer.getPlugin<VirtualTourPlugin>(VirtualTourPlugin);
+
+    function trackSceneView(event: virtualTourEvents.NodeChangedEvent) {
+      if (!analyticsTourId) {
+        return;
+      }
+
+      trackVirtualTourEvent({
+        tourId: analyticsTourId,
+        eventType: "scene_view",
+        sceneId: event.node.id,
+        embedded: analyticsEmbedded,
+      });
+    }
+
+    virtualTourPlugin.addEventListener("node-changed", trackSceneView);
 
     viewerRef.current =
       viewer;
@@ -225,12 +251,16 @@ export default function VirtualTourViewer({
           null;
       }
 
+      virtualTourPlugin.removeEventListener("node-changed", trackSceneView);
+
       viewer.destroy();
     };
   }, [
     nodes,
     startSceneId,
     title,
+    analyticsTourId,
+    analyticsEmbedded,
   ]);
 
   const viewerHeight =

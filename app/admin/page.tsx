@@ -520,13 +520,13 @@ export default async function AdminPage({
 
               <p className="mt-2 text-blue-100">
                 Gerenciamento de preços, períodos,
-                disponibilidade, imóveis e propostas
+                disponibilidade, imóveis, propostas e passeios 360°
               </p>
             </div>
 
             <nav
               aria-label="Opções do painel administrativo"
-              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-8"
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
             >
               <Link
                 href="/admin/propostas"
@@ -639,6 +639,28 @@ export default async function AdminPage({
               >
                 <span>Funcionários</span>
                 <span className="text-xs font-semibold text-indigo-700">Acessos da equipe</span>
+              </Link>
+
+              <Link
+                href="/admin/tours"
+                style={{
+                  color: "#172554",
+                }}
+                className="inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-sky-100 px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-200"
+              >
+                <span>Passeios 360°</span>
+                <span className="text-xs font-semibold text-sky-800">Ambientes e publicação</span>
+              </Link>
+
+              <Link
+                href="/admin/clientes-tours"
+                style={{
+                  color: "#14532d",
+                }}
+                className="inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-lime-100 px-5 py-3 text-center font-bold text-green-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-lime-200"
+              >
+                <span>Clientes dos tours</span>
+                <span className="text-xs font-semibold text-green-800">Contratos e cobranças</span>
               </Link>
             </nav>
 

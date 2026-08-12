@@ -36,6 +36,18 @@ type PropertyRecord = {
   title: string;
 };
 
+type TourServiceRecord = {
+  tour_id: string;
+  client_id: string;
+  payment_status: string;
+  service_status: string;
+};
+
+type TourClientRecord = {
+  id: string;
+  name: string;
+};
+
 const statusLabels:
   Record<string, string> = {
     draft: "Rascunho",
@@ -105,6 +117,8 @@ export default async function ToursPage({
   const [
     toursResult,
     propertiesResult,
+    servicesResult,
+    clientsResult,
   ] = await Promise.all([
     supabase
       .from("virtual_tours")
@@ -127,6 +141,14 @@ export default async function ToursPage({
       .order("title", {
         ascending: true,
       }),
+
+    supabase
+      .from("virtual_tour_services")
+      .select("tour_id, client_id, payment_status, service_status"),
+
+    supabase
+      .from("virtual_tour_clients")
+      .select("id, name"),
   ]);
 
   if (toursResult.error) {
@@ -153,6 +175,28 @@ export default async function ToursPage({
         ]
       )
     );
+
+  const services =
+    (servicesResult.data ?? []) as
+      TourServiceRecord[];
+
+  const clients =
+    (clientsResult.data ?? []) as
+      TourClientRecord[];
+
+  const serviceByTour = new Map(
+    services.map((service) => [
+      service.tour_id,
+      service,
+    ])
+  );
+
+  const clientNames = new Map(
+    clients.map((client) => [
+      client.id,
+      client.name,
+    ])
+  );
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 sm:py-10">
@@ -183,6 +227,16 @@ export default async function ToursPage({
                 className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/40 bg-white px-5 py-3 font-bold text-blue-950 transition hover:bg-sky-100"
               >
                 Voltar ao painel
+              </Link>
+
+              <Link
+                href="/admin/clientes-tours"
+                style={{
+                  color: "#172554",
+                }}
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-sky-100 px-5 py-3 font-bold text-blue-950 transition hover:bg-sky-200"
+              >
+                Clientes e cobranças
               </Link>
 
               <Link
@@ -249,6 +303,15 @@ export default async function ToursPage({
                   statusClasses[tour.status] ??
                   statusClasses.draft;
 
+                const service =
+                  serviceByTour.get(tour.id);
+
+                const clientName = service
+                  ? clientNames.get(
+                      service.client_id
+                    )
+                  : null;
+
                 return (
                   <article
                     key={tour.id}
@@ -279,6 +342,30 @@ export default async function ToursPage({
                       <p className="mt-1 break-all text-sm text-slate-500">
                         /tour/{tour.slug}
                       </p>
+
+                      <p className="mt-2 text-sm font-semibold text-slate-700">
+                        {clientName
+                          ? `Cliente: ${clientName}`
+                          : "Sem cliente comercial vinculado"}
+                      </p>
+
+                      {service && (
+                        <p className="mt-1 text-xs font-bold text-slate-500">
+                          Serviço: {service.service_status === "active"
+                            ? "Ativo"
+                            : service.service_status === "suspended"
+                            ? "Suspenso"
+                            : "Cancelado"}
+                          {" · "}
+                          Pagamento: {service.payment_status === "paid"
+                            ? "Pago"
+                            : service.payment_status === "waived"
+                            ? "Isento"
+                            : service.payment_status === "overdue"
+                            ? "Atrasado"
+                            : "Pendente"}
+                        </p>
+                      )}
 
                       <p className="mt-2 text-xs text-slate-500">
                         Criado em {formatDate(tour.created_at)}

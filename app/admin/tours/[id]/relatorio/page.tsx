@@ -23,6 +23,10 @@ type ReportPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    inicio?: string;
+    fim?: string;
+  }>;
 };
 
 type TourRecord = {
@@ -73,8 +77,7 @@ type DailyAnalytics = {
 
 type AnalyticsSummary = {
   total_views: number;
-  views_last_30_days: number;
-  views_last_7_days: number;
+  previous_period_views: number;
   whatsapp_clicks: number;
   embedded_views: number;
   scene_ranking: SceneAnalytics[];
@@ -131,13 +134,99 @@ function parseAnalyticsSummary(value: unknown): AnalyticsSummary | null {
 
   return {
     total_views: getNumericValue(record.total_views),
-    views_last_30_days: getNumericValue(record.views_last_30_days),
-    views_last_7_days: getNumericValue(record.views_last_7_days),
+    previous_period_views: getNumericValue(record.previous_period_views),
     whatsapp_clicks: getNumericValue(record.whatsapp_clicks),
     embedded_views: getNumericValue(record.embedded_views),
     scene_ranking: sceneRanking,
     daily_views: dailyViews,
   };
+}
+
+function getCurrentDateParts(): {
+  year: string;
+  month: string;
+  day: string;
+} {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).formatToParts(new Date());
+
+  const getPart = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+
+  return {
+    year: getPart("year"),
+    month: getPart("month"),
+    day: getPart("day"),
+  };
+}
+
+function getDefaultPeriod(): {
+  startDate: string;
+  endDate: string;
+} {
+  const currentDate = getCurrentDateParts();
+
+  return {
+    startDate: `${currentDate.year}-${currentDate.month}-01`,
+    endDate: `${currentDate.year}-${currentDate.month}-${currentDate.day}`,
+  };
+}
+
+function parseIsoDate(value: string | undefined): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    return null;
+  }
+
+  return date;
+}
+
+function resolvePeriod(
+  startValue: string | undefined,
+  endValue: string | undefined
+): {
+  startDate: string;
+  endDate: string;
+  wasAdjusted: boolean;
+} {
+  const fallback = getDefaultPeriod();
+  const start = parseIsoDate(startValue);
+  const end = parseIsoDate(endValue);
+
+  if (!start || !end || start.getTime() > end.getTime()) {
+    return { ...fallback, wasAdjusted: Boolean(startValue || endValue) };
+  }
+
+  const periodDays = Math.floor((end.getTime() - start.getTime()) / 86_400_000) + 1;
+
+  if (periodDays > 92) {
+    return { ...fallback, wasAdjusted: true };
+  }
+
+  return {
+    startDate: startValue as string,
+    endDate: endValue as string,
+    wasAdjusted: false,
+  };
+}
+
+function formatPeriodDate(value: string): string {
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 function formatNumber(value: number): string {
@@ -207,8 +296,11 @@ function getServiceLabel(value: string): string {
 
 export default async function VirtualTourReportPage({
   params,
+  searchParams,
 }: ReportPageProps) {
   const { id } = await params;
+  const { inicio, fim } = await searchParams;
+  const period = resolvePeriod(inicio, fim);
 
   if (!isValidUuid(id)) {
     notFound();
@@ -258,8 +350,10 @@ export default async function VirtualTourReportPage({
       .select("client_id, amount_cents, due_date, payment_status, service_status")
       .eq("tour_id", id)
       .maybeSingle(),
-    supabase.rpc("get_virtual_tour_analytics", {
+    supabase.rpc("get_virtual_tour_analytics_period", {
       p_tour_id: id,
+      p_start_date: period.startDate,
+      p_end_date: period.endDate,
     }),
   ]);
 
@@ -303,8 +397,7 @@ export default async function VirtualTourReportPage({
     : null;
   const analytics = summary ?? {
     total_views: 0,
-    views_last_30_days: 0,
-    views_last_7_days: 0,
+    previous_period_views: 0,
     whatsapp_clicks: 0,
     embedded_views: 0,
     scene_ranking: [],
@@ -316,6 +409,10 @@ export default async function VirtualTourReportPage({
   const maximumDailyViews = Math.max(1, ...analytics.daily_views.map((day) => day.views));
   const maximumSceneViews = Math.max(1, ...analytics.scene_ranking.map((scene) => scene.views));
   const mostVisitedScene = analytics.scene_ranking.find((scene) => scene.views > 0);
+  const viewDifference = analytics.total_views - analytics.previous_period_views;
+  const viewVariation = analytics.previous_period_views > 0
+    ? (viewDifference / analytics.previous_period_views) * 100
+    : null;
   const generatedAt = new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "long",
     timeStyle: "short",
@@ -337,12 +434,61 @@ export default async function VirtualTourReportPage({
       <div className="no-print mx-auto mb-4 flex max-w-5xl flex-wrap items-center justify-between gap-3">
         <Link
           href={`/admin/tours/${tour.id}`}
-          className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-blue-950 shadow-sm"
+          style={{ color: "#172554" }}
+          className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-black shadow-sm"
         >
           Voltar ao passeio
         </Link>
         <VirtualTourReportActions primaryColor={primaryColor} />
       </div>
+
+      <form
+        method="get"
+        className="no-print mx-auto mb-4 grid max-w-5xl gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+      >
+        <label className="text-sm font-black text-blue-950">
+          Data inicial
+          <input
+            type="date"
+            name="inicio"
+            defaultValue={period.startDate}
+            required
+            className="mt-2 block w-full rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-800"
+          />
+        </label>
+        <label className="text-sm font-black text-blue-950">
+          Data final
+          <input
+            type="date"
+            name="fim"
+            defaultValue={period.endDate}
+            required
+            className="mt-2 block w-full rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-800"
+          />
+        </label>
+        <button
+          type="submit"
+          style={{ backgroundColor: primaryColor, color: "#FFFFFF" }}
+          className="rounded-xl px-5 py-3 font-black shadow-sm transition hover:brightness-110"
+        >
+          Atualizar relatório
+        </button>
+        <p className="text-xs font-semibold text-slate-500 sm:col-span-3">
+          Escolha um período de até 92 dias. O relatório compara automaticamente com o período anterior de mesma duração.
+        </p>
+      </form>
+
+      {period.wasAdjusted && (
+        <div className="no-print mx-auto mb-4 max-w-5xl rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+          O período informado era inválido ou maior que 92 dias. O relatório voltou para o mês atual.
+        </div>
+      )}
+
+      {analyticsResult.error && (
+        <div className="no-print mx-auto mb-4 max-w-5xl rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">
+          As estatísticas por período ainda não estão disponíveis. Execute a atualização SQL desta etapa no Supabase.
+        </div>
+      )}
 
       <article className="report-sheet mx-auto max-w-5xl overflow-hidden rounded-3xl bg-white shadow-xl">
         <header
@@ -356,7 +502,10 @@ export default async function VirtualTourReportPage({
               </p>
               <h1 className="mt-2 text-3xl font-black leading-tight">{tour.title}</h1>
               <p className="mt-2 text-sm font-semibold text-white/80">
-                Passeio virtual 360° · atualizado em {generatedAt}
+                Período de {formatPeriodDate(period.startDate)} a {formatPeriodDate(period.endDate)}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-white/60">
+                Passeio virtual 360° · relatório gerado em {generatedAt}
               </p>
             </div>
             {logoPublicUrl ? (
@@ -405,14 +554,18 @@ export default async function VirtualTourReportPage({
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-bold text-slate-600">Visualizações</p>
+                <p className="text-xs font-bold text-slate-600">Visualizações no período</p>
                 <p className="mt-2 text-3xl font-black text-blue-950">{formatNumber(analytics.total_views)}</p>
                 <p className="mt-1 text-[11px] font-semibold text-slate-500">{formatNumber(analytics.embedded_views)} incorporadas</p>
               </div>
               <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-                <p className="text-xs font-bold text-sky-900">Últimos 30 dias</p>
-                <p className="mt-2 text-3xl font-black text-sky-800">{formatNumber(analytics.views_last_30_days)}</p>
-                <p className="mt-1 text-[11px] font-semibold text-sky-700">{formatNumber(analytics.views_last_7_days)} nos últimos 7 dias</p>
+                <p className="text-xs font-bold text-sky-900">Período anterior</p>
+                <p className="mt-2 text-3xl font-black text-sky-800">{formatNumber(analytics.previous_period_views)}</p>
+                <p className="mt-1 text-[11px] font-semibold text-sky-700">
+                  {viewVariation === null
+                    ? (analytics.total_views > 0 ? "Novo movimento registrado" : "Sem variação registrada")
+                    : `${viewDifference >= 0 ? "+" : ""}${viewVariation.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}% no período atual`}
+                </p>
               </div>
               <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
                 <p className="text-xs font-bold text-green-900">Cliques no WhatsApp</p>
@@ -430,8 +583,8 @@ export default async function VirtualTourReportPage({
           </section>
 
           <section className="report-section rounded-2xl border border-slate-200 p-5">
-            <h2 className="font-black text-blue-950">Visualizações nos últimos 14 dias</h2>
-            <div className="mt-5 flex h-40 items-end gap-2">
+            <h2 className="font-black text-blue-950">Visualizações no período selecionado</h2>
+            <div className="mt-5 flex h-40 items-end gap-1 overflow-x-auto">
               {analytics.daily_views.length === 0 ? (
                 <p className="m-auto text-sm font-semibold text-slate-500">Ainda não há visualizações registradas neste período.</p>
               ) : analytics.daily_views.map((day) => {
@@ -440,7 +593,7 @@ export default async function VirtualTourReportPage({
                   : Math.max(12, Math.round((day.views / maximumDailyViews) * 108));
 
                 return (
-                  <div key={day.date} className="flex min-w-0 flex-1 flex-col items-center justify-end">
+                  <div key={day.date} className="flex min-w-3 flex-1 flex-col items-center justify-end">
                     <span className="mb-1 text-[10px] font-black text-blue-950">{day.views}</span>
                     <div
                       style={{ height: `${barHeight}px`, backgroundColor: accentColor }}
@@ -494,7 +647,7 @@ export default async function VirtualTourReportPage({
                 </p>
                 <p>
                   <strong className="text-blue-950">Alcance recente:</strong>{" "}
-                  {formatNumber(analytics.views_last_30_days)} visualização(ões) nos últimos 30 dias.
+                  {formatNumber(analytics.total_views)} visualização(ões) entre {formatPeriodDate(period.startDate)} e {formatPeriodDate(period.endDate)}.
                 </p>
               </div>
             </div>

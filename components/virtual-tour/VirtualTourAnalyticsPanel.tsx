@@ -95,7 +95,7 @@ export default function VirtualTourAnalyticsPanel({
               style={{ color: "#FFFFFF" }}
               className="rounded-full bg-blue-950 px-4 py-2 text-xs font-black transition hover:bg-blue-900"
             >
-              Abrir relatório em PDF
+              Relatório por período
             </Link>
           )}
           <span className="w-fit rounded-full bg-green-100 px-4 py-2 text-xs font-black text-green-900">Atualização automática</span>

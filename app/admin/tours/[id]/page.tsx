@@ -589,6 +589,7 @@ export default async function TourDetailPage({
         <VirtualTourAnalyticsPanel
           summary={analyticsSummary}
           hasError={Boolean(analyticsResult.error)}
+          reportPath={`/admin/tours/${tour.id}/relatorio`}
         />
 
         {scenesWithoutOptimizedThumbnail.length > 0 && (

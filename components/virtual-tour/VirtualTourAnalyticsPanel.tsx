@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export type VirtualTourSceneAnalytics = {
   scene_id: string;
   scene_name: string;
@@ -22,6 +24,7 @@ export type VirtualTourAnalyticsSummary = {
 type VirtualTourAnalyticsPanelProps = {
   summary: VirtualTourAnalyticsSummary | null;
   hasError?: boolean;
+  reportPath?: string;
 };
 
 function formatNumber(value: number): string {
@@ -45,6 +48,7 @@ function formatShortDate(value: string): string {
 export default function VirtualTourAnalyticsPanel({
   summary,
   hasError = false,
+  reportPath,
 }: VirtualTourAnalyticsPanelProps) {
   if (hasError || !summary) {
     return (
@@ -73,7 +77,19 @@ export default function VirtualTourAnalyticsPanel({
             Acompanhe quantas vezes o passeio foi aberto, quais ambientes despertam mais interesse e quantos visitantes clicaram no WhatsApp.
           </p>
         </div>
-        <span className="w-fit rounded-full bg-green-100 px-4 py-2 text-xs font-black text-green-900">Atualização automática</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {reportPath && (
+            <Link
+              href={reportPath}
+              target="_blank"
+              style={{ color: "#FFFFFF" }}
+              className="rounded-full bg-blue-950 px-4 py-2 text-xs font-black transition hover:bg-blue-900"
+            >
+              Abrir relatório em PDF
+            </Link>
+          )}
+          <span className="w-fit rounded-full bg-green-100 px-4 py-2 text-xs font-black text-green-900">Atualização automática</span>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

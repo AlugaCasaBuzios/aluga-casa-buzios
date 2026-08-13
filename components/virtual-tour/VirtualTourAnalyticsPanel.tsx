@@ -25,6 +25,7 @@ type VirtualTourAnalyticsPanelProps = {
   summary: VirtualTourAnalyticsSummary | null;
   hasError?: boolean;
   reportPath?: string;
+  overviewPath?: string;
 };
 
 function formatNumber(value: number): string {
@@ -49,6 +50,7 @@ export default function VirtualTourAnalyticsPanel({
   summary,
   hasError = false,
   reportPath,
+  overviewPath,
 }: VirtualTourAnalyticsPanelProps) {
   if (hasError || !summary) {
     return (
@@ -78,6 +80,14 @@ export default function VirtualTourAnalyticsPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {overviewPath && (
+            <Link
+              href={overviewPath}
+              className="rounded-full border border-blue-950 bg-white px-4 py-2 text-xs font-black text-blue-950 transition hover:bg-slate-50"
+            >
+              Desempenho geral
+            </Link>
+          )}
           {reportPath && (
             <Link
               href={reportPath}

@@ -590,6 +590,7 @@ export default async function TourDetailPage({
           summary={analyticsSummary}
           hasError={Boolean(analyticsResult.error)}
           reportPath={`/admin/tours/${tour.id}/relatorio`}
+          overviewPath="/admin/tours/desempenho"
         />
 
         {scenesWithoutOptimizedThumbnail.length > 0 && (

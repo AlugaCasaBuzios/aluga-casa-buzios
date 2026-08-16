@@ -31,7 +31,7 @@ export default function PrivacidadePage() {
             </p>
 
             <p className="mt-5 text-sm text-white/60">
-              Última atualização: 28 de julho de 2026
+              Última atualização: 15 de agosto de 2026
             </p>
           </div>
         </section>
@@ -90,6 +90,13 @@ export default function PrivacidadePage() {
                   Informações técnicas necessárias ao funcionamento, segurança
                   e prevenção de fraudes também podem ser processadas pelos
                   provedores de infraestrutura.
+                </p>
+
+                <p className="mt-4 leading-8 text-zinc-600">
+                  No atendimento pelo WhatsApp, mensagens, nome de perfil,
+                  número de telefone e histórico da conversa poderão ser
+                  tratados para responder solicitações e encaminhar o contato
+                  à equipe responsável.
                 </p>
               </section>
 
@@ -156,7 +163,28 @@ export default function PrivacidadePage() {
 
               <section>
                 <h2 className="text-2xl font-bold text-blue-950">
-                  6. Compartilhamento de informações
+                  6. Atendimento automatizado
+                </h2>
+
+                <p className="mt-4 leading-8 text-zinc-600">
+                  Parte do atendimento no WhatsApp poderá ser realizada por
+                  uma assistente virtual baseada em inteligência artificial.
+                  Ela será identificada como atendimento automatizado e poderá
+                  consultar informações públicas dos imóveis, disponibilidade
+                  e estimativas de preço.
+                </p>
+
+                <p className="mt-4 leading-8 text-zinc-600">
+                  Reservas, pagamentos, descontos e situações sensíveis não
+                  são confirmados automaticamente. O cliente pode solicitar um
+                  atendente humano ou interromper as respostas automáticas a
+                  qualquer momento.
+                </p>
+              </section>
+
+              <section>
+                <h2 className="text-2xl font-bold text-blue-950">
+                  7. Compartilhamento de informações
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
@@ -169,7 +197,7 @@ export default function PrivacidadePage() {
 
               <section>
                 <h2 className="text-2xl font-bold text-blue-950">
-                  7. Direitos do titular
+                  8. Direitos do titular
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
@@ -187,7 +215,7 @@ export default function PrivacidadePage() {
 
               <section>
                 <h2 className="text-2xl font-bold text-blue-950">
-                  8. Segurança
+                  9. Segurança
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">
@@ -199,7 +227,7 @@ export default function PrivacidadePage() {
 
               <section>
                 <h2 className="text-2xl font-bold text-blue-950">
-                  9. Alterações desta política
+                  10. Alterações desta política
                 </h2>
 
                 <p className="mt-4 leading-8 text-zinc-600">

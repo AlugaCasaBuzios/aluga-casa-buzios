@@ -10,10 +10,6 @@ import {
 } from "@/lib/supabaseServer";
 
 import { logout } from "./actions";
-import {
-  setPropertyActive,
-} from "./imoveis/catalog-actions";
-
 import AdminPropertyTable from "@/components/admin/AdminPropertyTable";
 
 import {
@@ -661,6 +657,19 @@ export default async function AdminPage({
               >
                 <span>Clientes dos tours</span>
                 <span className="text-xs font-semibold text-green-800">Contratos e cobranças</span>
+              </Link>
+
+              <Link
+                href="/admin/atendimento-ia"
+                style={{
+                  color: "#4c1d95",
+                }}
+                className="inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-violet-100 px-5 py-3 text-center font-bold text-violet-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-violet-200"
+              >
+                <span>WhatsApp com IA</span>
+                <span className="text-xs font-semibold text-violet-800">
+                  Conhecimento e atendimento
+                </span>
               </Link>
             </nav>
 

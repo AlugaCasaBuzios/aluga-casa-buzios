@@ -773,7 +773,7 @@ export default async function OwnerReportPdfPage({ searchParams }: PdfPageProps)
         <header className="report-header">
           <div className="brand-block">
             <img
-              src="/images/logo/logo1.jpg"
+              src="/images/logo/logo-aluga-casa-buzios-512.png"
               alt="Aluga Casa Búzios"
               className="brand-logo"
             />

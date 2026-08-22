@@ -95,7 +95,7 @@ export default function Header() {
             aria-label="Página inicial da Aluga Casa Búzios"
           >
             <Image
-              src="/images/logo/logo1.jpg"
+              src="/images/logo/logo-aluga-casa-buzios-512.png"
               alt="Logo Aluga Casa Búzios"
               width={88}
               height={88}

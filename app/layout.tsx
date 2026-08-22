@@ -92,7 +92,7 @@ const organizationJsonLd = {
 
   url: siteUrl,
 
-  logo: `${siteUrl}/images/logo/logo1.jpg`,
+  logo: `${siteUrl}/images/logo/logo-aluga-casa-buzios-512.png`,
 
   image: `${siteUrl}/opengraph-image`,
 

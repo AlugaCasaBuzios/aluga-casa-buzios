@@ -316,31 +316,31 @@ export default function PropertyCard({
           {/* Comodidades */}
           <div className="mt-6 flex flex-wrap gap-2">
             {property.pool && (
-              <span className="rounded-full bg-sky-100 px-4 py-2 text-sm font-semibold text-sky-800">
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
                 🏊 Piscina
               </span>
             )}
 
             {property.barbecue && (
-              <span className="rounded-full bg-orange-100 px-4 py-2 text-sm font-semibold text-orange-800">
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
                 🔥 Churrasqueira
               </span>
             )}
 
             {property.petFriendly && (
-              <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800">
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
                 🐾 Aceita pets
               </span>
             )}
 
             {property.wifi && (
-              <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-800">
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
                 📶 Wi-Fi
               </span>
             )}
 
             {property.airConditioning && (
-              <span className="rounded-full bg-cyan-100 px-4 py-2 text-sm font-semibold text-cyan-800">
+              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
                 ❄️ Ar-condicionado
               </span>
             )}

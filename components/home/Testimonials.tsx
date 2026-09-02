@@ -55,7 +55,7 @@ export default function Testimonials({
   }
 
   return (
-    <section className="bg-white py-24">
+    <section className="bg-white py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-bold uppercase tracking-widest text-blue-700">

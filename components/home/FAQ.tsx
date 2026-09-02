@@ -53,7 +53,7 @@ export default function FAQ() {
   }
 
   return (
-    <section className="bg-white px-6 py-20 sm:py-24">
+    <section className="bg-zinc-50 px-6 py-16 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <div className="text-center">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-sky-700">

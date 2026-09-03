@@ -204,7 +204,7 @@ export default function PropertyCard({
         }
       >
         {/* Foto */}
-        <div className="relative h-72 overflow-hidden bg-zinc-100">
+        <div className="relative h-60 overflow-hidden bg-zinc-100">
           <PropertyCardImage
             src={property.image}
             alt={property.title}
@@ -240,12 +240,12 @@ export default function PropertyCard({
         </div>
 
         {/* Informações */}
-        <div className="p-7">
+        <div className="p-5">
           <h2 className="text-2xl font-bold text-blue-950 transition group-hover:text-sky-700">
             {property.title}
           </h2>
 
-          <p className="mt-3 flex items-center gap-2 text-zinc-500">
+          <p className="mt-2 flex items-center gap-2 text-zinc-500">
             <span aria-hidden="true">
               📍
             </span>
@@ -254,7 +254,7 @@ export default function PropertyCard({
           </p>
 
           {hasBasicInformation ? (
-            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3 text-sm text-zinc-700">
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-3 text-sm text-zinc-700">
               {property.guests > 0 && (
                 <span className="flex items-center gap-2">
                   <span aria-hidden="true">
@@ -308,45 +308,12 @@ export default function PropertyCard({
               )}
             </div>
           ) : (
-            <p className="mt-6 text-sm text-zinc-500">
+            <p className="mt-4 text-sm text-zinc-500">
               Informações completas em atualização.
             </p>
           )}
 
-          {/* Comodidades */}
-          <div className="mt-6 flex flex-wrap gap-2">
-            {property.pool && (
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
-                🏊 Piscina
-              </span>
-            )}
-
-            {property.barbecue && (
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
-                🔥 Churrasqueira
-              </span>
-            )}
-
-            {property.petFriendly && (
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
-                🐾 Aceita pets
-              </span>
-            )}
-
-            {property.wifi && (
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
-                📶 Wi-Fi
-              </span>
-            )}
-
-            {property.airConditioning && (
-              <span className="rounded-full bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700">
-                ❄️ Ar-condicionado
-              </span>
-            )}
-          </div>
-
-          <div className="mt-7 flex items-center justify-between border-t border-zinc-100 pt-5">
+          <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-4">
             <span className="font-bold text-sky-700">
               Ver detalhes
             </span>

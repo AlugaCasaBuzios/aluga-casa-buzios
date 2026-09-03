@@ -436,11 +436,7 @@ export default async function PropertyPage({
                   Conheça o imóvel
                 </p>
 
-                <h1 className="mt-3 text-3xl font-bold text-blue-950 sm:text-4xl">
-                  {property.title}
-                </h1>
-
-                <p className="mt-5 text-lg leading-8 text-zinc-700">
+                <p className="mt-3 text-lg leading-8 text-zinc-700">
                   {
                     property.description
                   }
@@ -482,49 +478,30 @@ export default async function PropertyPage({
                   Regras da hospedagem
                 </h2>
 
-                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <p className="mt-4 rounded-2xl bg-blue-50 px-6 py-4 font-semibold text-blue-950">
+                  Check-in a partir das{" "}
+                  {property.checkin} · Check-out
+                  até as {property.checkout}
+                </p>
+
+                <div className="mt-6 grid gap-x-6 gap-y-2 sm:grid-cols-2">
                   {property.rules.map(
                     (rule) => (
-                      <div
+                      <p
                         key={rule}
-                        className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+                        className="flex items-start gap-2 text-sm text-zinc-700"
                       >
-                        <p className="font-medium text-zinc-700">
-                          ✓ {rule}
-                        </p>
-                      </div>
+                        <span
+                          aria-hidden="true"
+                          className="text-emerald-600"
+                        >
+                          ✓
+                        </span>
+
+                        {rule}
+                      </p>
                     )
                   )}
-                </div>
-
-                <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-2xl bg-blue-50 p-6">
-                    <p className="text-sm font-medium text-zinc-500">
-                      Horário de
-                      check-in
-                    </p>
-
-                    <p className="mt-2 text-xl font-bold text-blue-950">
-                      A partir das{" "}
-                      {
-                        property.checkin
-                      }
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-blue-50 p-6">
-                    <p className="text-sm font-medium text-zinc-500">
-                      Horário de
-                      check-out
-                    </p>
-
-                    <p className="mt-2 text-xl font-bold text-blue-950">
-                      Até as{" "}
-                      {
-                        property.checkout
-                      }
-                    </p>
-                  </div>
                 </div>
               </section>
 

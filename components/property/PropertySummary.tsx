@@ -52,90 +52,38 @@ export default function PropertySummary({
         )}
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-        <Info
-          icon="👥"
-          title="Hóspedes"
-          value={property.guests}
-        />
+      <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-zinc-700">
+        {[
+          `👥 ${property.guests} ${property.guests === 1 ? "hóspede" : "hóspedes"}`,
+          `🛏 ${property.bedrooms} ${property.bedrooms === 1 ? "quarto" : "quartos"}`,
+          `🛌 ${property.beds} ${property.beds === 1 ? "cama" : "camas"}`,
+          `🚿 ${property.bathrooms} ${property.bathrooms === 1 ? "banheiro" : "banheiros"}`,
+          ...(hasArea ? [`📐 ${property.area} m²`] : []),
+          ...(hasGarage
+            ? [
+                `🚗 ${property.garage} ${property.garage === 1 ? "vaga" : "vagas"}`,
+              ]
+            : []),
+          `📍 ${property.neighborhood}`,
+          `🏖 ${property.beachDistance}`,
+        ].map((item, index, list) => (
+          <span
+            key={item}
+            className="flex items-center gap-2"
+          >
+            {item}
 
-        <Info
-          icon="🛏"
-          title="Quartos"
-          value={property.bedrooms}
-        />
-
-        <Info
-          icon="🚿"
-          title="Banheiros"
-          value={property.bathrooms}
-        />
-
-        <Info
-          icon="🛌"
-          title="Camas"
-          value={property.beds}
-        />
-
-        {hasArea && (
-          <Info
-            icon="📐"
-            title="Área"
-            value={`${property.area} m²`}
-          />
-        )}
-
-        {hasGarage && (
-          <Info
-            icon="🚗"
-            title="Garagem"
-            value={property.garage}
-          />
-        )}
-
-        <Info
-          icon="📍"
-          title="Bairro"
-          value={property.neighborhood}
-        />
-
-        <Info
-          icon="🏖"
-          title="Praia"
-          value={property.beachDistance}
-        />
+            {index < list.length - 1 && (
+              <span
+                aria-hidden="true"
+                className="text-zinc-300"
+              >
+                ·
+              </span>
+            )}
+          </span>
+        ))}
       </div>
     </section>
-  );
-}
-
-interface InfoProps {
-  icon: string;
-  title: string;
-  value: string | number;
-}
-
-function Info({
-  icon,
-  title,
-  value,
-}: InfoProps) {
-  return (
-    <div className="rounded-2xl border border-slate-200 p-4 text-center transition hover:border-blue-700 md:p-5">
-      <div
-        aria-hidden="true"
-        className="text-3xl"
-      >
-        {icon}
-      </div>
-
-      <div className="mt-3 text-sm text-gray-500">
-        {title}
-      </div>
-
-      <div className="mt-1 font-bold text-blue-950">
-        {value}
-      </div>
-    </div>
   );
 }

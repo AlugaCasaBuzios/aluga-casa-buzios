@@ -785,19 +785,15 @@ export default function CasasContent({
 
       <section
         id="imoveis"
-        className="mx-auto max-w-7xl scroll-mt-28 px-6 py-20"
+        className="mx-auto max-w-7xl scroll-mt-28 px-6 py-12"
       >
-        <div className="mb-12 flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+        <div className="mb-8 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.25em] text-sky-700">
-              Propriedades disponíveis
-            </p>
-
-            <h2 className="mt-3 text-3xl font-bold text-blue-950 sm:text-4xl">
+            <h2 className="text-3xl font-bold text-blue-950 sm:text-4xl">
               Escolha sua casa
             </h2>
 
-            <p className="mt-3 text-zinc-600">
+            <p className="mt-2 text-zinc-600">
               Encontramos {favoriteFilteredProperties.length}{" "}
               {favoriteFilteredProperties.length === 1
                 ? "imóvel"
@@ -806,7 +802,7 @@ export default function CasasContent({
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:items-end">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() =>
@@ -816,7 +812,7 @@ export default function CasasContent({
                 )
               }
               aria-pressed={favoriteOnly}
-              className={`inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border px-5 py-3 font-bold transition sm:w-auto ${
+              className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-5 py-3 font-bold transition ${
                 favoriteOnly
                   ? "border-red-200 bg-red-50 text-red-700 shadow-sm"
                   : "border-zinc-300 bg-white text-zinc-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
@@ -840,46 +836,37 @@ export default function CasasContent({
               )}
             </button>
 
-            <div className="w-full sm:w-auto">
-              <label
-                htmlFor="property-sort"
-                className="mb-2 block text-sm font-bold text-blue-950 sm:text-right"
-              >
-                Ordenar por
-              </label>
+            <select
+              aria-label="Ordenar por"
+              value={sort}
+              onChange={(event) =>
+                setSort(
+                  event.target
+                    .value as PropertySort
+                )
+              }
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-800 shadow-sm outline-none transition focus:border-sky-600 focus:ring-2 focus:ring-sky-100"
+            >
+              <option value="recommended">
+                Recomendados
+              </option>
 
-              <select
-                id="property-sort"
-                value={sort}
-                onChange={(event) =>
-                  setSort(
-                    event.target
-                      .value as PropertySort
-                  )
-                }
-                className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 font-semibold text-zinc-800 shadow-sm outline-none transition focus:border-sky-600 focus:ring-2 focus:ring-sky-100 sm:w-64"
-              >
-                <option value="recommended">
-                  Recomendados
-                </option>
+              <option value="price-asc">
+                Menor diária
+              </option>
 
-                <option value="price-asc">
-                  Menor diária
-                </option>
+              <option value="price-desc">
+                Maior diária
+              </option>
 
-                <option value="price-desc">
-                  Maior diária
-                </option>
+              <option value="guests-desc">
+                Maior capacidade
+              </option>
 
-                <option value="guests-desc">
-                  Maior capacidade
-                </option>
-
-                <option value="rating-desc">
-                  Melhor avaliação
-                </option>
-              </select>
-            </div>
+              <option value="rating-desc">
+                Melhor avaliação
+              </option>
+            </select>
 
             {hasActiveSelections && (
               <button

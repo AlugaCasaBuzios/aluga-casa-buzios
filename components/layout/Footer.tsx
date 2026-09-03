@@ -7,9 +7,9 @@ export default function Footer() {
   return (
     <footer className="bg-blue-950 text-white">
       <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-6">
           {/* Marca */}
-          <div>
+          <div className="lg:col-span-2">
             <Link
               href="/"
               className="inline-flex items-center gap-4"
@@ -33,11 +33,6 @@ export default function Footer() {
                 </p>
               </div>
             </Link>
-
-            <p className="mt-6 max-w-sm leading-7 text-white/70">
-              Casas selecionadas para você aproveitar Armação dos Búzios com
-              conforto, segurança e atendimento direto.
-            </p>
 
             <div className="mt-6 flex items-center gap-3">
               <a
@@ -68,6 +63,11 @@ export default function Footer() {
                 ✉️
               </a>
             </div>
+
+            <p className="mt-6 max-w-sm leading-7 text-white/70">
+              Casas selecionadas para você aproveitar Armação dos Búzios com
+              conforto, segurança e atendimento direto.
+            </p>
           </div>
 
           {/* Navegação */}
@@ -168,13 +168,13 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Ações */}
-          <div>
+          {/* Planeje sua viagem */}
+          <div className="flex flex-col items-start">
             <h2 className="text-lg font-bold">
               Planeje sua viagem
             </h2>
 
-            <p className="mt-6 leading-7 text-white/70">
+            <p className="mt-6 mb-6 leading-7 text-white/70">
               Consulte casas disponíveis para suas datas e quantidade de
               hóspedes.
             </p>
@@ -183,28 +183,29 @@ export default function Footer() {
               href="https://wa.me/5524998288846?text=Olá! Gostaria de consultar casas disponíveis para minha viagem a Búzios."
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-green-700 px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-800"
+              className="mt-auto inline-flex items-center justify-center rounded-full bg-green-700 px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-1 hover:bg-green-800"
             >
               Consultar disponibilidade
             </a>
+          </div>
 
-            <div className="mt-8 border-t border-white/10 pt-7">
-              <h2 className="text-lg font-bold">
-                Você possui um imóvel?
-              </h2>
+          {/* Você possui um imóvel? */}
+          <div className="flex flex-col items-start">
+            <h2 className="text-lg font-bold">
+              Você possui um imóvel?
+            </h2>
 
-              <p className="mt-3 leading-7 text-white/70">
-                Apresente sua casa para nossa equipe e conheça nosso trabalho de
-                administração e divulgação.
-              </p>
+            <p className="mt-3 mb-5 leading-7 text-white/70">
+              Apresente sua casa para nossa equipe e conheça nosso trabalho de
+              administração e divulgação.
+            </p>
 
-              <Link
-                href="/anuncie-conosco"
-                className="mt-5 inline-flex items-center justify-center rounded-full bg-sky-400 px-6 py-3 font-bold text-blue-950 shadow-lg transition hover:-translate-y-1 hover:bg-sky-300"
-              >
-                Anuncie conosco
-              </Link>
-            </div>
+            <Link
+              href="/anuncie-conosco"
+              className="mt-auto inline-flex items-center justify-center rounded-full bg-sky-400 px-6 py-3 font-bold text-blue-950 shadow-lg transition hover:-translate-y-1 hover:bg-sky-300"
+            >
+              Anuncie conosco
+            </Link>
           </div>
         </div>
 

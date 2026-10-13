@@ -7,6 +7,10 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
+import {
+  markPricingReviewed,
+} from "@/lib/pricing/markPricingReviewed";
+
 function getTextValue(
   formData: FormData,
   fieldName: string
@@ -199,6 +203,11 @@ export async function createDatePricingOverride(
       `/admin/precos-por-data/novo?erro=${errorCode}`
     );
   }
+
+  await markPricingReviewed(
+    [propertyId],
+    user.id
+  );
 
   revalidatePath(
     "/admin/precos-por-data"

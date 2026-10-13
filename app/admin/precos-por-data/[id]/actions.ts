@@ -7,6 +7,10 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
+import {
+  markPricingReviewed,
+} from "@/lib/pricing/markPricingReviewed";
+
 function getTextValue(
   formData: FormData,
   fieldName: string
@@ -190,6 +194,11 @@ export async function updateDatePricingOverride(
     );
   }
 
+  await markPricingReviewed(
+    [propertyId],
+    user.id
+  );
+
   revalidatePath(
     "/admin/precos-por-data"
   );
@@ -228,10 +237,11 @@ export async function deleteDatePricingOverride(
     redirect("/admin/login");
   }
 
-  const { error } = await supabase
+  const { data: deletedRows, error } = await supabase
     .from("date_pricing_overrides")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .select("property_id");
 
   if (error) {
     console.error(
@@ -243,6 +253,13 @@ export async function deleteDatePricingOverride(
       `/admin/precos-por-data/${id}?erro=excluir`
     );
   }
+
+  await markPricingReviewed(
+    (deletedRows ?? []).map(
+      (row) => String(row.property_id)
+    ),
+    user.id
+  );
 
   revalidatePath(
     "/admin/precos-por-data"

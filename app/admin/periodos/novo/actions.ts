@@ -7,6 +7,10 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
+import {
+  markPricingReviewed,
+} from "@/lib/pricing/markPricingReviewed";
+
 function getTextValue(
   formData: FormData,
   fieldName: string
@@ -52,7 +56,8 @@ function isValidDateOnly(
 
 function createRuleId(
   name: string,
-  startDate: string
+  startDate: string,
+  propertyId: string | null
 ): string {
   const normalizedName = name
     .normalize("NFD")
@@ -64,7 +69,9 @@ function createRuleId(
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return `${normalizedName}-${startDate}`;
+  return propertyId
+    ? `${normalizedName}-${startDate}-${propertyId}`
+    : `${normalizedName}-${startDate}`;
 }
 
 export async function createSpecialPricingRule(
@@ -111,8 +118,37 @@ export async function createSpecialPricingRule(
     "label"
   );
 
+  const propertyId =
+    getTextValue(
+      formData,
+      "propertyId"
+    ) || null;
+
+  const nightlyPriceText =
+    getTextValue(
+      formData,
+      "nightlyPrice"
+    );
+
+  const nightlyPrice =
+    nightlyPriceText
+      ? parseNumberValue(
+          nightlyPriceText
+        )
+      : null;
+
   const active =
     formData.get("active") === "on";
+
+  if (
+    nightlyPrice !== null &&
+    (!Number.isFinite(nightlyPrice) ||
+      nightlyPrice <= 0)
+  ) {
+    redirect(
+      "/admin/periodos/novo?erro=preco-fixo"
+    );
+  }
 
   if (!name) {
     redirect(
@@ -181,7 +217,8 @@ export async function createSpecialPricingRule(
 
   const id = createRuleId(
     name,
-    startDate
+    startDate,
+    propertyId
   );
 
   const { error } = await supabase
@@ -189,6 +226,8 @@ export async function createSpecialPricingRule(
     .insert({
       id,
       name,
+      property_id: propertyId,
+      nightly_price: nightlyPrice,
       start_date: startDate,
       end_date: endDate,
       multiplier,
@@ -211,6 +250,17 @@ export async function createSpecialPricingRule(
 
     redirect(
       `/admin/periodos/novo?erro=${errorCode}`
+    );
+  }
+
+  /*
+   * Período exclusivo conta como revisão
+   * de preços daquele imóvel.
+   */
+  if (propertyId) {
+    await markPricingReviewed(
+      [propertyId],
+      user.id
     );
   }
 

@@ -10,6 +10,7 @@ type PropertyPricingRow = {
   property_id: string;
   base_price: number | string;
   cleaning_fee: number | string | null;
+  site_discount_percent: number | string | null;
   active: boolean;
 };
 
@@ -154,6 +155,7 @@ async function getPricingMap(
       property_id,
       base_price,
       cleaning_fee,
+      site_discount_percent,
       active
     `)
     .in(
@@ -178,6 +180,49 @@ async function getPricingMap(
       pricing,
     ])
   );
+}
+
+/*
+ * O preço-base cadastrado é o do Airbnb.
+ * O site exibe a diária já com o desconto
+ * de reserva direta.
+ */
+function getSiteNightlyPrice(
+  pricing:
+    | PropertyPricingRow
+    | undefined
+): {
+  price: number;
+  priceBeforeDiscount: number;
+  siteDiscountPercent: number;
+} {
+  const priceBeforeDiscount =
+    toFiniteNumber(
+      pricing?.base_price ?? null
+    );
+
+  const siteDiscountPercent = Math.min(
+    Math.max(
+      toFiniteNumber(
+        pricing?.site_discount_percent ??
+          null
+      ),
+      0
+    ),
+    50
+  );
+
+  return {
+    price:
+      siteDiscountPercent > 0
+        ? Math.round(
+            priceBeforeDiscount *
+              (1 - siteDiscountPercent / 100)
+          )
+        : priceBeforeDiscount,
+    priceBeforeDiscount,
+    siteDiscountPercent,
+  };
 }
 
 function mapProperty(
@@ -248,11 +293,7 @@ function mapProperty(
         row.checkout
       ),
 
-    price:
-      toFiniteNumber(
-        pricing?.base_price ??
-          null
-      ),
+    ...getSiteNightlyPrice(pricing),
     cleaningFee:
       toFiniteNumber(
         pricing?.cleaning_fee ??

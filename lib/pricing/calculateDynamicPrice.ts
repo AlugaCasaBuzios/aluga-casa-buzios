@@ -17,7 +17,8 @@ export interface PriceAdjustment {
     | "orphan-gap"
     | "minimum-limit"
     | "maximum-limit"
-    | "manual";
+    | "manual"
+    | "site-discount";
 
   label: string;
   multiplier?: number;
@@ -86,11 +87,33 @@ export interface DynamicPriceInput {
    * Quando não informadas, utiliza as regras locais.
    */
   specialPricingRules?: SpecialPricingRule[];
+
+  /**
+   * Liga os ajustes automáticos (dia da semana,
+   * antecedência, última hora, ocupação).
+   * Desligado por padrão: os valores cadastrados
+   * no painel são usados como estão.
+   */
+  dynamicRulesEnabled?: boolean;
+
+  /**
+   * Desconto do site sobre o preço calculado.
+   * 10 = diária 10% abaixo do valor cadastrado.
+   */
+  siteDiscountPercent?: number;
 }
 
 export interface DynamicPriceResult {
   date: string;
   basePrice: number;
+
+  /**
+   * Diária equivalente à do Airbnb,
+   * antes do desconto do site.
+   */
+  priceBeforeDiscount: number;
+  siteDiscountPercent: number;
+
   finalPrice: number;
   minimumNights: number;
 
@@ -249,6 +272,51 @@ function getWeekdayLabel(
   return labels[weekday] ?? "Dia da semana";
 }
 
+function normalizeDiscountPercent(
+  value: number | undefined
+): number {
+  if (
+    value === undefined ||
+    !Number.isFinite(value) ||
+    value <= 0
+  ) {
+    return 0;
+  }
+
+  return Math.min(value, 50);
+}
+
+/*
+ * Aplica o desconto do site sobre a diária já
+ * calculada. Os valores do painel representam
+ * o preço do Airbnb; o desconto vem por último.
+ */
+function applySiteDiscount(
+  priceBeforeDiscount: number,
+  siteDiscountPercent: number,
+  adjustments: PriceAdjustment[]
+): number {
+  if (siteDiscountPercent <= 0) {
+    return priceBeforeDiscount;
+  }
+
+  const discountedPrice = Math.round(
+    priceBeforeDiscount *
+      (1 - siteDiscountPercent / 100)
+  );
+
+  adjustments.push({
+    type: "site-discount",
+    label: `Desconto de ${siteDiscountPercent}% para reserva direta`,
+    multiplier:
+      1 - siteDiscountPercent / 100,
+    valueBefore: priceBeforeDiscount,
+    valueAfter: discountedPrice,
+  });
+
+  return discountedPrice;
+}
+
 export function calculateDynamicPrice({
   date,
   basePrice,
@@ -262,6 +330,8 @@ export function calculateDynamicPrice({
   maximumPrice,
   specialPricingRules =
     localSpecialPricingRules,
+  dynamicRulesEnabled = false,
+  siteDiscountPercent,
 }: DynamicPriceInput): DynamicPriceResult {
   if (
     !Number.isFinite(basePrice) ||
@@ -288,6 +358,11 @@ export function calculateDynamicPrice({
     Math.max(monthlyOccupancy, 0),
     1
   );
+
+  const normalizedDiscount =
+    normalizeDiscountPercent(
+      siteDiscountPercent
+    );
 
   const specialRule =
     findSpecialRule(
@@ -329,7 +404,7 @@ export function calculateDynamicPrice({
 
   /*
    * O preço manual substitui todas as regras
-   * de cálculo automático.
+   * de cálculo, exceto o desconto do site.
    */
   if (
     manualPrice !== undefined &&
@@ -346,7 +421,14 @@ export function calculateDynamicPrice({
     return {
       date,
       basePrice,
-      finalPrice: manualPrice,
+      priceBeforeDiscount: manualPrice,
+      siteDiscountPercent:
+        normalizedDiscount,
+      finalPrice: applySiteDiscount(
+        manualPrice,
+        normalizedDiscount,
+        adjustments
+      ),
       minimumNights,
       specialRule,
       daysBeforeCheckIn,
@@ -357,32 +439,32 @@ export function calculateDynamicPrice({
     };
   }
 
-  /*
-   * Caso o preço dinâmico esteja desativado,
-   * retorna somente o preço-base.
-   */
-  if (!dynamicPricingSettings.enabled) {
-    return {
-      date,
-      basePrice,
-      finalPrice: basePrice,
-      minimumNights,
-      specialRule,
-      daysBeforeCheckIn,
-      monthlyOccupancy:
-        normalizedOccupancy,
-      isManualPrice: false,
-      adjustments,
-    };
-  }
+  const useDynamicRules =
+    dynamicPricingSettings.enabled &&
+    dynamicRulesEnabled;
 
   let calculatedPrice = basePrice;
 
   /*
-   * Em datas especiais, o multiplicador do
-   * evento substitui o ajuste do dia da semana.
+   * Períodos especiais valem sempre e, em suas
+   * datas, substituem o ajuste do dia da semana.
+   * Um preço fixo substitui o multiplicador.
    */
-  if (specialRule) {
+  if (
+    specialRule?.nightlyPrice !== undefined &&
+    specialRule.nightlyPrice !== null &&
+    specialRule.nightlyPrice > 0
+  ) {
+    adjustments.push({
+      type: "special-period",
+      label: specialRule.name,
+      valueBefore: calculatedPrice,
+      valueAfter: specialRule.nightlyPrice,
+    });
+
+    calculatedPrice =
+      specialRule.nightlyPrice;
+  } else if (specialRule) {
     calculatedPrice = applyMultiplier(
       calculatedPrice,
       specialRule.multiplier,
@@ -392,7 +474,7 @@ export function calculateDynamicPrice({
       },
       adjustments
     );
-  } else {
+  } else if (useDynamicRules) {
     const weekday =
       targetDate.getUTCDay();
 
@@ -416,7 +498,10 @@ export function calculateDynamicPrice({
    * Última hora e reserva antecipada
    * são mutuamente exclusivos.
    */
-  if (daysBeforeCheckIn >= 0) {
+  if (
+    useDynamicRules &&
+    daysBeforeCheckIn >= 0
+  ) {
     const lastMinuteRule =
       [
         ...dynamicPricingSettings
@@ -482,21 +567,22 @@ export function calculateDynamicPrice({
   /*
    * Ajuste conforme a ocupação mensal.
    */
-  const occupancyRule =
-    [
-      ...dynamicPricingSettings
-        .occupancyRules,
-    ]
-      .sort(
-        (firstRule, secondRule) =>
-          secondRule.minimumOccupancy -
-          firstRule.minimumOccupancy
-      )
-      .find(
-        (rule) =>
-          normalizedOccupancy >=
-          rule.minimumOccupancy
-      );
+  const occupancyRule = useDynamicRules
+    ? [
+        ...dynamicPricingSettings
+          .occupancyRules,
+      ]
+        .sort(
+          (firstRule, secondRule) =>
+            secondRule.minimumOccupancy -
+            firstRule.minimumOccupancy
+        )
+        .find(
+          (rule) =>
+            normalizedOccupancy >=
+            rule.minimumOccupancy
+        )
+    : undefined;
 
   if (occupancyRule) {
     calculatedPrice = applyMultiplier(
@@ -514,7 +600,7 @@ export function calculateDynamicPrice({
    * Ajuste para pequenos espaços
    * vazios entre reservas.
    */
-  if (isOrphanGap) {
+  if (useDynamicRules && isOrphanGap) {
     calculatedPrice = applyMultiplier(
       calculatedPrice,
       dynamicPricingSettings
@@ -530,27 +616,38 @@ export function calculateDynamicPrice({
   }
 
   /*
-   * Usa os limites absolutos do painel quando
-   * estiverem preenchidos. Caso contrário,
-   * utiliza os multiplicadores padrão.
+   * Os limites do painel valem sempre que
+   * estiverem preenchidos. Os limites automáticos
+   * (multiplicadores do preço-base) só existem
+   * junto com as regras automáticas.
    */
-  const calculatedMinimumPrice =
+  const hasMinimumPrice =
     minimumPrice !== undefined &&
     Number.isFinite(minimumPrice) &&
-    minimumPrice > 0
-      ? minimumPrice
-      : basePrice *
-        dynamicPricingSettings
-          .minimumPriceMultiplier;
+    minimumPrice > 0;
 
-  const calculatedMaximumPrice =
+  const hasMaximumPrice =
     maximumPrice !== undefined &&
     Number.isFinite(maximumPrice) &&
-    maximumPrice > 0
+    maximumPrice > 0;
+
+  const calculatedMinimumPrice =
+    hasMinimumPrice
+      ? minimumPrice
+      : useDynamicRules
+        ? basePrice *
+          dynamicPricingSettings
+            .minimumPriceMultiplier
+        : 0;
+
+  const calculatedMaximumPrice =
+    hasMaximumPrice
       ? maximumPrice
-      : basePrice *
-        dynamicPricingSettings
-          .maximumPriceMultiplier;
+      : useDynamicRules
+        ? basePrice *
+          dynamicPricingSettings
+            .maximumPriceMultiplier
+        : Number.POSITIVE_INFINITY;
 
   if (
     calculatedMinimumPrice >
@@ -593,14 +690,16 @@ export function calculateDynamicPrice({
       calculatedMaximumPrice;
   }
 
-  let finalPrice = roundPrice(
+  let priceBeforeDiscount = roundPrice(
     calculatedPrice,
-    dynamicPricingSettings.roundTo
+    useDynamicRules
+      ? dynamicPricingSettings.roundTo
+      : 1
   );
 
-  finalPrice = Math.min(
+  priceBeforeDiscount = Math.min(
     Math.max(
-      finalPrice,
+      priceBeforeDiscount,
       calculatedMinimumPrice
     ),
     calculatedMaximumPrice
@@ -609,7 +708,14 @@ export function calculateDynamicPrice({
   return {
     date,
     basePrice,
-    finalPrice,
+    priceBeforeDiscount,
+    siteDiscountPercent:
+      normalizedDiscount,
+    finalPrice: applySiteDiscount(
+      priceBeforeDiscount,
+      normalizedDiscount,
+      adjustments
+    ),
     minimumNights,
     specialRule,
     daysBeforeCheckIn,

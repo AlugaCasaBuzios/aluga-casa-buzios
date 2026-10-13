@@ -9,6 +9,8 @@ export interface PropertyPricingConfig {
   minimumNights?: number;
   minimumPrice?: number;
   maximumPrice?: number;
+  siteDiscountPercent: number;
+  dynamicRulesEnabled: boolean;
   source: "supabase" | "properties";
 }
 
@@ -18,6 +20,8 @@ type PropertyPricingRow = {
   minimum_nights: unknown;
   minimum_price: unknown;
   maximum_price: unknown;
+  site_discount_percent: unknown;
+  dynamic_rules_enabled: unknown;
 };
 
 function toPositiveNumber(
@@ -103,6 +107,9 @@ function createFallbackPricing(
         property.cleaningFee
       ) ?? 0,
 
+    siteDiscountPercent: 0,
+    dynamicRulesEnabled: false,
+
     source: "properties",
   };
 }
@@ -127,7 +134,9 @@ export async function getPropertyPricingConfig(
         cleaning_fee,
         minimum_nights,
         minimum_price,
-        maximum_price
+        maximum_price,
+        site_discount_percent,
+        dynamic_rules_enabled
       `)
       .eq("property_id", property.id)
       .eq("active", true)
@@ -191,6 +200,16 @@ export async function getPropertyPricingConfig(
         row.maximum_price
       );
 
+    const siteDiscountPercent = Math.min(
+      toNonNegativeNumber(
+        row.site_discount_percent
+      ) ?? 0,
+      50
+    );
+
+    const dynamicRulesEnabled =
+      row.dynamic_rules_enabled === true;
+
     if (
       minimumPrice !== undefined &&
       maximumPrice !== undefined &&
@@ -204,13 +223,11 @@ export async function getPropertyPricingConfig(
         basePrice,
         cleaningFee,
         minimumNights,
+        siteDiscountPercent,
+        dynamicRulesEnabled,
         source: "supabase",
       };
     }
-
-    console.log(
-      `Configuração de preços carregada do Supabase para ${property.id}.`
-    );
 
     return {
       basePrice,
@@ -218,6 +235,8 @@ export async function getPropertyPricingConfig(
       minimumNights,
       minimumPrice,
       maximumPrice,
+      siteDiscountPercent,
+      dynamicRulesEnabled,
       source: "supabase",
     };
   } catch (error) {

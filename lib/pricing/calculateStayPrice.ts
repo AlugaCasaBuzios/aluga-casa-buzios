@@ -88,11 +88,24 @@ export interface StayPriceInput {
     string,
     number
   >;
+
+  /**
+   * Ajustes automáticos opcionais por imóvel.
+   */
+  dynamicRulesEnabled?: boolean;
+
+  /**
+   * Desconto do site sobre as diárias,
+   * em porcentagem. A taxa de limpeza
+   * não recebe desconto.
+   */
+  siteDiscountPercent?: number;
 }
 
 export interface StayNightPrice {
   date: string;
   price: number;
+  priceBeforeDiscount: number;
   minimumNights: number;
   calculation: DynamicPriceResult;
 }
@@ -106,6 +119,13 @@ export interface StayPriceResult {
   minimumNightsMet: boolean;
 
   nightlyPrices: StayNightPrice[];
+
+  /**
+   * Soma das diárias pelo valor do Airbnb,
+   * antes do desconto do site.
+   */
+  accommodationSubtotalBeforeDiscount: number;
+  siteDiscountPercent: number;
 
   accommodationSubtotal: number;
   cleaningFee: number;
@@ -217,6 +237,8 @@ export function calculateStayPrice({
   orphanGapDates = [],
   manualPrices = {},
   manualMinimumNights = {},
+  dynamicRulesEnabled = false,
+  siteDiscountPercent,
 }: StayPriceInput): StayPriceResult {
   const checkInDate =
     parseDateOnly(checkIn);
@@ -298,12 +320,16 @@ export function calculateStayPrice({
         minimumPrice,
         maximumPrice,
         specialPricingRules,
+        dynamicRulesEnabled,
+        siteDiscountPercent,
       });
 
     nightlyPrices.push({
       date: currentDate,
       price:
         calculation.finalPrice,
+      priceBeforeDiscount:
+        calculation.priceBeforeDiscount,
       minimumNights:
         calculation.minimumNights,
       calculation,
@@ -314,6 +340,13 @@ export function calculateStayPrice({
     nightlyPrices.reduce(
       (total, night) =>
         total + night.price,
+      0
+    );
+
+  const accommodationSubtotalBeforeDiscount =
+    nightlyPrices.reduce(
+      (total, night) =>
+        total + night.priceBeforeDiscount,
       0
     );
 
@@ -340,6 +373,10 @@ export function calculateStayPrice({
       requiredMinimumNights,
 
     nightlyPrices,
+    accommodationSubtotalBeforeDiscount,
+    siteDiscountPercent:
+      nightlyPrices[0]?.calculation
+        .siteDiscountPercent ?? 0,
     accommodationSubtotal,
 
     cleaningFee:

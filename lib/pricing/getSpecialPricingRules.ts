@@ -13,6 +13,8 @@ type SpecialPricingRuleRow = {
   start_date: string;
   end_date: string;
   multiplier: number | string;
+  nightly_price: number | string | null;
+  property_id: string | null;
   minimum_nights: number;
   priority: number;
   label: string;
@@ -35,13 +37,37 @@ function getLocalRules(): SpecialPricingRulesResult {
   };
 }
 
-export async function getSpecialPricingRules():
-  Promise<SpecialPricingRulesResult> {
+function toOptionalPositiveNumber(
+  value: number | string | null
+): number | null {
+  if (value === null) {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue) &&
+    parsedValue > 0
+    ? parsedValue
+    : null;
+}
+
+/**
+ * Carrega os períodos especiais ativos.
+ *
+ * Com propertyId, retorna os períodos gerais
+ * (sem imóvel) e os exclusivos daquele imóvel.
+ * As regras locais só são usadas se o Supabase
+ * falhar; uma lista vazia é respeitada.
+ */
+export async function getSpecialPricingRules(
+  propertyId?: string
+): Promise<SpecialPricingRulesResult> {
   try {
     const supabase =
       await createSupabaseServerClient();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("special_pricing_rules")
       .select(`
         id,
@@ -49,12 +75,27 @@ export async function getSpecialPricingRules():
         start_date,
         end_date,
         multiplier,
+        nightly_price,
+        property_id,
         minimum_nights,
         priority,
         label,
         active
       `)
-      .eq("active", true)
+      .eq("active", true);
+
+    if (propertyId) {
+      query = query.or(
+        `property_id.is.null,property_id.eq.${propertyId}`
+      );
+    } else {
+      query = query.is(
+        "property_id",
+        null
+      );
+    }
+
+    const { data, error } = await query
       .order("priority", {
         ascending: false,
       })
@@ -74,14 +115,6 @@ export async function getSpecialPricingRules():
     const rows =
       (data ?? []) as SpecialPricingRuleRow[];
 
-    if (rows.length === 0) {
-      console.warn(
-        "Nenhum período especial ativo no Supabase. Usando regras locais."
-      );
-
-      return getLocalRules();
-    }
-
     const rules: SpecialPricingRule[] =
       rows.map((row) => ({
         id: row.id,
@@ -89,10 +122,21 @@ export async function getSpecialPricingRules():
         startDate: row.start_date,
         endDate: row.end_date,
         multiplier: Number(row.multiplier),
+        nightlyPrice:
+          toOptionalPositiveNumber(
+            row.nightly_price
+          ),
+        propertyId: row.property_id,
         minimumNights: Number(
           row.minimum_nights
         ),
-        priority: Number(row.priority),
+        /*
+         * Um período exclusivo do imóvel vence
+         * um período geral de mesma prioridade.
+         */
+        priority:
+          Number(row.priority) +
+          (row.property_id ? 0.5 : 0),
         label: row.label,
       }));
 

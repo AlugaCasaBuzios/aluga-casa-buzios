@@ -22,6 +22,8 @@ type SpecialPricingRule = {
   start_date: string;
   end_date: string;
   multiplier: number | string;
+  nightly_price: number | string | null;
+  property_id: string | null;
   minimum_nights: number;
   priority: number;
   label: string;
@@ -76,6 +78,8 @@ export default async function SpecialPeriodsPage({
       start_date,
       end_date,
       multiplier,
+      nightly_price,
+      property_id,
       minimum_nights,
       priority,
       label,
@@ -262,7 +266,9 @@ export default async function SpecialPeriodsPage({
                         </p>
 
                         <p className="mt-1 text-xs text-slate-500">
-                          {period.id}
+                          {period.property_id
+                            ? `Somente: ${period.property_id}`
+                            : "Todos os imóveis"}
                         </p>
                       </td>
 
@@ -282,10 +288,16 @@ export default async function SpecialPeriodsPage({
                       </td>
 
                       <td className="px-5 py-4 font-semibold text-green-700">
-                        +{" "}
-                        {formatPercentage(
-                          period.multiplier
-                        )}
+                        {period.nightly_price !== null
+                          ? `${Number(
+                              period.nightly_price
+                            ).toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })} / noite`
+                          : `+ ${formatPercentage(
+                              period.multiplier
+                            )}`}
                       </td>
 
                       <td className="px-5 py-4">

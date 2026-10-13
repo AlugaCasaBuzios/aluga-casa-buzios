@@ -18,6 +18,18 @@ export interface SpecialPricingRule {
    */
   multiplier: number;
 
+  /**
+   * Preço fixo por noite. Quando informado,
+   * substitui o multiplicador.
+   */
+  nightlyPrice?: number | null;
+
+  /**
+   * Imóvel ao qual o período se aplica.
+   * Nulo ou ausente: vale para todos.
+   */
+  propertyId?: string | null;
+
   minimumNights: number;
 
   /**

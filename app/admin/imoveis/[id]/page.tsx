@@ -35,6 +35,9 @@ type PropertyPricing = {
   minimum_nights: number | null;
   minimum_price: number | string | null;
   maximum_price: number | string | null;
+  site_discount_percent: number | string;
+  dynamic_rules_enabled: boolean;
+  pricing_reviewed_at: string | null;
   active: boolean;
 };
 
@@ -144,6 +147,9 @@ function getErrorMessage(
     case "intervalo":
       return "O preço mínimo não pode ser maior que o preço máximo.";
 
+    case "desconto":
+      return "O desconto do site deve ficar entre 0% e 50%.";
+
     case "salvar":
       return "Não foi possível salvar as alterações de preço.";
 
@@ -213,6 +219,9 @@ export default async function EditPropertyPage({
         minimum_nights,
         minimum_price,
         maximum_price,
+        site_discount_percent,
+        dynamic_rules_enabled,
+        pricing_reviewed_at,
         active
       `)
       .eq("property_id", id)
@@ -1111,7 +1120,26 @@ export default async function EditPropertyPage({
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Ajuste os valores usados pelo cálculo automático de reservas.
+              Cadastre os mesmos valores cobrados no Airbnb. O site aplica o
+              desconto de reserva direta por último.
+            </p>
+
+            <p className="mt-2 text-sm text-slate-600">
+              {pricing.pricing_reviewed_at
+                ? `Preços conferidos pela última vez em ${new Date(
+                    pricing.pricing_reviewed_at
+                  ).toLocaleDateString("pt-BR", {
+                    timeZone: "America/Sao_Paulo",
+                  })}.`
+                : "Preços ainda não conferidos com o Airbnb."}{" "}
+              <Link
+                href={`/admin/precos/${encodeURIComponent(
+                  pricing.property_id
+                )}`}
+                className="font-semibold text-blue-900 hover:underline"
+              >
+                Ver calendário de preços e link iCal →
+              </Link>
             </p>
           </div>
 
@@ -1230,6 +1258,56 @@ export default async function EditPropertyPage({
                 />
               </div>
             </div>
+
+            <div>
+              <label
+                htmlFor="siteDiscountPercent"
+                className={labelClassName}
+              >
+                Desconto do site (%)
+              </label>
+
+              <input
+                id="siteDiscountPercent"
+                name="siteDiscountPercent"
+                type="number"
+                min="0"
+                max="50"
+                step="0.5"
+                defaultValue={Number(
+                  pricing.site_discount_percent ?? 0
+                )}
+                className={inputClassName}
+              />
+
+              <p className="mt-2 text-sm text-slate-500">
+                Diária do site = valor do Airbnb menos esta porcentagem. Use 0
+                para cobrar o mesmo valor. A taxa de limpeza não recebe desconto.
+              </p>
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <input
+                name="dynamicRulesEnabled"
+                type="checkbox"
+                defaultChecked={
+                  pricing.dynamic_rules_enabled
+                }
+                className="h-5 w-5 rounded border-slate-300"
+              />
+
+              <span>
+                <span className="block font-semibold text-slate-900">
+                  Ajustes automáticos
+                </span>
+
+                <span className="block text-sm text-slate-600">
+                  Sábado +25%, sexta +15%, desconto de última hora e acréscimo
+                  para reservas antecipadas. Deixe desmarcado para usar só os
+                  valores cadastrados.
+                </span>
+              </span>
+            </label>
 
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <input

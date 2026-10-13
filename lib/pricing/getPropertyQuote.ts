@@ -101,7 +101,7 @@ export async function getPropertyQuote(
       manualBlocks,
     ] = await Promise.all([
       getPropertyPricingConfig(property),
-      getSpecialPricingRules(),
+      getSpecialPricingRules(property.id),
       getDatePricingOverrides(property.id, input.checkIn, input.checkOut),
       getManualAvailabilityBlocks(property.id, input.checkIn, input.checkOut),
     ]);
@@ -199,6 +199,8 @@ export async function getPropertyQuote(
       specialPricingRules: specialPricingConfig.rules,
       manualPrices: dateOverrides.manualPrices,
       manualMinimumNights: dateOverrides.manualMinimumNights,
+      dynamicRulesEnabled: pricingConfig.dynamicRulesEnabled,
+      siteDiscountPercent: pricingConfig.siteDiscountPercent,
     });
 
     const availabilityConfirmed =
@@ -217,6 +219,7 @@ export async function getPropertyQuote(
           minimumNights: pricingConfig.minimumNights ?? null,
           minimumPrice: pricingConfig.minimumPrice ?? null,
           maximumPrice: pricingConfig.maximumPrice ?? null,
+          siteDiscountPercent: pricingConfig.siteDiscountPercent,
         },
         pricingSource: pricingConfig.source,
         specialPricingSource: specialPricingConfig.source,

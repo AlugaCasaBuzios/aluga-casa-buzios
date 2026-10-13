@@ -661,6 +661,14 @@ export async function updatePropertyPricing(
     formData.get("maximumPrice")
   );
 
+  const siteDiscountPercent =
+    parseNumber(
+      formData.get("siteDiscountPercent")
+    ) ?? 0;
+
+  const dynamicRulesEnabled =
+    formData.get("dynamicRulesEnabled") === "on";
+
   const active =
     formData.get("active") === "on";
 
@@ -724,9 +732,26 @@ export async function updatePropertyPricing(
     );
   }
 
+  if (
+    siteDiscountPercent < 0 ||
+    siteDiscountPercent > 50
+  ) {
+    redirect(
+      `${editPage}?erro=desconto`
+    );
+  }
+
   const supabase =
     await requireAuthenticatedUser();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  /*
+   * Salvar os preços conta como revisão:
+   * o lembrete semanal deixa de listar o imóvel.
+   */
   const { error } = await supabase
     .from("property_pricing")
     .update({
@@ -735,6 +760,14 @@ export async function updatePropertyPricing(
       minimum_nights: minimumNights,
       minimum_price: minimumPrice,
       maximum_price: maximumPrice,
+      site_discount_percent:
+        siteDiscountPercent,
+      dynamic_rules_enabled:
+        dynamicRulesEnabled,
+      pricing_reviewed_at:
+        new Date().toISOString(),
+      pricing_reviewed_by:
+        user?.id ?? null,
       active,
     })
     .eq("property_id", propertyId);
@@ -747,6 +780,11 @@ export async function updatePropertyPricing(
 
   revalidatePath("/admin");
   revalidatePath(editPage);
+  revalidatePath("/");
+  revalidatePath("/casas");
+  revalidatePath(
+    `/imoveis/${encodeURIComponent(propertyId)}`
+  );
 
   redirect("/admin?salvo=1");
 }

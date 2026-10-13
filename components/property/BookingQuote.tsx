@@ -52,6 +52,8 @@ interface QuoteResult {
   nights: number;
   requiredMinimumNights: number;
   minimumNightsMet: boolean;
+  accommodationSubtotalBeforeDiscount?: number;
+  siteDiscountPercent?: number;
   accommodationSubtotal: number;
   cleaningFee: number;
   total: number;
@@ -267,6 +269,17 @@ export default function BookingQuote({
     useState<QuoteResult | null>(
       null
     );
+
+  const directBookingDiscount =
+    quote &&
+    quote.accommodationSubtotalBeforeDiscount !==
+      undefined
+      ? Math.max(
+          quote.accommodationSubtotalBeforeDiscount -
+            quote.accommodationSubtotal,
+          0
+        )
+      : 0;
 
   const [error, setError] =
     useState("");
@@ -985,10 +998,29 @@ export default function BookingQuote({
 
               <strong>
                 {formatCurrency(
-                  quote.accommodationSubtotal
+                  directBookingDiscount > 0
+                    ? quote.accommodationSubtotalBeforeDiscount ??
+                        quote.accommodationSubtotal
+                    : quote.accommodationSubtotal
                 )}
               </strong>
             </div>
+
+            {directBookingDiscount > 0 && (
+              <div className="flex justify-between gap-4 text-green-700">
+                <span>
+                  Desconto reserva direta (
+                  {quote.siteDiscountPercent}%)
+                </span>
+
+                <strong>
+                  −{" "}
+                  {formatCurrency(
+                    directBookingDiscount
+                  )}
+                </strong>
+              </div>
+            )}
 
             <div className="flex justify-between gap-4">
               <span>

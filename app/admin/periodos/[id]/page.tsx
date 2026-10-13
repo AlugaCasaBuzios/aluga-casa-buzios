@@ -9,6 +9,12 @@ import {
 } from "@/lib/supabaseServer";
 
 import {
+  getPricingPropertyOptions,
+} from "@/lib/pricing/getPricingPropertyOptions";
+
+import PeriodPropertyFields from "../PeriodPropertyFields";
+
+import {
   updateSpecialPricingRule,
 } from "./actions";
 
@@ -34,6 +40,8 @@ type SpecialPricingRule = {
   start_date: string;
   end_date: string;
   multiplier: number | string;
+  nightly_price: number | string | null;
+  property_id: string | null;
   minimum_nights: number;
   priority: number;
   label: string;
@@ -55,6 +63,9 @@ const errorMessages: Record<
 
   multiplicador:
     "O multiplicador precisa ser maior que zero.",
+
+  "preco-fixo":
+    "O preço fixo precisa ser maior que zero ou ficar em branco.",
 
   noites:
     "O mínimo de noites precisa ser um número inteiro maior que zero.",
@@ -101,6 +112,8 @@ export default async function EditSpecialPeriodPage({
       start_date,
       end_date,
       multiplier,
+      nightly_price,
+      property_id,
       minimum_nights,
       priority,
       label,
@@ -108,6 +121,9 @@ export default async function EditSpecialPeriodPage({
     `)
     .eq("id", id)
     .maybeSingle();
+
+  const properties =
+    await getPricingPropertyOptions();
 
   if (error) {
     console.error(
@@ -265,6 +281,16 @@ export default async function EditSpecialPeriodPage({
                 acréscimo de 35%.
               </p>
             </div>
+
+            <PeriodPropertyFields
+              properties={properties}
+              defaultPropertyId={
+                period.property_id
+              }
+              defaultNightlyPrice={
+                period.nightly_price
+              }
+            />
 
             <div>
               <label

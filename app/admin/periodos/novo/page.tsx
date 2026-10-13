@@ -6,6 +6,12 @@ import {
 } from "@/lib/supabaseServer";
 
 import {
+  getPricingPropertyOptions,
+} from "@/lib/pricing/getPricingPropertyOptions";
+
+import PeriodPropertyFields from "../PeriodPropertyFields";
+
+import {
   createSpecialPricingRule,
 } from "./actions";
 
@@ -29,6 +35,9 @@ const errorMessages: Record<string, string> = {
 
   multiplicador:
     "O multiplicador precisa ser maior que zero.",
+
+  "preco-fixo":
+    "O preço fixo precisa ser maior que zero ou ficar em branco.",
 
   noites:
     "O mínimo de noites precisa ser um número inteiro maior que zero.",
@@ -61,6 +70,9 @@ export default async function NewSpecialPeriodPage({
   if (!user) {
     redirect("/admin/login");
   }
+
+  const properties =
+    await getPricingPropertyOptions();
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10">
@@ -167,6 +179,10 @@ export default async function NewSpecialPeriodPage({
                 Para dobrar o preço, use 2,00.
               </p>
             </div>
+
+            <PeriodPropertyFields
+              properties={properties}
+            />
 
             <div>
               <label

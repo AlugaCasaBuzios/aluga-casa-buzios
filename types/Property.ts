@@ -41,7 +41,18 @@ export interface Property {
 
   checkout: string;
 
+  /**
+   * Diária exibida no site (preço-base com
+   * o desconto de reserva direta aplicado).
+   */
   price: number;
+
+  /**
+   * Preço-base cadastrado (valor do Airbnb).
+   */
+  priceBeforeDiscount?: number;
+
+  siteDiscountPercent?: number;
 
   cleaningFee: number;
 

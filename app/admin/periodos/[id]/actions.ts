@@ -7,6 +7,10 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabaseServer";
 
+import {
+  markPricingReviewed,
+} from "@/lib/pricing/markPricingReviewed";
+
 function getTextValue(
   formData: FormData,
   fieldName: string
@@ -83,12 +87,41 @@ export async function updateSpecialPricingRule(
     "label"
   );
 
+  const propertyId =
+    getTextValue(
+      formData,
+      "propertyId"
+    ) || null;
+
+  const nightlyPriceText =
+    getTextValue(
+      formData,
+      "nightlyPrice"
+    );
+
+  const nightlyPrice =
+    nightlyPriceText
+      ? parseNumberValue(
+          nightlyPriceText
+        )
+      : null;
+
   const active =
     formData.get("active") === "on";
 
   if (!id) {
     redirect(
       "/admin/periodos?erro=id"
+    );
+  }
+
+  if (
+    nightlyPrice !== null &&
+    (!Number.isFinite(nightlyPrice) ||
+      nightlyPrice <= 0)
+  ) {
+    redirect(
+      `/admin/periodos/${id}?erro=preco-fixo`
     );
   }
 
@@ -161,6 +194,8 @@ export async function updateSpecialPricingRule(
     .from("special_pricing_rules")
     .update({
       name,
+      property_id: propertyId,
+      nightly_price: nightlyPrice,
       start_date: startDate,
       end_date: endDate,
       multiplier,
@@ -180,6 +215,13 @@ export async function updateSpecialPricingRule(
 
     redirect(
       `/admin/periodos/${id}?erro=salvar`
+    );
+  }
+
+  if (propertyId) {
+    await markPricingReviewed(
+      [propertyId],
+      user.id
     );
   }
 

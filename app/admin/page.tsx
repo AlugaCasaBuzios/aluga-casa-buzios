@@ -605,6 +605,17 @@ export default async function AdminPage({
               </Link>
 
               <Link
+                href="/admin/precos"
+                style={{
+                  color: "#172554",
+                }}
+                className="inline-flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl bg-white px-5 py-3 text-center font-bold text-blue-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-100"
+              >
+                <span>Revisão de preços</span>
+                <span className="text-xs font-semibold text-slate-600">Calendário, lembrete e iCal</span>
+              </Link>
+
+              <Link
                 href="/admin/manutencao"
                 style={{
                   color: "#14532d",

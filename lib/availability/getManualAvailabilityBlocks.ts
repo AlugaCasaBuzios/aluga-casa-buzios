@@ -1,12 +1,17 @@
+import "server-only";
+
+/*
+ * Leitura feita com a chave secreta, somente no servidor:
+ * a tabela não deve ser legível pela chave pública.
+ */
 import {
-  createSupabaseServerClient,
-} from "@/lib/supabaseServer";
+  createSupabaseAdminClient,
+} from "@/lib/supabaseAdmin";
 
 type ManualAvailabilityBlockRow = {
   id: string;
   start_date: string;
   end_date_exclusive: string;
-  reason: string | null;
 };
 
 export type ManualAvailabilityBlocksSource =
@@ -17,7 +22,6 @@ export interface ManualAvailabilityBlock {
   id: string;
   startDate: string;
   endDateExclusive: string;
-  reason: string | null;
   source: "manual";
 }
 
@@ -41,7 +45,7 @@ export async function getManualAvailabilityBlocks(
 ): Promise<ManualAvailabilityBlocksResult> {
   try {
     const supabase =
-      await createSupabaseServerClient();
+      createSupabaseAdminClient();
 
     const {
       data,
@@ -51,8 +55,7 @@ export async function getManualAvailabilityBlocks(
       .select(`
         id,
         start_date,
-        end_date_exclusive,
-        reason
+        end_date_exclusive
       `)
       .eq("property_id", propertyId)
       .eq("active", true)
@@ -86,7 +89,6 @@ export async function getManualAvailabilityBlocks(
         startDate: row.start_date,
         endDateExclusive:
           row.end_date_exclusive,
-        reason: row.reason,
         source: "manual",
       }));
 

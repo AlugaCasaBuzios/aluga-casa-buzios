@@ -1,6 +1,12 @@
+import "server-only";
+
+/*
+ * Leitura feita com a chave secreta, somente no servidor:
+ * a tabela não deve ser legível pela chave pública.
+ */
 import {
-  createSupabaseServerClient,
-} from "@/lib/supabaseServer";
+  createSupabaseAdminClient,
+} from "@/lib/supabaseAdmin";
 
 type DatePricingOverrideRow = {
   pricing_date: string;
@@ -39,7 +45,7 @@ export async function getDatePricingOverrides(
 ): Promise<DatePricingOverridesResult> {
   try {
     const supabase =
-      await createSupabaseServerClient();
+      createSupabaseAdminClient();
 
     const {
       data,

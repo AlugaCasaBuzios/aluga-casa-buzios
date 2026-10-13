@@ -121,10 +121,10 @@ export async function getPropertyQuote(
         "O imóvel está bloqueado durante parte do período selecionado. Escolha outras datas.",
         {
           conflictSource: "manual",
+          // O motivo do bloqueio é interno e pode conter dados de hóspedes.
           unavailablePeriod: {
             startDate: manualConflict.startDate,
             endDateExclusive: manualConflict.endDateExclusive,
-            reason: manualConflict.reason,
           },
         }
       );
